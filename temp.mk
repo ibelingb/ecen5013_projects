@@ -11,6 +11,6 @@
 #*****************************************************************************
 
 # source files
-SRCS += test_temp.c \
-temp.c \
+SRCS += temp/test_temp.c \
+temp/temp.c \
 lu_iic.c
