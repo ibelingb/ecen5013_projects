@@ -52,7 +52,7 @@ int8_t apds9301_getDeviceId(uint8_t file, uint8_t *deviceId)
   return EXIT_SUCCESS;
 }
 
-int8_t apds9301_getInterruptThreshold(uint8_t file, uint8_t *intThreshold)
+int8_t apds9301_getInterruptThreshold(uint8_t file, IntThresholdByte_e intByte, uint8_t *intThreshold)
 {
 
   return EXIT_SUCCESS;
