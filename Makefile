@@ -12,12 +12,12 @@
 #*****************************************************************************
 
 # General / default variables for all platforms / architectures
-CFLAGS = -Wall -g -O0 -Werror
+CFLAGS = -Wall -g -Og -Werror
 CPPFLAGS = -MD -MP
-TARGET = temp
+TARGET = test_temp
 LDFLAGS = 
 include $(TARGET).mk
-INCLDS = -I.
+INCLDS = -I./include
 
 ifeq ($(PLATFORM),BBG)
 CROSS_COMP_NAME = arm-buildroot-linux-uclibcgnueabihf
@@ -66,17 +66,22 @@ $(OBJS): %.o : %.c %.d
 	@ echo "Compiling $@"
 	
 .PHONY: build
-build: all
+build: $(TARGET)
+
+.PHONY: run
+run: build
+ifeq ($(PLATFORM),BBG)
+	scp $(TARGET) root@10.0.0.87:/usr/bin/$(TARGET)
+	ssh -t root@10.0.0.87 "cd /usr/bin/ && gdbserver localhost:2345 test_temp"
+endif
 
 .PHONY: all
-all: $(TARGET).elf
+all: run
 	
-$(TARGET).elf: $(OBJS)
+$(TARGET): $(OBJS)
 	@echo PLATFORM = $(PLATFORM)
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -o $(TARGET).elf $^ $(LDFLAGS)
+	@$(CC) $(CPPFLAGS) $(CFLAGS) -o $(TARGET) $^ $(LDFLAGS)
 	@echo build complete
-	@$(SZ) -Bx $(TARGET).elf
+	@$(SZ) -Bx $(TARGET)
 	@echo
-	@$(READELF) -h $(TARGET).elf
-	@echo
-	@$(READELF) -A $(TARGET).elf
+	@$(READELF) -h $(TARGET)
