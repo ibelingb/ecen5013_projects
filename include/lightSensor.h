@@ -21,6 +21,17 @@
 
 #include <stdint.h>
 
+
+/*---------------------------------------------------------------------------------*/
+/* Enum used to specify which Interrupt Threshold byte is being set/get */
+enum IntThresholdByte_e
+{
+  LOWBYTE_LOWTHRES = 0,
+  HIGHBYTE_LOWTHRES,
+  LOWBYTE_HIGHTHRES,
+  HIGHBYTE_HIGHTHRES
+};
+
 /*---------------------------------------------------------------------------------*/
 /**
  * @brief TODO
@@ -80,7 +91,7 @@ int8_t apds9301_getDeviceId(uint8_t file, uint8_t *deviceId);
  *
  * @return 
  */
-int8_t apds9301_getInterruptThreshold(uint8_t file, uint8_t *intThreshold);
+int8_t apds9301_getInterruptThreshold(uint8_t file, IntThresholdByte_e intByte, uint8_t *intThreshold);
 
 /*---------------------------------------------------------------------------------*/
 
