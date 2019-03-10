@@ -12,12 +12,12 @@
 #*****************************************************************************
 
 # General / default variables for all platforms / architectures
-CFLAGS = -Wall -g -O0 -Werror
+CFLAGS = -Wall -g -O0 -Werror -pthread
 CPPFLAGS = -MD -MP
-TARGET = temp
-LDFLAGS = 
+TARGET = main
+LDFLAGS = -lrt
 include $(TARGET).mk
-INCLDS = -I.
+INCLDS = -I./include
 
 ifeq ($(PLATFORM),BBG)
 CROSS_COMP_NAME = arm-buildroot-linux-uclibcgnueabihf

@@ -21,9 +21,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <mqueue.h>
 #include <signal.h>
+#include <sys/shm.h>
+#include <sys/mman.h>
 
 #include "tempThread.h"
 #include "lightThread.h"
@@ -33,22 +36,20 @@
 
 /* Define static and global variables */
 
-
 int main(int argc, char *argv[]){
+  char *taskStatusMsgQueueName = "/heartbeat_mq";
+  char *logMsgQueueName        = "/logging_mq";
+  char *sensorSharedMemoryName = "/sensor_sm";
   TaskStatusPacket recvThreadStatus;
   SensorThreadInfo sensorThreadInfo;
   RemoteThreadInfo remoteThreadInfo;
-  logThreadInfo logThreadInfo;
+  LogThreadInfo logThreadInfo;
   LogMsgPacket logPacket;
-  char *taskStatusMsgQueueName  = "/heartbeat_mq";
-  char *logMsgQueueName        = "/logging_mq";
-  char *sensorSharedMemoryName = "/sensor_sm";
-  struct mq_attr = mqAttr;
+  struct mq_attr mqAttr;
   mqd_t logMsgQueue;
   mqd_t taskStatusMsgQueue;
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
-  int status = 0;
 
   /* Check inputs */
   // TODO
@@ -70,7 +71,7 @@ int main(int argc, char *argv[]){
   shm_unlink(sensorSharedMemoryName);
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
-  mqAttr.mq_magmsg  = MSG_QUEUE_DEPTH;
+  mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH;
   mqAttr.mq_msgsize = MSG_QUEUE_MSG_SIZE;
   mqAttr.mq_curmsgs = 0;
 
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]){
   }
 
   /* Create MessageQueue to receive thread status from all children */
-  taskStatusMsgQueue = mq_open(logMsgQueueName, O_CREAT | O_RDRW, 0666, &mqAttr);
+  taskStatusMsgQueue = mq_open(logMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
   if(taskStatusMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n");

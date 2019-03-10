@@ -20,17 +20,17 @@
 #define LIGHT_SENSOR_H_
 
 #include <stdint.h>
-
+#include <stdbool.h>
 
 /*---------------------------------------------------------------------------------*/
 /* Enum used to specify which Interrupt Threshold byte is being set/get */
-enum IntThresholdByte_e
+typedef enum
 {
   LOWBYTE_LOWTHRES = 0,
   HIGHBYTE_LOWTHRES,
   LOWBYTE_HIGHTHRES,
   HIGHBYTE_HIGHTHRES
-};
+} IntThresholdByte_e;
 
 /*---------------------------------------------------------------------------------*/
 /**
