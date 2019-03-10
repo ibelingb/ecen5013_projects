@@ -12,10 +12,10 @@
 #*****************************************************************************
 
 # General / default variables for all platforms / architectures
-CFLAGS = -Wall -g -Og -Werror
+CFLAGS = -Wall -g -O0 -Werror -pthread
 CPPFLAGS = -MD -MP
-TARGET = test_temp
-LDFLAGS = 
+TARGET = main
+LDFLAGS = -lrt
 include $(TARGET).mk
 INCLDS = -I./include
 
