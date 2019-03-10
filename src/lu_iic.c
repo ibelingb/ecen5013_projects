@@ -1,8 +1,20 @@
-/*
- * references:
+/***********************************************************************************
+ * @author Brian Ibeling and Josh Malburg
+ * 
+ * Advanced Embedded Software Development
+ * ECEN5013 - Rick Heidebrecht
+ * @date March 8, 2019
+ * arm-linux-gnueabi (Buildroot)
+ * gcc (Ubuntu)
+ ************************************************************************************
+ *
+ * @file lu_iic.c
+ * @brief generic i2c-dev driver 
+ *
  * https://www.linuxquestions.org/questions/programming-9/reading-data-via-i2c-dev-4175499069/
  * https://www.kernel.org/doc/Documentation/i2c/dev-interface
  * http://linux-sunxi.org/I2Cdev
+ ************************************************************************************
  */
 
 #include <stdio.h>
@@ -17,11 +29,19 @@
 #include <unistd.h>
 
 
-int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint8_t *pReg_value)
+int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t *pReg_value, uint8_t regSize, uint8_t regEndianness)
 {
-    unsigned char inbuf, outbuf;
+    unsigned char inbuf[regSize], outbuf;
     struct i2c_rdwr_ioctl_data packets;
     struct i2c_msg messages[2];
+    uint32_t regValue;
+    uint8_t ind;
+
+    if((pReg_value == NULL) || (regSize > sizeof(uint32_t)))
+    {
+        printf("getIicRegister - input error\n");
+        return EXIT_FAILURE;
+    }  
 
     /*
      * In order to read a register, we first do a "dummy write" by writing
@@ -36,7 +56,7 @@ int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint8_t *pReg_val
     messages[1].addr  = slavAddr;
     messages[1].flags = I2C_M_RD/* | I2C_M_NOSTART */;
     messages[1].len   = sizeof(inbuf);
-    messages[1].buf   = &inbuf;
+    messages[1].buf   = &inbuf[0];
 
     /* Send the request to the kernel and get the result back */
     packets.msgs      = messages;
@@ -44,61 +64,25 @@ int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint8_t *pReg_val
     if(ioctl(file, I2C_RDWR, &packets) < 0)
     {
         printf("getIicRegister - IIC read failed, errno (%d): %s\n\r", errno, strerror(errno));
-        return 1;
+        return EXIT_FAILURE;
     }
-    *pReg_value = inbuf;
+    for(regValue = 0, ind = 0; ind < regSize; ++ind)
+    {
+        uint8_t byte = inbuf[ind];
 
-	return EXIT_SUCCESS;
-
-//	static uint8_t buf[0xff];
-//	buf[0] = reg;
-//
-//    /* set the I2C slave address; try production then prototype hardware */
-//    if(ioctl(IicFd, I2C_SLAVE_FORCE, slavAddr) < 0)
-//    {
-//    	printf("failed to set slave addr, errno (%d): %s\n\r", errno, strerror(errno));
-//    	return -1;
-//    }
-//
-//    if(slavAddr != 0x70)
-//    {
-//    	/* read back value */
-//    	size_t readSize = sizeof(buf) / sizeof(buf[0]);
-//    	if (read(IicFd, buf, readSize) != readSize) {
-//    		printf("getIicRegister - IIC read failed, errno (%d): %s\n\r", errno, strerror(errno));
-//    		return EXIT_FAILURE;
-//    	}
-//
-//    	/* return read reg */
-//    	*pReg_value = buf[reg];
-//    }
-//    else
-//    {
-//    	/* tell chip what register to get */
-//        size_t writeSize = sizeof(buf[0]) / sizeof(buf[0]);
-//    	if (write(IicFd, buf, writeSize) != writeSize)
-//    	{
-//    		printf("getIicRegister - IIC read failed, errno (%d): %s\n\r", errno, strerror(errno));
-//    		return EXIT_FAILURE;
-//    	}
-//    	/* read back value */
-//    	if (read(IicFd, buf, 1) != 1) {
-//    		printf("getIicRegister - IIC read failed, errno (%d): %s\n\r", errno, strerror(errno));
-//    		return EXIT_FAILURE;
-//    	}
-//
-//    	/* return read reg */
-//    	*pReg_value = buf[0];
-//    }
+        if(regEndianness)
+            regValue += (byte << (8 * ind));
+        else
+            regValue += (byte << (8 * ((regSize - 1) - ind)));
+    }
+    *pReg_value = regValue;
 
 	return EXIT_SUCCESS;
 }
 
-int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint8_t reg_value)
+int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t reg_value, uint8_t regSize, uint8_t regEndianness)
 {
-
-
-    unsigned char outbuf[2];
+    unsigned char outbuf[regSize];
     struct i2c_rdwr_ioctl_data packets;
     struct i2c_msg messages[1];
 
@@ -120,32 +104,6 @@ int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint8_t reg_value
     }
 
     return EXIT_SUCCESS;
-
-//	uint8_t pTxData[2];
-//	uint8_t bytesSent;
-//	uint8_t readValue;
-//
-//    /* set the I2C slave address; try production then prototype hardware */
-//    if(ioctl(IicFd, I2C_SLAVE_FORCE, slavAddr) < 0)
-//    {
-//    	printf("failed to set slave addr, errno (%d): %s\n\r", errno, strerror(errno));
-//    	return -1;
-//    }
-//
-//	pTxData[0] = reg;
-//	pTxData[1] = reg_value;
-//
-//	/* write addr and reg to slave */
-//	bytesSent = write(IicFd, &pTxData, sizeof(pTxData));
-//	if (bytesSent != sizeof(pTxData)) {
-//		printf("setIicRegister - IIC write failed, errno (%d): %s\n\r", errno, strerror(errno));
-//		return EXIT_FAILURE;
-//	}
-//	getIicRegister(IicFd, slavAddr, reg, &readValue);
-//	if(readValue != reg_value)
-//		printf("written value didn't take, slavAddr: %x, reg: %x, reg_value: %x, readValue: %x\n", slavAddr, reg, reg_value, readValue);
-//
-//	return EXIT_SUCCESS;
 }
 
 int initIic(char *filename)
