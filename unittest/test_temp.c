@@ -23,19 +23,22 @@
 #include "tempSensor.h"
 #include "debug.h"
 
+#define TEMP_SAMPLES	(4)
+
 /* global file descriptor */
 int fd;
 uint8_t testCount = 0;
 
 /* test cases */
-int8_t test_TempConv(void);
-int8_t rwr_LowThreshold(void);
-int8_t rwr_HighThreshold(void);
-int8_t rwr_FaultQueueSize(void);
+int8_t test_LowThreshold(void);
+int8_t test_HighThreshold(void);
+int8_t test_FaultQueueSize(void);
 int8_t test_ExtendedAddrMode(void);
 int8_t test_Shutdown(void);
-int8_t rwr_ConversionRate(void);
-int8_t test_Alert(void);
+int8_t test_ConversionRate(void);
+int8_t test_AlertPolarity(void);
+int8_t test_TempConv(void);
+//int8_t test_initialize(void);
 
 int main(void)
 {
@@ -51,14 +54,17 @@ int main(void)
 
 	sleep(2);
 
-	testFails += rwr_LowThreshold();
-	testFails += rwr_HighThreshold();
-	testFails += readTempConv();
-	testFails += rwr_FaultQueueSize();
+	testFails += test_TempConv();
+	testFails += test_LowThreshold();
+	testFails += test_HighThreshold();
+	testFails += test_FaultQueueSize();
 	testFails += test_ExtendedAddrMode();
+	testFails += test_TempConv();
 	testFails += test_Shutdown();
-	testFails += rwr_ConversionRate();
-	testFails += test_Alert();
+	testFails += test_TempConv();
+	testFails += test_ConversionRate();
+	testFails += test_TempConv();
+	testFails += test_AlertPolarity();
 
 	printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);
 
@@ -76,8 +82,9 @@ int8_t test_TempConv(void)
 	uint8_t ind;
 	float temp, start;
 	testCount++;
+	INFO_PRINT("start of test_TempConv, test #%d\n",testCount);
 
-	for(ind = 0; ind < 10; ++ind)
+	for(ind = 0; ind < TEMP_SAMPLES; ++ind)
 	{
 		if(tmp102_getTempC(fd, &temp) < 0)
 		{
@@ -98,83 +105,114 @@ int8_t test_TempConv(void)
 	
 	return EXIT_SUCCESS;
 }
-
 /**
  * @brief read, write and verify write to low temp threshold register
  * 
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
-int8_t rwr_LowThreshold(void)
+int8_t test_LowThreshold(void)
 {
 	float Tlow, start, CHANGE = 5.0f;
 	testCount++;
+	INFO_PRINT("start of test_LowThreshold, test #%d\n",testCount);
 
 	/*read threshold value */
 	if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &Tlow))
-	{ ERROR_PRINT("rwr_LowThreshold write failed\n"); return EXIT_FAILURE; }
+	{ ERROR_PRINT("test_LowThreshold write failed\n"); return EXIT_FAILURE; }
 	else { INFO_PRINT("got Tlow value: %f\n", Tlow); }
 
 	/* change it */
 	start = Tlow;
 	if(EXIT_FAILURE == tmp102_setLowThreshold(fd, Tlow - CHANGE))
-	{ ERROR_PRINT("rwr_LowThreshold read failed\n"); return EXIT_FAILURE; }
+	{ ERROR_PRINT("test_LowThreshold read failed\n"); return EXIT_FAILURE; }
 
 	/* read it back */
 	if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &Tlow))
-	{ ERROR_PRINT("rwr_LowThreshold write failed\n"); return EXIT_FAILURE; }
+	{ ERROR_PRINT("test_LowThreshold write failed\n"); return EXIT_FAILURE; }
 	else { INFO_PRINT("got Tlow value: %f\n", Tlow); }
 
 	if((start - CHANGE) != Tlow)
 	{ 
-		ERROR_PRINT("rwr_LowThreshold read doesn't match written\n");
+		ERROR_PRINT("test_LowThreshold read doesn't match written\n");
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
-
 /**
  * @brief read, write and verify write to high temp threshold register
  * 
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
-int8_t rwr_HighThreshold(void)
+int8_t test_HighThreshold(void)
 {
 	float Thigh, start, CHANGE = 5.0f;
 	testCount++;
+	INFO_PRINT("start of test_HighThreshold, test #%d\n",testCount);
 
 	/*read threshold value */
 	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &Thigh))
-	{ ERROR_PRINT("rwr_HighThreshold write failed\n"); return EXIT_FAILURE; }
+	{ ERROR_PRINT("test_HighThreshold write failed\n"); return EXIT_FAILURE; }
 	else { INFO_PRINT("got Thigh value: %f\n", Thigh); }
 
 	/* change it */
 	start = Thigh;
 	if(EXIT_FAILURE == tmp102_setHighThreshold(fd, Thigh - CHANGE))
-	{ ERROR_PRINT("rwr_HighThreshold read failed\n"); return EXIT_FAILURE; }
+	{ ERROR_PRINT("test_HighThreshold read failed\n"); return EXIT_FAILURE; }
 
 	/* read it back */
 	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &Thigh))
-	{ ERROR_PRINT("rwr_HighThreshold write failed\n"); return EXIT_FAILURE; }
+	{ ERROR_PRINT("test_HighThreshold write failed\n"); return EXIT_FAILURE; }
 	else { INFO_PRINT("got Thigh value: %f\n", Thigh); }
 
 	if((start - CHANGE) != Thigh)
 	{ 
-		ERROR_PRINT("rwr_HighThreshold read doesn't match written\n");
+		ERROR_PRINT("test_HighThreshold read doesn't match written\n");
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
-
 /**
  * @brief read, write and verify write to fault queue register
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
-int8_t rwr_FaultQueueSize(void)
+int8_t test_FaultQueueSize(void)
 {
+	Tmp102_FaultCount_e startCount, tmpCount, newCount;
 	testCount++;
+	INFO_PRINT("start of test_FaultQueueSize, test #%d\n",testCount);
+	
+	/*read value */
+	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &startCount))
+	{ ERROR_PRINT("test_FaultQueueSize read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startCount value: %d\n", startCount); }
+
+	/* set new value */
+	if((((uint8_t)startCount) + 1) >= TMP102_REQ_FAULT_END)
+	{
+		newCount = (Tmp102_FaultCount_e)((((uint8_t)startCount) + 1) 
+		% ((uint8_t)(TMP102_REQ_FAULT_END - 1)));
+	}
+	else {
+		newCount = startCount + 1;
+	}
+	
+	/* write new value */
+	if(EXIT_FAILURE == tmp102_setFaultQueueSize(fd, newCount))
+	{ ERROR_PRINT("test_FaultQueueSize write failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &tmpCount))
+	{ ERROR_PRINT("test_FaultQueueSize read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got tmpCount value: %d\n", tmpCount); }
+
+	/* verify read back value match write value */
+	if(newCount != tmpCount)
+	{ 
+		ERROR_PRINT("test_FaultQueueSize read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
-
 /**
  * @brief set extended addressMode and verify temp reading is 
  * still correct, try to get temp above 128 DegC?
@@ -183,10 +221,42 @@ int8_t rwr_FaultQueueSize(void)
  */
 int8_t test_ExtendedAddrMode(void)
 {
+	Tmp102_AddrMode_e startMode, tmpMode, newMode;
 	testCount++;
+	INFO_PRINT("start of test_ExtendedAddrMode, test #%d\n",testCount);
+	
+	/*read value */
+	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &startMode))
+	{ ERROR_PRINT("test_ExtendedAddrMode read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startMode value: %d\n", startMode); }
+
+	/* set new value */
+	if((((uint8_t)startMode) + 1) >= TMP102_ADDR_MODE_END)
+	{
+		newMode = (Tmp102_AddrMode_e)((((uint8_t)startMode) + 1) 
+		% ((uint8_t)(TMP102_ADDR_MODE_END - 1)));
+	}
+	else {
+		newMode = startMode + 1;
+	}
+	
+	/* write new value */
+	if(EXIT_FAILURE == tmp102_setExtendedMode(fd, newMode))
+	{ ERROR_PRINT("test_ExtendedAddrMode write failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &tmpMode))
+	{ ERROR_PRINT("test_ExtendedAddrMode read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got tmpMode value: %d\n", tmpMode); }
+
+	/* verify read back value match write value */
+	if(newMode != tmpMode)
+	{ 
+		ERROR_PRINT("test_ExtendedAddrMode read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
-
 /**
  * @brief put sensor in shutdown mode, verify temp conversion
  * is disabled; verify conversion returns to normal when 
@@ -196,19 +266,139 @@ int8_t test_ExtendedAddrMode(void)
  */
 int8_t test_Shutdown(void)
 {
+	Tmp102_Shutdown_e startState, tmpState, newState;
 	testCount++;
+	INFO_PRINT("start of test_Shutdown, test #%d\n",testCount);
+	
+	/*read value */
+	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &startState))
+	{ ERROR_PRINT("test_Shutdown read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startState value: %d\n", startState); }
+
+	/* set new value */
+	if((((uint8_t)startState) + 1) >= TMP102_DEVICE_IN_END)
+	{
+		newState = (Tmp102_Shutdown_e)((((uint8_t)startState) + 1) 
+		% ((uint8_t)(TMP102_DEVICE_IN_END - 1)));
+	}
+	else {
+		newState = startState + 1;
+	}
+	
+	/* write new value */
+	if(EXIT_FAILURE == tmp102_setShutdownState(fd, newState))
+	{ ERROR_PRINT("test_Shutdown write failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &tmpState))
+	{ ERROR_PRINT("test_Shutdown read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got tmpState value: %d\n", tmpState); }
+
+	/* verify read back value match write value */
+	if(newState != tmpState)
+	{ 
+		ERROR_PRINT("test_Shutdown read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
-
 /**
  * @brief change the conversion rate; verify by sampling at
  * high rate and inspect samples to see if they change when expected
  * 
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
-int8_t rwr_ConversionRate(void)
+int8_t test_ConversionRate(void)
 {
+	Tmp102_ConvRate_e startRate, tmpRate, newRate;
 	testCount++;
+	INFO_PRINT("start of test_ConversionRate, test #%d\n",testCount);
+	
+	/*read value */
+	if(EXIT_FAILURE == tmp102_getConvRate(fd, &startRate))
+	{ ERROR_PRINT("test_ConversionRate read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startRate value: %d\n", startRate); }
+
+	/* set new value */
+	if((((uint8_t)startRate) + 1) >= TMP102_CONV_RATE_END)
+	{
+		newRate = (Tmp102_ConvRate_e)((((uint8_t)startRate) + 1) 
+		% ((uint8_t)(TMP102_CONV_RATE_END - 1)));
+	}
+	else {
+		newRate = startRate + 1;
+	}
+	
+	/* write new value */
+	if(EXIT_FAILURE == tmp102_setConvRate(fd, newRate))
+	{ ERROR_PRINT("test_ConversionRate write failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getConvRate(fd, &tmpRate))
+	{ ERROR_PRINT("test_ConversionRate read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got tmpRate value: %d\n", tmpRate); }
+
+	/* verify read back value match write value */
+	if(newRate != tmpRate)
+	{ 
+		ERROR_PRINT("test_ConversionRate read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+/**
+ * @brief set/clear polarity to verify alert active level changes
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t test_AlertPolarity(void)
+{
+	uint8_t startPol, tmpPol, newPol;
+	Tmp102_Alert_e startAlert, newAlert;
+
+	testCount++;
+	INFO_PRINT("start of test_AlertPolarity, test #%d\n",testCount);
+	
+	/*read start polarity value */
+	if(EXIT_FAILURE == tmp102_getPolarity(fd, &startPol))
+	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startPol value: %d\n", startPol); }
+
+	/*read start alert value */
+	if(EXIT_FAILURE == tmp102_getAlert(fd, &startAlert))
+	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startAlert value: %d\n", startAlert); }
+
+	/* set new value */
+	newPol = !startPol;
+	
+	/* write new value */
+	if(EXIT_FAILURE == tmp102_setPolarity(fd, newPol))
+	{ ERROR_PRINT("test_AlertPolarity write failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getPolarity(fd, &tmpPol))
+	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got tmpPol value: %d\n", tmpPol); }
+
+	/*read start alert value */
+	if(EXIT_FAILURE == tmp102_getAlert(fd, &newAlert))
+	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got newAlert value: %d\n", newAlert); }
+
+	/* verify read back value match write value */
+	if(newPol != tmpPol)
+	{ 
+		ERROR_PRINT("test_AlertPolarity polarity read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
+
+	/* verify alert compensates for polarity flip */
+	if(newAlert != startAlert)
+	{ 
+		ERROR_PRINT("test_AlertPolarity alert read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -220,6 +410,38 @@ int8_t rwr_ConversionRate(void)
  */
 int8_t test_Alert(void)
 {
+	Tmp102_Alert_e startAlert, newAlert;
+
 	testCount++;
+	INFO_PRINT("start of test_Alert, test #%d\n",testCount);
+
+	/* get 10 temp samples of nominal conditions */
+
+	/* ask user to apply heat and find average */
+
+	/* set high and low threshold values */
+
+	/* get alert value */
+
+	/* tell user to apply heat */
+
+	/* wait for alert pin to set */
+
+	/*read start alert value */
+	if(EXIT_FAILURE == tmp102_getAlert(fd, &startAlert))
+	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got startAlert value: %d\n", startAlert); }
+
+	/*read start alert value */
+	if(EXIT_FAILURE == tmp102_getAlert(fd, &newAlert))
+	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
+	else { INFO_PRINT("got newAlert value: %d\n", newAlert); }
+
+	/* verify alert compensates for polarity flip */
+	if(newAlert != startAlert)
+	{ 
+		ERROR_PRINT("test_AlertPolarity alert read doesn't match written\n");
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }

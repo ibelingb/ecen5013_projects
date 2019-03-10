@@ -64,7 +64,6 @@
 
 /* private functions */
 int8_t tmp102_getReg(uint8_t file, uint16_t *pReg, uint8_t REG);
-int8_t tmp102_getPolarity(uint8_t file, uint8_t *pBit);
 
 
 int8_t tmp102_getTempC(uint8_t file, float *pTemp)
@@ -116,6 +115,31 @@ int8_t tmp102_getLowThreshold(uint8_t file, float *pLow)
 	return EXIT_SUCCESS;
 }
 
+int8_t tmp102_setLowThreshold(uint8_t file, float low)
+{
+	uint32_t low_bits;
+	Tmp102_AddrMode_e addressMode;
+	uint8_t shiftValue;
+	
+	/* get extended mode */
+	if(EXIT_FAILURE == tmp102_getExtendedMode(file, &addressMode))
+		return EXIT_FAILURE;
+
+	/* if extended address mode shift one less bit */
+	shiftValue = TMP102_TLOW_START_BIT;
+	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
+		--shiftValue;
+
+	/* convert float to integer */
+	low_bits = TMP102_TEMPC_TO_BITS(low, shiftValue);
+
+	/* set register value */
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_TLOW_REG, low_bits, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
+
+	return EXIT_SUCCESS;
+}
+
 int8_t tmp102_getHighThreshold(uint8_t file, float *pHigh)
 {
 	uint8_t shiftValue;
@@ -144,10 +168,35 @@ int8_t tmp102_getHighThreshold(uint8_t file, float *pHigh)
 	return EXIT_SUCCESS;
 }
 
-int8_t tmp102_getFaultQueueSize(uint8_t file, Tmp102_FaultCount_e *pFaults)
+int8_t tmp102_setHighThreshold(uint8_t file, float high)
+{
+	uint32_t high_bits;
+	Tmp102_AddrMode_e addressMode;
+	uint8_t shiftValue;
+	
+	/* get extended mode */
+	if(EXIT_FAILURE == tmp102_getExtendedMode(file, &addressMode))
+		return EXIT_FAILURE;
+
+	/* if extended address mode shift one less bit */
+	shiftValue = TMP102_THIGH_START_BIT;
+	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
+		--shiftValue;
+
+	/* convert float to integer */
+	high_bits = TMP102_TEMPC_TO_BITS(high, shiftValue);
+
+	/* set register value */
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_THIGH_REG, high_bits, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
+
+	return EXIT_SUCCESS;
+}
+
+int8_t tmp102_getFaultQueueSize(uint8_t file, Tmp102_FaultCount_e *pCounts)
 {
 	/* validate inputs */
-	if(pFaults == NULL)
+	if(pCounts == NULL)
 		return EXIT_FAILURE;
 
 	/* get register value */
@@ -156,8 +205,31 @@ int8_t tmp102_getFaultQueueSize(uint8_t file, Tmp102_FaultCount_e *pFaults)
 		return EXIT_FAILURE;
 	
 	/* get data */
-	*pFaults = (Tmp102_FaultCount_e)((tmp & TMP102_CONFIG_REG_MASK_FLT_QUEUE) 
+	*pCounts = (Tmp102_FaultCount_e)((tmp & TMP102_CONFIG_REG_MASK_FLT_QUEUE) 
 	>> TMP102_CONFIG_REG_OFFSET_FLT_QUEUE);
+	
+	return EXIT_SUCCESS;
+}
+
+int8_t tmp102_setFaultQueueSize(uint8_t file, Tmp102_FaultCount_e size)
+{
+	uint16_t tmp = 0, reg;
+
+	/* first get current config register value */
+	if(EXIT_FAILURE == tmp102_getReg(file, &reg, TMP102_CONFIG_REG))
+		return EXIT_FAILURE;
+	
+	/* clear previous queue count value */
+	reg &= ~TMP102_CONFIG_REG_MASK_FLT_QUEUE;
+
+	/* set new value in tmp */
+	tmp = (((uint16_t)size << TMP102_CONFIG_REG_OFFSET_FLT_QUEUE) 
+	& TMP102_CONFIG_REG_MASK_FLT_QUEUE);
+
+	/* write new register value */
+	reg |= tmp;
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_CONFIG_REG, reg, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
 	
 	return EXIT_SUCCESS;
 }
@@ -180,6 +252,29 @@ int8_t tmp102_getExtendedMode(uint8_t file, Tmp102_AddrMode_e *pMode)
 	return EXIT_SUCCESS;
 }
 
+int8_t tmp102_setExtendedMode(uint8_t file, Tmp102_AddrMode_e mode)
+{
+	uint16_t tmp = 0, reg;
+
+	/* first get current config register value */
+	if(EXIT_FAILURE == tmp102_getReg(file, &reg, TMP102_CONFIG_REG))
+		return EXIT_FAILURE;
+	
+	/* clear previous queue count value */
+	reg &= ~TMP102_CONFIG_REG_MASK_EXT_MODE;
+
+	/* set new value in tmp */
+	tmp = (((uint16_t)mode << TMP102_CONFIG_REG_OFFSET_EXT_MODE) 
+	& TMP102_CONFIG_REG_MASK_EXT_MODE);
+
+	/* write new register value */
+	reg |= tmp;
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_CONFIG_REG, reg, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
+	
+	return EXIT_SUCCESS;
+}
+
 int8_t tmp102_getShutdownState(uint8_t file, Tmp102_Shutdown_e *pState)
 {
 	/* validate inputs */
@@ -195,6 +290,29 @@ int8_t tmp102_getShutdownState(uint8_t file, Tmp102_Shutdown_e *pState)
 	*pState = (Tmp102_Shutdown_e)((tmp & TMP102_CONFIG_REG_MASK_SHUTDOWN) 
 	>> TMP102_CONFIG_REG_OFFSET_SHUTDOWN);
 
+	return EXIT_SUCCESS;
+}
+
+int8_t tmp102_setShutdownState(uint8_t file, Tmp102_Shutdown_e state)
+{
+	uint16_t tmp = 0, reg;
+
+	/* first get current config register value */
+	if(EXIT_FAILURE == tmp102_getReg(file, &reg, TMP102_CONFIG_REG))
+		return EXIT_FAILURE;
+	
+	/* clear previous queue count value */
+	reg &= ~TMP102_CONFIG_REG_MASK_SHUTDOWN;
+
+	/* set new value in tmp */
+	tmp = (((uint16_t)state << TMP102_CONFIG_REG_OFFSET_SHUTDOWN) 
+	& TMP102_CONFIG_REG_MASK_SHUTDOWN);
+
+	/* write new register value */
+	reg |= tmp;
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_CONFIG_REG, reg, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
+	
 	return EXIT_SUCCESS;
 }
 
@@ -249,98 +367,33 @@ int8_t tmp102_getConvRate(uint8_t file, Tmp102_ConvRate_e *pConvRt)
 	return EXIT_SUCCESS;
 }
 
-int8_t tmp102_setLowThreshold(uint8_t file, float low)
+int8_t tmp102_setConvRate(uint8_t file, Tmp102_ConvRate_e convrate)
 {
-	uint32_t low_bits;
-	Tmp102_AddrMode_e addressMode;
-	uint8_t shiftValue;
+	uint16_t tmp = 0, reg;
+
+	/* first get current config register value */
+	if(EXIT_FAILURE == tmp102_getReg(file, &reg, TMP102_CONFIG_REG))
+		return EXIT_FAILURE;
 	
-	/* get extended mode */
-	if(EXIT_FAILURE == tmp102_getExtendedMode(file, &addressMode))
+	/* clear previous queue count value */
+	reg &= ~TMP102_CONFIG_REG_MASK_CONVRATE;
+
+	/* set new value in tmp */
+	tmp = (((uint16_t)convrate << TMP102_CONFIG_REG_OFFSET_CONVRATE) 
+	& TMP102_CONFIG_REG_MASK_CONVRATE);
+
+	/* write new register value */
+	reg |= tmp;
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_CONFIG_REG, reg, TMP102_REG_SIZE, TMP102_ENDIANNESS))
 		return EXIT_FAILURE;
-
-	/* if extended address mode shift one less bit */
-	shiftValue = TMP102_TLOW_START_BIT;
-	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
-		--shiftValue;
-
-	/* convert float to integer */
-	low_bits = TMP102_TEMPC_TO_BITS(low, shiftValue);
-
-	/* set register value */
-	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_TLOW_REG, low_bits, TMP102_REG_SIZE, TMP102_ENDIANNESS))
-		return EXIT_FAILURE;
-
-	return EXIT_SUCCESS;
-}
-
-int8_t tmp102_setHighThreshold(uint8_t file, float high)
-{
-	uint32_t high_bits;
-	Tmp102_AddrMode_e addressMode;
-	uint8_t shiftValue;
 	
-	/* get extended mode */
-	if(EXIT_FAILURE == tmp102_getExtendedMode(file, &addressMode))
-		return EXIT_FAILURE;
-
-	/* if extended address mode shift one less bit */
-	shiftValue = TMP102_THIGH_START_BIT;
-	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
-		--shiftValue;
-
-	/* convert float to integer */
-	high_bits = TMP102_TEMPC_TO_BITS(high, shiftValue);
-
-	/* set register value */
-	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_THIGH_REG, high_bits, TMP102_REG_SIZE, TMP102_ENDIANNESS))
-		return EXIT_FAILURE;
-
 	return EXIT_SUCCESS;
 }
 
-int8_t tmp102_setTempResolution(uint8_t file, uint8_t res)
-{
-	return EXIT_SUCCESS;
-}
-
-int8_t tmp102_setExtendedMode(uint8_t file, Tmp102_AddrMode_e mode)
-{
-	return EXIT_SUCCESS;
-}
-
-int8_t tmp102_setShutdownState(uint8_t file, Tmp102_Shutdown_e state)
-{
-	return EXIT_SUCCESS;
-}
-
-int8_t tmp102_setConvRate(uint8_t file, uint8_t *pConvRt)
-{
-	return EXIT_SUCCESS;
-}
-
-
-/** private functions ******************************************************************/
-
-int8_t tmp102_getReg(uint8_t file, uint16_t *pConfig, uint8_t REG)
+int8_t tmp102_getPolarity(uint8_t file, uint8_t *pPol)
 {
 	/* validate inputs */
-	if(pConfig == NULL)
-		return EXIT_FAILURE;
-
-	/* get register value */
-	uint32_t tmp;
-	if(EXIT_FAILURE == getIicRegister(file, TMP102_ADDR, REG, &tmp, TMP102_REG_SIZE, TMP102_ENDIANNESS))
-		return EXIT_FAILURE;
-
-	*pConfig = (uint16_t)(0xFFFF & tmp);
-	return EXIT_SUCCESS;
-}
-
-int8_t tmp102_getPolarity(uint8_t file, uint8_t *pBit)
-{
-	/* validate inputs */
-	if(pBit == NULL)
+	if(pPol == NULL)
 		return EXIT_FAILURE;
 
 	/* get register value */
@@ -349,8 +402,57 @@ int8_t tmp102_getPolarity(uint8_t file, uint8_t *pBit)
 		return EXIT_FAILURE;
 	
 	/* get data */
-	*pBit = (uint8_t)((tmp & TMP102_CONFIG_REG_MASK_POL) 
+	*pPol = (uint8_t)((tmp & TMP102_CONFIG_REG_MASK_POL) 
 	>> TMP102_CONFIG_REG_OFFSET_POL);
 
+	return EXIT_SUCCESS;
+}
+
+int8_t tmp102_setPolarity(uint8_t file, uint8_t pol)
+{
+	uint16_t tmp = 0, reg;
+
+	/* first get current config register value */
+	if(EXIT_FAILURE == tmp102_getReg(file, &reg, TMP102_CONFIG_REG))
+		return EXIT_FAILURE;
+	
+	/* clear previous queue count value */
+	reg &= ~TMP102_CONFIG_REG_MASK_POL;
+
+	/* set new value in tmp */
+	tmp = (((uint16_t)pol << TMP102_CONFIG_REG_OFFSET_POL) 
+	& TMP102_CONFIG_REG_MASK_POL);
+
+	/* write new register value */
+	reg |= tmp;
+	if(EXIT_FAILURE == setIicRegister(file, TMP102_ADDR, TMP102_CONFIG_REG, reg, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
+	
+	return EXIT_SUCCESS;
+}
+
+/** private functions ******************************************************************/
+
+/**
+ * @brief reads register from userspace driver and converts
+ * to 16-bit register
+ * 
+ * @param file handle of i2c bus
+ * @param pReg pointer to results variable 
+ * @param REG address of register
+ * @return int8_t status, EXIT_SUCCESS if succeeds
+ */
+int8_t tmp102_getReg(uint8_t file, uint16_t *pReg, uint8_t REG)
+{
+	/* validate inputs */
+	if(pReg == NULL)
+		return EXIT_FAILURE;
+
+	/* get register value */
+	uint32_t tmp;
+	if(EXIT_FAILURE == getIicRegister(file, TMP102_ADDR, REG, &tmp, TMP102_REG_SIZE, TMP102_ENDIANNESS))
+		return EXIT_FAILURE;
+
+	*pReg = (uint16_t)(0xFFFF & tmp);
 	return EXIT_SUCCESS;
 }
