@@ -66,13 +66,7 @@
 int8_t tmp102_getReg(uint8_t file, uint16_t *pReg, uint8_t REG);
 int8_t tmp102_getPolarity(uint8_t file, uint8_t *pBit);
 
-/**
- * @brief get temperature from sensor in celcius.
- * 
- * @param file handle for i2c bus
- * @param pTemp pointer to temperature variable / return value
- * @return int8_t status, EXIT_SUCCESS or EXIT_FAILURE
- */
+
 int8_t tmp102_getTempC(uint8_t file, float *pTemp)
 {
 	/* validate inputs */
@@ -94,13 +88,6 @@ int8_t tmp102_getTempC(uint8_t file, float *pTemp)
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief get low temperature threshold value in celcius.
- * 
- * @param file handle to i2c bus
- * @param pLow pointer to store threshold value
- * @return int8_t status, EXIT_SUCCESS if succeeeds
- */
 int8_t tmp102_getLowThreshold(uint8_t file, float *pLow)
 {
 	uint8_t shiftValue;
@@ -129,13 +116,6 @@ int8_t tmp102_getLowThreshold(uint8_t file, float *pLow)
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief get high temperature threshold value in celcius.
- * 
- * @param file handle to i2c bus
- * @param pLow pointer to store threshold value
- * @return int8_t status, EXIT_SUCCESS if succeeeds
- */
 int8_t tmp102_getHighThreshold(uint8_t file, float *pHigh)
 {
 	uint8_t shiftValue;
@@ -182,13 +162,6 @@ int8_t tmp102_getFaultQueueSize(uint8_t file, Tmp102_FaultCount_e *pFaults)
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief get address mode, normal (12-bits) or extended (13-bits)
- * 
- * @param file handle to i2c bus
- * @param pEM pointer to variable to store mode
- * @return int8_t status, returns EXIT_SUCCESS if succeeds
- */
 int8_t tmp102_getExtendedMode(uint8_t file, Tmp102_AddrMode_e *pMode)
 {
 	/* validate inputs */
@@ -207,13 +180,6 @@ int8_t tmp102_getExtendedMode(uint8_t file, Tmp102_AddrMode_e *pMode)
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief determine if sensor is in shutdown mode
- * 
- * @param file handle to i2c bus
- * @param pState pointer to state variable, to store results
- * @return int8_t status, EXIT_SUCCESS if succeeds
- */
 int8_t tmp102_getShutdownState(uint8_t file, Tmp102_Shutdown_e *pState)
 {
 	/* validate inputs */
@@ -283,13 +249,6 @@ int8_t tmp102_getConvRate(uint8_t file, Tmp102_ConvRate_e *pConvRt)
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief change the low temperature threshold sensor value
- * 
- * @param file handle to i2c bus
- * @param high new threshold value to write
- * @return int8_t return status, EXIT_SUCCESS if succeeds
- */
 int8_t tmp102_setLowThreshold(uint8_t file, float low)
 {
 	uint32_t low_bits;
@@ -315,13 +274,6 @@ int8_t tmp102_setLowThreshold(uint8_t file, float low)
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief change the high temperature threshold sensor value
- * 
- * @param file handle to i2c bus
- * @param high new threshold value to write
- * @return int8_t return status, EXIT_SUCCESS if succeeds
- */
 int8_t tmp102_setHighThreshold(uint8_t file, float high)
 {
 	uint32_t high_bits;

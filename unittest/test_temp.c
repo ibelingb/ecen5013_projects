@@ -28,17 +28,23 @@ int fd;
 uint8_t testCount = 0;
 
 /* test cases */
-int8_t readTempConv(void);
+int8_t test_TempConv(void);
 int8_t rwr_LowThreshold(void);
 int8_t rwr_HighThreshold(void);
+int8_t rwr_FaultQueueSize(void);
+int8_t test_ExtendedAddrMode(void);
+int8_t test_Shutdown(void);
+int8_t rwr_ConversionRate(void);
+int8_t test_Alert(void);
 
 int main(void)
 {
+	printf("test cases for TMP02 temp sensor library\n");
+	
+	/* keep track of failures */
 	uint8_t testFails = 0;
 
-	printf("test cases for TMP02 temp sensor library\n");
-
-	/* init bus */
+	/* init handle for i2c bus */
 	fd = initIic("/dev/i2c-2");
 	if(fd < 0)
 		printf("i2c init failed\n");
@@ -48,13 +54,24 @@ int main(void)
 	testFails += rwr_LowThreshold();
 	testFails += rwr_HighThreshold();
 	testFails += readTempConv();
+	testFails += rwr_FaultQueueSize();
+	testFails += test_ExtendedAddrMode();
+	testFails += test_Shutdown();
+	testFails += rwr_ConversionRate();
+	testFails += test_Alert();
 
 	printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);
 
 	return EXIT_SUCCESS;
 }
 
-int8_t readTempConv(void)
+/**
+ * @brief read temp and verify conversions to/from C/F/K 
+ * use all temp conversions
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t test_TempConv(void)
 {
 	uint8_t ind;
 	float temp, start;
@@ -82,6 +99,11 @@ int8_t readTempConv(void)
 	return EXIT_SUCCESS;
 }
 
+/**
+ * @brief read, write and verify write to low temp threshold register
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
 int8_t rwr_LowThreshold(void)
 {
 	float Tlow, start, CHANGE = 5.0f;
@@ -110,6 +132,11 @@ int8_t rwr_LowThreshold(void)
 	return EXIT_SUCCESS;
 }
 
+/**
+ * @brief read, write and verify write to high temp threshold register
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
 int8_t rwr_HighThreshold(void)
 {
 	float Thigh, start, CHANGE = 5.0f;
@@ -135,5 +162,64 @@ int8_t rwr_HighThreshold(void)
 		ERROR_PRINT("rwr_HighThreshold read doesn't match written\n");
 		return EXIT_FAILURE;
 	}
+	return EXIT_SUCCESS;
+}
+
+/**
+ * @brief read, write and verify write to fault queue register
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t rwr_FaultQueueSize(void)
+{
+	testCount++;
+	return EXIT_SUCCESS;
+}
+
+/**
+ * @brief set extended addressMode and verify temp reading is 
+ * still correct, try to get temp above 128 DegC?
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t test_ExtendedAddrMode(void)
+{
+	testCount++;
+	return EXIT_SUCCESS;
+}
+
+/**
+ * @brief put sensor in shutdown mode, verify temp conversion
+ * is disabled; verify conversion returns to normal when 
+ * commanded out of shutdown mode.
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t test_Shutdown(void)
+{
+	testCount++;
+	return EXIT_SUCCESS;
+}
+
+/**
+ * @brief change the conversion rate; verify by sampling at
+ * high rate and inspect samples to see if they change when expected
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t rwr_ConversionRate(void)
+{
+	testCount++;
+	return EXIT_SUCCESS;
+}
+
+/**
+ * @brief set threshold values to reachable range and verify alert
+ * pin sets and clears when entering / exiting inadmissible range
+ * 
+ * @return int8_t test pass / fail (EXIT_FAILURE)
+ */
+int8_t test_Alert(void)
+{
+	testCount++;
 	return EXIT_SUCCESS;
 }
