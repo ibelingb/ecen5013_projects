@@ -19,20 +19,18 @@
 
 #include <stdint.h>
 
-int8_t tmp102_getTemp(uint8_t file, float *pTemp);
-int8_t tmp102_getLowThreshold(uint8_t file, uint16_t *pLow);
-int8_t tmp102_getHighThreshold(uint8_t file, uint16_t *pHigh);
+int8_t tmp102_getTempC(uint8_t file, float *pTemp);
+int8_t tmp102_getLowThreshold(uint8_t file, float *pLow);
+int8_t tmp102_getHighThreshold(uint8_t file, float *pHigh);
+int8_t tmp102_setLowThreshold(uint8_t file, float low);
+int8_t tmp102_setHighThreshold(uint8_t file, float high);
 
-int8_t tmp102_getConfiguration(uint8_t file, uint16_t *pConfig);
 int8_t tmp102_getTempResolution(uint8_t file, uint8_t *res);
 int8_t tmp102_getFault(uint8_t file, uint8_t *pFaults);
 int8_t tmp102_getExtendedMode(uint8_t file, uint8_t *pEM);
 int8_t tmp102_getShutdownMode(uint8_t file, uint8_t *bit);
 int8_t tmp102_getAlert(uint8_t file, uint8_t *pAlert);
 int8_t tmp102_getConvRate(uint8_t file, uint8_t *pConvRt);
-
-int8_t tmp102_setLowThreshold(uint8_t file, uint16_t low);
-int8_t tmp102_setHighThreshold(uint8_t file, uint16_t high);
 
 int8_t tmp102_setConfiguration(uint8_t file, uint16_t config);
 int8_t tmp102_setTempResolution(uint8_t file, uint8_t res);
