@@ -82,7 +82,10 @@ int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t *pReg_va
 
 int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t reg_value, uint8_t regSize, uint8_t regEndianness)
 {
-    unsigned char outbuf[regSize];
+    if(regSize > sizeof(uint32_t))
+        return EXIT_FAILURE;
+    
+    unsigned char outbuf[regSize + 1];
     struct i2c_rdwr_ioctl_data packets;
     struct i2c_msg messages[1];
 
@@ -91,8 +94,27 @@ int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t reg_valu
     messages[0].len   = sizeof(outbuf);
     messages[0].buf   = outbuf;
 
-    outbuf[0] = reg;			/* register to write to */
-    outbuf[1] = reg_value;		/* write value */
+    /* register to write to */
+    outbuf[0] = reg;			
+
+    /* values to write */
+    uint32_t shifted;
+    uint8_t masked;
+    for(uint8_t ind = 0; ind < regSize; ++ind)
+    {
+        if(regEndianness)
+        {
+            shifted = reg_value >> (8 * ind);
+            masked  = (uint8_t)(0xFF & shifted);
+            outbuf[ind + 1] = masked;
+        }
+        else
+        {
+            shifted = reg_value >> (8 * ((regSize -1) - ind));
+            masked  = (uint8_t)(0xFF & shifted);
+            outbuf[ind + 1] = masked;
+        }
+    }
 
     /* Transfer the i2c packets to the kernel and verify it worked */
     packets.msgs  = messages;
@@ -102,7 +124,6 @@ int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t reg_valu
 		printf("setIicRegister - IIC write failed, errno (%d): %s\n\r", errno, strerror(errno));
 		return EXIT_FAILURE;
     }
-
     return EXIT_SUCCESS;
 }
 
