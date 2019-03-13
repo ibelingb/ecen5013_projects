@@ -25,6 +25,7 @@
 #include <string.h>
 #include <mqueue.h>
 #include <signal.h>
+#include <pthread.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
 
@@ -34,7 +35,12 @@
 #include "loggingThread.h"
 #include "packet.h"
 
+#define NUM_THREADS (4)
+
 /* Define static and global variables */
+pthread_t gThreads[NUM_THREADS];
+pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
+
 
 int main(int argc, char *argv[]){
   char *taskStatusMsgQueueName = "/heartbeat_mq";
@@ -42,7 +48,6 @@ int main(int argc, char *argv[]){
   char *sensorSharedMemoryName = "/sensor_sm";
   TaskStatusPacket recvThreadStatus;
   SensorThreadInfo sensorThreadInfo;
-  RemoteThreadInfo remoteThreadInfo;
   LogThreadInfo logThreadInfo;
   LogMsgPacket logPacket;
   struct mq_attr mqAttr;
@@ -60,7 +65,6 @@ int main(int argc, char *argv[]){
   /* Initialize created structs and packets to be 0-filled */
   memset(&recvThreadStatus, 0, sizeof(struct TaskStatusPacket));
   memset(&sensorThreadInfo, 0, sizeof(struct SensorThreadInfo));
-  memset(&remoteThreadInfo, 0, sizeof(struct RemoteThreadInfo));
   memset(&logThreadInfo,    0, sizeof(struct LogThreadInfo));
   memset(&logPacket,        0, sizeof(struct LogMsgPacket));
   memset(&mqAttr,           0, sizeof(struct mq_attr));
@@ -117,35 +121,48 @@ int main(int argc, char *argv[]){
   strcpy(sensorThreadInfo.logMsgQueueName, logMsgQueueName);
   strcpy(sensorThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
   sensorThreadInfo.sharedMemSize = sharedMemSize;
-
-  // TODO: if remoteThreadInfo not needed, reuse sensorThreadInfo struct for remoteThread pthread_create()
-  strcpy(remoteThreadInfo.heartbeatMsgQueueName, taskStatusMsgQueueName);
-  strcpy(remoteThreadInfo.logMsgQueueName, logMsgQueueName);
-  strcpy(remoteThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
-  remoteThreadInfo.sharedMemSize = sharedMemSize;
+  sensorThreadInfo.sharedMemMutex = gSharedMemMutex;
 
   strcpy(logThreadInfo.heartbeatMsgQueueName, taskStatusMsgQueueName);
   strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
 
+  pthread_mutex_init(&gSharedMemMutex, NULL);
+
   /* Create threads */
-  //TODO
-
-  /* Join threads */
-  //TODO
-
-  /* Verify all threads have started successfully */
-  // TODO - Add checks for task->state
+  if(pthread_create(&gThreads[0], NULL, logThreadHandler, (void*)&logThreadInfo) != 0)
+  {
+    printf("ERROR: Failed to create Logging Thread - exiting main().\n");
+    return -1;
+  }
+  if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
+  {
+    printf("ERROR: Failed to create Remote Thread - exiting main().\n");
+    return -1;
+  }
+  if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
+  {
+    printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
+    return -1;
+  }
+  if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
+  {
+    printf("ERROR: Failed to create LightSensor Thread - exiting main().\n");
+    return -1;
+  }
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
   // Setup timer
 
+
+  // TODO: Since not joining threads, is there a cleanup method for the created pthreads? pthread_exit()?
   /* Cleanup */
   mq_unlink(taskStatusMsgQueueName);
   mq_unlink(logMsgQueueName);
   shm_unlink(sensorSharedMemoryName);
   mq_close(taskStatusMsgQueue);
   mq_close(logMsgQueue);
+  pthread_mutex_destroy(&gSharedMemMutex);
   close(sharedMemFd);
 }
 

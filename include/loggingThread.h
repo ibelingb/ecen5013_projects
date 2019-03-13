@@ -18,9 +18,9 @@
 #define LOGGING_THREAD_H_
 
 #include <stdint.h>
-#include "packet.h"
 
 /*---------------------------------------------------------------------------------*/
+void* logThreadHandler(void* threadInfo);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LOGGING_THREAD_H_ */

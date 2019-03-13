@@ -18,9 +18,9 @@
 #define REMOTE_THREAD_H_
 
 #include <stdint.h>
-#include "packet.h"
 
 /*---------------------------------------------------------------------------------*/
+void* remoteThreadHandler(void* threadInfo);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* REMOTE_THREAD_H_ */

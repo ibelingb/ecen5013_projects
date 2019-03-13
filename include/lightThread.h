@@ -21,9 +21,9 @@
 
 #include <stdint.h>
 #include "lightSensor.h"
-#include "packet.h"
 
 /*---------------------------------------------------------------------------------*/
+void* lightSensorThreadHandler(void* threadInfo);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */

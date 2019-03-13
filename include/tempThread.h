@@ -19,9 +19,9 @@
 
 #include <stdint.h>
 #include "tempSensor.h"
-#include "packet.h"
 
 /*---------------------------------------------------------------------------------*/
+void* tempSensorThreadHandler(void* threadInfo);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* TEMP_THREAD_H_ */

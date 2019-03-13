@@ -4,6 +4,7 @@
 #define PACKET_H_
 
 #include <stdint.h>
+#include <pthread.h>
 
 #define MSG_QUEUE_MSG_SIZE   (8192) // bytes
 #define MSG_QUEUE_DEPTH      (20) // total messages
@@ -129,16 +130,8 @@ typedef struct SensorThreadInfo
   char logMsgQueueName[IPC_NAME_SIZE];
   char sensorSharedMemoryName[IPC_NAME_SIZE];
   int sharedMemSize;
+  pthread_mutex_t sharedMemMutex;
 } SensorThreadInfo;
-
-// NOTE: same as SensorThreadInfo, might not need the below struct
-typedef struct RemoteThreadInfo
-{
-  char heartbeatMsgQueueName[IPC_NAME_SIZE];
-  char logMsgQueueName[IPC_NAME_SIZE];
-  char sensorSharedMemoryName[IPC_NAME_SIZE];
-  int sharedMemSize;
-} RemoteThreadInfo;
 
 typedef struct LogThreadInfo
 {
