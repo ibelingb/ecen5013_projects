@@ -152,7 +152,12 @@ int main(int argc, char *argv[]){
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
-  // Setup timer
+  // TODO: Setup timer
+  while(1){
+    // TODO
+
+    sleep(10);
+  }
 
 
   // TODO: Since not joining threads, is there a cleanup method for the created pthreads? pthread_exit()?

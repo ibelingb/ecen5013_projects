@@ -46,7 +46,7 @@ DEPS = $(OBJS:.o=.d)
 
 .PHONY: clean
 clean: 
-	@$(RM) -rf $(GARBAGE_TYPED_FOLDERS)
+	@$(RM) -rf $(GARBAGE_TYPED_FOLDERS) $(TARGET)
 	@ echo "Clean complete"
 
 $(OBJS): %.o : %.c %.d

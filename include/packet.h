@@ -12,7 +12,8 @@
 #define IPC_NAME_SIZE        (30)
 
 /* Identifies start of a packet */
-uint8_t header[2] = {0xAB, 0xCD};
+#define HEADER_BYTE1 (0xAB)
+#define HEADER_BYTE2 (0xCD)
 
 /* ------------------------------------------------------------- */
 /*** ENUM DEFINITIONS ***/
@@ -123,7 +124,6 @@ typedef struct LightDataStruct
 /*** THREAD INFO STRUCT DEFINITIONS ***/
 /* Struct defining the set of arguments passed to each thread when it's created */
 
-// TODO - determine if single SensorThreadInfo struct can be used across all threads
 typedef struct SensorThreadInfo
 {
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
