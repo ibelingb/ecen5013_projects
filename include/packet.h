@@ -129,8 +129,11 @@ typedef struct SensorThreadInfo
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
   char sensorSharedMemoryName[IPC_NAME_SIZE];
+  pthread_mutex_t* sharedMemMutex;
+  pthread_mutex_t* i2cBusMutex;
   int sharedMemSize;
-  pthread_mutex_t sharedMemMutex;
+  int tempDataOffset;  /* Offset into SharedMemory for TempDataStruct (in bytes) */
+  int lightDataOffset; /* Offset into SharedMemory for LightDataStruct (in bytes) */
 } SensorThreadInfo;
 
 typedef struct LogThreadInfo

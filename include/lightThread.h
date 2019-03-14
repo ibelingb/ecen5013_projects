@@ -21,9 +21,14 @@
 
 #include <stdint.h>
 #include "lightSensor.h"
+#include "packet.h"
+
+#define APDS9301_ID (0x00) // TODO - update
 
 /*---------------------------------------------------------------------------------*/
 void* lightSensorThreadHandler(void* threadInfo);
+
+void getLightSensorData(LightDataStruct *lightSensorData);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */

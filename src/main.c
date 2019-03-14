@@ -40,7 +40,7 @@
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
 pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
-
+pthread_mutex_t gI2cBusMutex; 
 
 int main(int argc, char *argv[]){
   char *taskStatusMsgQueueName = "/heartbeat_mq";
@@ -121,12 +121,15 @@ int main(int argc, char *argv[]){
   strcpy(sensorThreadInfo.logMsgQueueName, logMsgQueueName);
   strcpy(sensorThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
   sensorThreadInfo.sharedMemSize = sharedMemSize;
-  sensorThreadInfo.sharedMemMutex = gSharedMemMutex;
+  sensorThreadInfo.lightDataOffset = sizeof(TempDataStruct);
+  sensorThreadInfo.sharedMemMutex = &gSharedMemMutex;
+  sensorThreadInfo.i2cBusMutex = &gI2cBusMutex;
 
   strcpy(logThreadInfo.heartbeatMsgQueueName, taskStatusMsgQueueName);
   strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
 
   pthread_mutex_init(&gSharedMemMutex, NULL);
+  pthread_mutex_init(&gI2cBusMutex, NULL);
 
   /* Create threads */
   if(pthread_create(&gThreads[0], NULL, logThreadHandler, (void*)&logThreadInfo) != 0)
@@ -168,6 +171,7 @@ int main(int argc, char *argv[]){
   mq_close(taskStatusMsgQueue);
   mq_close(logMsgQueue);
   pthread_mutex_destroy(&gSharedMemMutex);
+  pthread_mutex_destroy(&gI2cBusMutex);
   close(sharedMemFd);
 }
 

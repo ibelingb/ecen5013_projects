@@ -26,10 +26,10 @@
 /* Enum used to specify which Interrupt Threshold byte is being set/get */
 typedef enum
 {
-  LOWBYTE_LOWTHRES = 0,
-  HIGHBYTE_LOWTHRES,
-  LOWBYTE_HIGHTHRES,
-  HIGHBYTE_HIGHTHRES
+  LOWTHRES_LOWBYTE = 0,
+  LOWTHRES_HIGHBYTE,
+  HIGHTHRES_LOWBYTE,
+  HIGHTHRES_HIGHBYTE
 } IntThresholdByte_e;
 
 /*---------------------------------------------------------------------------------*/
@@ -41,7 +41,7 @@ typedef enum
  *
  * @return 
  */
-int8_t apds9301_getLuxData0(uint8_t file, uint8_t luxData0);
+int8_t apds9301_getLuxData0(uint8_t file, uint8_t *luxData0);
 
 /**
  * @brief TODO
@@ -51,7 +51,7 @@ int8_t apds9301_getLuxData0(uint8_t file, uint8_t luxData0);
  *
  * @return 
  */
-int8_t apds9301_getLuxData1(uint8_t file, uint8_t luxData1);
+int8_t apds9301_getLuxData1(uint8_t file, uint8_t *luxData1);
 
 /**
  * @brief TODO
@@ -61,7 +61,7 @@ int8_t apds9301_getLuxData1(uint8_t file, uint8_t luxData1);
  *
  * @return 
  */
-int8_t apds9301_getConfig(uint8_t file, uint8_t *config);
+int8_t apds9301_getControl(uint8_t file, uint8_t *control);
 
 /**
  * @brief TODO
