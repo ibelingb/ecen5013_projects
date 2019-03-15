@@ -11,6 +11,8 @@
  * @file test_temp.c
  * @brief test cases for temperature library / sensor
  *
+ * TODO:
+ * 1. verify can handle neg numbers
  ************************************************************************************
  */
 
@@ -38,7 +40,6 @@ int8_t test_Shutdown(void);
 int8_t test_ConversionRate(void);
 int8_t test_AlertPolarity(void);
 int8_t test_TempConv(void);
-//int8_t test_initialize(void);
 
 int main(void)
 {
@@ -392,50 +393,6 @@ int8_t test_AlertPolarity(void)
 		ERROR_PRINT("test_AlertPolarity polarity read doesn't match written\n");
 		return EXIT_FAILURE;
 	}
-
-	/* verify alert compensates for polarity flip */
-	if(newAlert != startAlert)
-	{ 
-		ERROR_PRINT("test_AlertPolarity alert read doesn't match written\n");
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
-/**
- * @brief set threshold values to reachable range and verify alert
- * pin sets and clears when entering / exiting inadmissible range
- * 
- * @return int8_t test pass / fail (EXIT_FAILURE)
- */
-int8_t test_Alert(void)
-{
-	Tmp102_Alert_e startAlert, newAlert;
-
-	testCount++;
-	INFO_PRINT("start of test_Alert, test #%d\n",testCount);
-
-	/* get 10 temp samples of nominal conditions */
-
-	/* ask user to apply heat and find average */
-
-	/* set high and low threshold values */
-
-	/* get alert value */
-
-	/* tell user to apply heat */
-
-	/* wait for alert pin to set */
-
-	/*read start alert value */
-	if(EXIT_FAILURE == tmp102_getAlert(fd, &startAlert))
-	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
-	else { INFO_PRINT("got startAlert value: %d\n", startAlert); }
-
-	/*read start alert value */
-	if(EXIT_FAILURE == tmp102_getAlert(fd, &newAlert))
-	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
-	else { INFO_PRINT("got newAlert value: %d\n", newAlert); }
 
 	/* verify alert compensates for polarity flip */
 	if(newAlert != startAlert)
