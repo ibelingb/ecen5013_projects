@@ -19,18 +19,19 @@
 
 /* Prototypes for private/helper functions */
 static void txHeartbeatMsg();
-static void remoteTimerHandler();
+static void setCmdResponse(RemoteCmd_e cmd, char* response);
 
 /* Define static and global variables */
 static SensorThreadInfo sensorInfo;
 static bool threadAlive;
+static LightDataStruct lightData; /* Used to read data from Shared Memory */
+static TempDataStruct tempData;  /* Used to read data from Shared Memory */
 
 /*---------------------------------------------------------------------------------*/
 void* remoteThreadHandler(void* threadInfo)
 {
   sensorInfo = *(SensorThreadInfo *)threadInfo;
-  struct LightDataStruct lightData = {0}; /* Used to read data from Shared Memory */
-  struct TempDataStruct tempData = {0};  /* Used to read data from Shared Memory */
+  RemoteCmdPacket cmdPacket = {0};
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
   struct mq_attr mqAttr;
@@ -106,18 +107,23 @@ void* remoteThreadHandler(void* threadInfo)
   // TODO - send msg to log
 
   while(threadAlive) {
-    /* block for incoming commands from remote client(s) */
+    /* Check for incoming commands from remote client(s) (non-blocking) */
     // TODO
 
-    /* Based on cmd received, read from Shared Memory and pass data based on client socket */
-    //sharedMem
+    /* Verify received cmd and packet are valid */
+    // TODO
+
+    /* Read from Shared Memory and pass requested data back to client */
     pthread_mutex_lock(sensorInfo.sharedMemMutex);
     memcpy(&tempData, (sharedMemPtr+sensorInfo.tempDataOffset), sizeof(struct TempDataStruct));
     memcpy(&lightData, (sharedMemPtr+sensorInfo.lightDataOffset), sizeof(struct LightDataStruct));
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
+    setCmdResponse(cmdPacket.cmd, cmdPacket.payload);
+
     sleep(5);
-    
+
+    // TODO Move to timer
     txHeartbeatMsg();
   }
 
@@ -134,17 +140,49 @@ void* remoteThreadHandler(void* threadInfo)
 
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
-static void remoteTimerHandler(){
-  // TODO
-
-  return;
-}
-
-
 static void txHeartbeatMsg(){
   // TODO
 
   return;
 }
 
+static void setCmdResponse(RemoteCmd_e cmd, char* response){
+  /* Based on received command, populate response to provide back to client */
+  switch(cmd) {
+    case TEMPCMD_GETTEMP :
+      break;
+    case TEMPCMD_GETTHRES :
+      break;
+    case TEMPCMD_GETCONFIG :
+      break;
+    case TEMPCMD_GETRESOLUTION :
+      break;
+    case TEMPCMD_GETFAULT :
+      break;
+    case TEMPCMD_GETEXTMODE :
+      break;
+    case TEMPCMD_GETSHUTDOWNMODE :
+      break;
+    case TEMPCMD_GETALERT :
+      break;
+    case TEMPCMD_GETCONVRATE :
+      break;
+    case LIGHTCMD_GETLUX :
+      break;
+    case LIGHTCMD_GETDEVID :
+      break;
+    case LIGHTCMD_GETCTRL :
+      break;
+    case LIGHTCMD_GETTIMING :
+      break;
+    case LIGHTCMD_GETLOWTHRES :
+      break;
+    case LIGHTCMD_GETHIGHTHRES :
+      break;
+    default:
+      break;
+  }
+
+  return;
+}
 /*---------------------------------------------------------------------------------*/

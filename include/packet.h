@@ -5,15 +5,15 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include "tempSensor.h"
 
-#define MSG_QUEUE_MSG_SIZE   (8192) // bytes
-#define MSG_QUEUE_DEPTH      (20) // total messages
-#define LOG_MSG_PAYLOAD_SIZE (128) // bytes
-#define IPC_NAME_SIZE        (30)
+#define MSG_QUEUE_MSG_SIZE      (8192) // bytes
+#define MSG_QUEUE_DEPTH         (20) // total messages
+#define LOG_MSG_PAYLOAD_SIZE    (128) // bytes
+#define IPC_NAME_SIZE           (30)
 
 /* Identifies start of a packet */
-#define HEADER_BYTE1 (0xAB)
-#define HEADER_BYTE2 (0xCD)
+#define PKT_HEADER (0xABCD)
 
 /* ------------------------------------------------------------- */
 /*** ENUM DEFINITIONS ***/
@@ -68,32 +68,11 @@ typedef enum LogLevel_e
   LOGLVL_ERROR
 } LogLevel_e;
 
-typedef enum RemoteCmd_e
-{
-  TEMPCMD_GETALL = 0,
-  TEMPCMD_GETTEMP,
-  TEMPCMD_GETTHRES,
-  TEMPCMD_GETCONFIG,
-  TEMPCMD_GETRESOLUTION,
-  TEMPCMD_GETFAULT,
-  TEMPCMD_GETEXTMODE,
-  TEMPCMD_GETSHUTDOWNMODE,
-  TEMPCMD_GETALERT,
-  TEMPCMD_GETCONVRATE,
-  LIGHTCMD_GETALL = 50,
-  LIGHTCMD_GETLUX,
-  LIGHTCMD_GETDEVID,
-  LIGHTCMD_GETCTRL,
-  LIGHTCMD_GETTIMING,
-  LIGHTCMD_GETLOWTHRES,
-  LIGHTCMD_GETHIGHTHRES
-} RemoteCmd_e;
-
 /* ------------------------------------------------------------- */
 /*** PACKET/STRUCT DEFINITIONS ***/
 typedef struct TaskStatusPacket
 {
-  uint8_t header[2];
+  uint16_t header;
   uint32_t timestamp;
   ProcessId_e processId;
   TaskState_e taskState;
@@ -107,22 +86,22 @@ typedef struct LogMsgPacket
   LogLevel_e logLevel;
   ProcessId_e processId;
   LogMsg_e logMsgType;
-  uint8_t payload[LOG_MSG_PAYLOAD_SIZE];
+  char payload[LOG_MSG_PAYLOAD_SIZE];
 } LogMsgPacket;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
 typedef struct TempDataStruct
 {
-  uint8_t tmp102_temp;
-  uint8_t tmp102_lowThreshold;
-  uint8_t tmp102_highThreshold;
-  uint8_t tmp102_config;
-  uint8_t tmp102_tempResolution;
-  uint8_t tmp102_fault;
-  uint8_t tmp102_extendedMode;
-  uint8_t tmp102_shutdownMode;
-  uint8_t tmp102_alert;
-  uint8_t tmp102_convRate;
+  float tmp102_temp;
+  float tmp102_lowThreshold;
+  float tmp102_highThreshold;
+  float tmp102_config;
+  float tmp102_tempResolution;
+  Tmp102_FaultCount_e tmp102_fault;
+  Tmp102_AddrMode_e tmp102_extendedMode;
+  Tmp102_Shutdown_e tmp102_shutdownMode;
+  Tmp102_Alert_e tmp102_alert;
+  Tmp102_ConvRate_e tmp102_convRate;
   //TODO - add fields for converted values and 16-bit fields
 } TempDataStruct;
 
