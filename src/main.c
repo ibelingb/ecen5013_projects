@@ -34,6 +34,7 @@
 #include "remoteThread.h"
 #include "loggingThread.h"
 #include "packet.h"
+#include "bbgLeds.h"
 
 #define NUM_THREADS (4)
 
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]){
   if(logMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Logger - exiting.\n");
-    return -1; // TODO - update
+    return EXIT_FAILURE;
   }
 
   /* Create MessageQueue to receive thread status from all children */
@@ -93,7 +94,7 @@ int main(int argc, char *argv[]){
   if(taskStatusMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n");
-    return -1;
+    return EXIT_FAILURE;
   }
 
   /* Create Shared Memory for data sharing between SensorThreads and RemoteThread */
@@ -101,19 +102,19 @@ int main(int argc, char *argv[]){
   if(sharedMemFd == -1)
   {
     printf("ERROR: main() failed to create shared memory for sensor and remote threads - exiting.\n");
-    return -1;
+    return EXIT_FAILURE;
   }
   /* Configure size of SensorSharedMemory */
   if(ftruncate(sharedMemFd, sharedMemSize) == -1)
   {
     printf("ERROR: main() failed to configure size of shared memory - exiting.\n");
-    return -1;
+    return EXIT_FAILURE;
   }
   /* MemoryMap shared memory */
   if(*(int*)mmap(0, sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0) == -1)
   {
     printf("ERROR: main() failed to complete memory mapping for shared memory - exiting.\n");
-    return -1;
+    return EXIT_FAILURE;
   }
 
   /* Populate ThreadInfo objects to pass names for created IPC pieces to threads */
@@ -135,23 +136,27 @@ int main(int argc, char *argv[]){
   if(pthread_create(&gThreads[0], NULL, logThreadHandler, (void*)&logThreadInfo) != 0)
   {
     printf("ERROR: Failed to create Logging Thread - exiting main().\n");
-    return -1;
+    return EXIT_FAILURE;
   }
   if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
   {
     printf("ERROR: Failed to create Remote Thread - exiting main().\n");
-    return -1;
+    return EXIT_FAILURE;
   }
   if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
   {
     printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
-    return -1;
+    return EXIT_FAILURE;
   }
   if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
   {
     printf("ERROR: Failed to create LightSensor Thread - exiting main().\n");
-    return -1;
+    return EXIT_FAILURE;
   }
+
+  /* Log main thread started succesfully */
+  printf("The Main() thread has successfully started with all child threads created.\n");
+  // TODO - add msg to log
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */

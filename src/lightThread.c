@@ -6,15 +6,14 @@
 #include "lu_iic.h"
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h> // TODO: remove after sleep() replaced with timer
-#include <stdio.h>
 #include <mqueue.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
 
 /* Prototypes for private/helper functions */
-void getLightSensorData(LightDataStruct *lightSensorData);
 static void txHeartbeatMsg();
 static void lightTimerHandler();
 
@@ -73,7 +72,7 @@ void* lightSensorThreadHandler(void* threadInfo)
   i2cBusMutex = sensorInfo.i2cBusMutex;
 
   /* Log SensorThread successfully created */
-  printf("Successfully created Sensor Thread.\n");
+  printf("Successfully created lightSensorThread.\n");
   // TODO
 
   /* Setup timer to periodically sample from Light Sensor */
