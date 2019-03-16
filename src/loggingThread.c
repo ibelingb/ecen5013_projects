@@ -29,10 +29,16 @@
 #include "logger.h"
 #include "packet.h"
 
+// TODO - Remove? Defined in test_logger.c
+int gExitLog;
+
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo)
 {
     int logFd;  /* log file descriptor */
+
+    //TODO - Remove? Defined in test_logger.c
+    gExitLog = 1;
 
     /* timer variables */
     struct sigevent timer_sigevent;
