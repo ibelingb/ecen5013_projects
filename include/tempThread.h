@@ -20,6 +20,15 @@
 #include <stdint.h>
 #include "tempSensor.h"
 
+typedef enum {
+    TEMP_EVENT_STARTED = 0,
+    TEMP_EVENT_OVERTEMP,
+    TEMP_EVENT_OVERTEMP_RELEQUISHED,
+    TEMP_EVENT_ERROR,
+    TEMP_EVENT_EXITING,
+    TEMP_EVENT_END
+} TempEvent_e;
+
 /*---------------------------------------------------------------------------------*/
 void* tempSensorThreadHandler(void* threadInfo);
 

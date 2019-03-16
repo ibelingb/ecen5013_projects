@@ -83,7 +83,7 @@ uint8_t log_item(logItem_t *pLogItem)
 {
 	if(log_byte(FRAME_START_BYTE) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->logEventId) != LOG_STATUS_OK)
+	if(log_integer(pLogItem->logMsgId) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
 	if(log_string(pLogItem->pFilename) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;

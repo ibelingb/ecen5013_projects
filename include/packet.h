@@ -48,9 +48,33 @@ typedef enum Task_e
   TASK_TEMP,
 } Task_e;
 
+// TODO - move to header
+typedef enum {
+    REMOTE_EVENT_STARTED = 0,
+    REMOTE_EVENT_CNCT_ACCEPTED,
+    REMOTE_EVENT_CNCT_LOST,
+    REMOTE_EVENT_CMD_RECV,
+    REMOTE_EVENT_INVALID_RECV,
+    REMOTE_EVENT_ERROR,
+    REMOTE_EVENT_EXITING,
+    REMOTE_EVENT_END
+} RemoteEvent_e;
+
+
+// TODO - move to header
+typedef enum {
+    LIGHT_EVENT_STARTED = 0,
+    LIGHT_EVENT_DAY,
+    LIGHT_EVENT_NIGHT,
+    LIGHT_EVENT_ERROR,
+    LIGHT_EVENT_EXITING,
+    LIGHT_EVENT_END
+} LightEvent_e;
+
+// TODO - delete, defined in logger_types.h
 typedef enum LogMsg_e
 {
-  LOG_MSG_ERROR = 0,
+  LOG_MSG_SYS_ERROR = 0,
   LOG_MSG_MAIN_START,
   LOG_MSG_TEMP_START,
   LOG_MSG_LIGHT_START,

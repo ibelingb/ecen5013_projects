@@ -22,6 +22,16 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "HOST-BUILD-LOGGER",
+            "type": "shell",
+            "command": "make clean all TARGET=test_logger",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }

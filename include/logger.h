@@ -31,35 +31,38 @@
 
 #define LOG_FLUSH()
 #define LOG_INIT()					/* implemented */
-#define SYSTEM_ID()					/* implemented */
-#define SYSTEM_VERSION()			/* implemented */
-#define LOGGER_INITIALIZED()		/* implemented */
-#define GPIO_INITIALIZED()			/* implemented */
-#define SYSTEM_INITIALIZED()		/* implemented */
-#define SYSTEM_HALTED()				/* implemented */
-#define INFO(pStr)					/* implemented */
-#define WARNING(pStr)				/* implemented */
-#define ERROR(pStr)					/* implemented */
-#define PROFILING_STARTED()
-#define PROFILING_RESULT(pArray, statPayloadLength)
-#define PROFILING_COMPLETED()
-#define DATA_RECEIVED(value)		/* implemented */
-#define DATA_ANALYSIS_STARTED()		/* implemented */
-#define DATA_ALPHA_COUNT(count)		/* implemented */
-#define DATA_NUM_COUNT(count)		/* implemented */
-#define DATA_PUNC_COUNT(count)		/* implemented */
-#define DATA_MISC_COUNT(count)		/* implemented */
-#define DATA_ANALYSIS_COMPLETED()	/* implemented */
-#define HEARTBEAT()					/* implemented */
-#define CORE_DUMP()
+#define LOG_SYSTEM_ID()					/* implemented */
+#define LOG_SYSTEM_VERSION()			/* implemented */
+#define LOG_LOGGER_INITIALIZED()		/* implemented */
+#define LOG_GPIO_INITIALIZED()			/* implemented */
+#define LOG_SYSTEM_INITIALIZED()		/* implemented */
+#define LOG_SYSTEM_HALTED()				/* implemented */
+#define LOG_INFO(pStr)					/* implemented */
+#define LOG_WARNING(pStr)				/* implemented */
+#define LOG_ERROR(pStr)					/* implemented */
+#define LOG_PROFILING_STARTED()
+#define LOG_PROFILING_RESULT(pArray, statPayloadLength)
+#define LOG_PROFILING_COMPLETED()
+#define LOG_DATA_RECEIVED(value)		/* implemented */
+#define LOG_DATA_ANALYSIS_STARTED()		/* implemented */
+#define LOG_DATA_ALPHA_COUNT(count)		/* implemented */
+#define LOG_DATA_NUM_COUNT(count)		/* implemented */
+#define LOG_DATA_PUNC_COUNT(count)		/* implemented */
+#define LOG_DATA_MISC_COUNT(count)		/* implemented */
+#define LOG_DATA_ANALYSIS_COMPLETED()	/* implemented */
+#define LOG_HEARTBEAT()					/* implemented */
+#define LOG_CORE_DUMP()
 
 #else /* LOGging enabled */
 
 #ifdef __linux__
+#ifdef LOG_MSG_QUEUE
+#else
 #include "logger_block.h"
 #define LOG_ITEM(pLogItem)	(log_item(pLogItem))
 #define LOG_INIT()			(init_logger_block())
 #define LOG_FLUSH()			(log_flush())
+#endif
 #else
 #ifdef LOG_BLOCKING
 #include "logger_block.h"
@@ -75,12 +78,12 @@
 #endif
 
 #ifndef __linux__
-#define SYSTEM_ID()({\
+#define LOG_SYSTEM_ID()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
 	uint8_t numStr[32];\
 	uint16_t deviceId = (SIM->SDID & 0xFFFF0000u) >> 16;\
-	logItem.logEventId = LOG_EVENT_SYSTEM_ID;\
+	logItem.logMsgId = LOG_MSG_SYSTEM_ID;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -90,12 +93,12 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define SYSTEM_VERSION()({\
+#define LOG_SYSTEM_VERSION()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
 	uint8_t numStr[32];\
 	uint16_t versionId = (SIM->SDID & 0x0000FF00u) | (FW_VERSION & 0xFFu);\
-	logItem.logEventId = LOG_EVENT_SYSTEM_VERSION;\
+	logItem.logMsgId = LOG_MSG_SYSTEM_VERSION;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -105,14 +108,14 @@
 	LOG_ITEM(&logItem);\
 })
 #else
-#define SYSTEM_ID()
-#define SYSTEM_VERSION()
+#define LOG_SYSTEM_ID()
+#define LOG_SYSTEM_VERSION()
 #endif
 
-#define LOGGER_INITIALIZED()({\
+#define LOG_LOGGER_INITIALIZED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_LOGGER_INITIALIZED;\
+	logItem.logMsgId = LOG_MSG_LOGGER_INITIALIZED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -122,10 +125,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define GPIO_INITIALIZED()({\
+#define LOG_GPIO_INITIALIZED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_GPIO_INITIALIZED;\
+	logItem.logMsgId = LOG_MSG_GPIO_INITIALIZED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -135,10 +138,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define SYSTEM_INITIALIZED()({\
+#define LOG_SYSTEM_INITIALIZED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_SYSTEM_INITIALIZED;\
+	logItem.logMsgId = LOG_MSG_SYSTEM_INITIALIZED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -148,10 +151,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define SYSTEM_HALTED()({\
+#define LOG_SYSTEM_HALTED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_SYSTEM_HALTED;\
+	logItem.logMsgId = LOG_MSG_SYSTEM_HALTED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -161,10 +164,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define INFO(pStr)({\
+#define LOG_INFO(pStr)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_INFO;\
+	logItem.logMsgId = LOG_MSG_INFO;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -174,10 +177,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define WARNING(pStr)({\
+#define LOG_WARNING(pStr)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_WARNING;\
+	logItem.logMsgId = LOG_MSG_WARNING;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -187,10 +190,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define ERROR(pStr)({\
+#define LOG_ERROR(pStr)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_ERROR;\
+	logItem.logMsgId = LOG_MSG_ERROR;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -200,10 +203,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define PROFILING_STARTED()({\
+#define LOG_PROFILING_STARTED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_PROFILING_STARTED;\
+	logItem.logMsgId = LOG_MSG_PROFILING_STARTED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -213,10 +216,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define PROFILING_RESULT(pArray, statPayloadLength)({\
+#define LOG_PROFILING_RESULT(pArray, statPayloadLength)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_PROFILING_RESULT;\
+	logItem.logMsgId = LOG_MSG_PROFILING_RESULT;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -226,10 +229,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define PROFILING_COMPLETED()({\
+#define LOG_PROFILING_COMPLETED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_PROFILING_COMPLETED;\
+	logItem.logMsgId = LOG_MSG_PROFILING_COMPLETED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -239,13 +242,13 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define DATA_RECEIVED(value)({\
+#define LOG_DATA_RECEIVED(value)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
 	uint8_t numStr[2];\
 	numStr[0] = value;\
 	numStr[1] = '\0';\
-	logItem.logEventId = LOG_EVENT_DATA_RECEIVED;\
+	logItem.logMsgId = LOG_MSG_DATA_RECEIVED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -255,10 +258,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define DATA_ANALYSIS_STARTED()({\
+#define LOG_DATA_ANALYSIS_STARTED()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_DATA_ANALYSIS_STARTED;\
+	logItem.logMsgId = LOG_MSG_DATA_ANALYSIS_STARTED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -268,37 +271,11 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define DATA_ALPHA_COUNT(count)({\
+#define LOG_DATA_ALPHA_COUNT(count)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
 	uint8_t numStr[32];\
-	logItem.logEventId = LOG_EVENT_DATA_ALPHA_COUNT;\
-	logItem.pFilename = &fileStr[0];\
-	logItem.lineNum = __LINE__;\
-	logItem.time = log_get_time();\
-	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
-	logItem.pPayload = &numStr[0];\
-	log_set_checksum(&logItem);\
-	LOG_ITEM(&logItem);\
-})
-#define DATA_NUM_COUNT(count)({\
-	logItem_t logItem;\
-	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	uint8_t numStr[32];\
-	logItem.logEventId = LOG_EVENT_DATA_NUM_COUNT;\
-	logItem.pFilename = &fileStr[0];\
-	logItem.lineNum = __LINE__;\
-	logItem.time = log_get_time();\
-	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
-	logItem.pPayload = &numStr[0];\
-	log_set_checksum(&logItem);\
-	LOG_ITEM(&logItem);\
-})
-#define DATA_PUNC_COUNT(count)({\
-	logItem_t logItem;\
-	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	uint8_t numStr[32];\
-	logItem.logEventId = LOG_EVENT_DATA_PUNC_COUNT;\
+	logItem.logMsgId = LOG_MSG_DATA_ALPHA_COUNT;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -308,11 +285,11 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define DATA_MISC_COUNT(count)({\
+#define LOG_DATA_NUM_COUNT(count)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
 	uint8_t numStr[32];\
-	logItem.logEventId = LOG_EVENT_DATA_MISC_COUNT;\
+	logItem.logMsgId = LOG_MSG_DATA_NUM_COUNT;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -322,10 +299,38 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define DATA_ANALYSIS_COMPLETED()({\
+#define LOG_DATA_PUNC_COUNT(count)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_DATA_ANALYSIS_COMPLETED;\
+	uint8_t numStr[32];\
+	logItem.logMsgId = LOG_MSG_DATA_PUNC_COUNT;\
+	logItem.pFilename = &fileStr[0];\
+	logItem.lineNum = __LINE__;\
+	logItem.time = log_get_time();\
+	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
+	logItem.pPayload = &numStr[0];\
+	log_set_checksum(&logItem);\
+	LOG_ITEM(&logItem);\
+})
+
+#define LOG_DATA_MISC_COUNT(count)({\
+	logItem_t logItem;\
+	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
+	uint8_t numStr[32];\
+	logItem.logMsgId = LOG_MSG_DATA_MISC_COUNT;\
+	logItem.pFilename = &fileStr[0];\
+	logItem.lineNum = __LINE__;\
+	logItem.time = log_get_time();\
+	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
+	logItem.pPayload = &numStr[0];\
+	log_set_checksum(&logItem);\
+	LOG_ITEM(&logItem);\
+})
+
+#define LOG_DATA_ANALYSIS_COMPLETED()({\
+	logItem_t logItem;\
+	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
+	logItem.logMsgId = LOG_MSG_DATA_ANALYSIS_COMPLETED;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -335,10 +340,10 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define HEARTBEAT()({\
+#define LOG_HEARTBEAT()({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	logItem.logEventId = LOG_EVENT_HEARTBEAT;\
+	logItem.logMsgId = LOG_MSG_HEARTBEAT;\
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
@@ -349,5 +354,40 @@
 })
 
 #define CORE_DUMP()
+
+#define LOG_THREAD_STATUS(tid)({\
+	logItem_t logItem;\
+	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
+	uint8_t numStr[32];\
+	logItem.logMsgId = LOG_MSG_DATA_ALPHA_COUNT;\
+	logItem.pFilename = &fileStr[0];\
+	logItem.lineNum = __LINE__;\
+	logItem.time = log_get_time();\
+	logItem.payloadLength = my_itoa(tid, &numStr[0], HEX_BASE);\
+	logItem.pPayload = &numStr[0];\
+	log_set_checksum(&logItem);\
+	LOG_ITEM(&logItem);\
+})
+
+#define LOG_THREAD_EVENT(event_e, eventId)({\
+	logItem_t logItem;\
+	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
+	uint8_t numStr[32];\
+	logItem.logMsgId = eventId;\
+	logItem.pFilename = &fileStr[0];\
+	logItem.lineNum = __LINE__;\
+	logItem.time = log_get_time();\
+	logItem.payloadLength = my_itoa((uint8_t)event_e, &numStr[0], HEX_BASE);\
+	logItem.pPayload = &numStr[0];\
+	log_set_checksum(&logItem);\
+	LOG_ITEM(&logItem);\
+})
+
+#define LOG_TEMP_SENSOR_EVENT(event_e)		(LOG_THREAD_EVENT(event_e, LOG_MSG_TEMP_SENSOR_EVENT))
+#define LOG_LIGHT_SENSOR_EVENT(event_e)		(LOG_THREAD_EVENT(event_e, LOG_MSG_LIGHT_SENSOR_EVENT))
+#define LOG_REMOTE_HANDLING_EVENT(event_e)	(LOG_THREAD_EVENT(event_e, LOG_MSG_REMOTE_HANDLING_EVENT))
+#define LOG_LOG_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_REMOTE_HANDLING_EVENT))
+#define LOG_MAIN_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_MAIN_EVENT))
+
 #endif  /* DEBUG */
 #endif	/* LOGGER_H */

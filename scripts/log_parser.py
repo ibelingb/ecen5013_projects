@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+
+#*****************************************************************************
+# @author Joshua Malburg
+# joshua.malburg@colorado.edu
+# Advanced Embedded Software Development
+# ECEN5013-002 - Rick Heidebrecht
+# @date March 15, 2019
+#*****************************************************************************
+#
+# @file log_parser.py
+# @brief parse binary log file from projet #1; use python3
+#
+#*****************************************************************************
+
 from enum import IntEnum
 import struct
 
@@ -30,7 +45,7 @@ class parseState_e(IntEnum):
     PARSE_END = 10
 
 
-class logEvent_e(IntEnum):
+class logMsg_e(IntEnum):
     NONE = 0
     SYSTEM_ID = 1
     SYSTEM_VERSION = 2
@@ -53,7 +68,12 @@ class logEvent_e(IntEnum):
     DATA_ANALYSIS_COMPLETED = 19
     HEARTBEAT = 20
     CORE_DUMP = 21
-    END = 22
+    THREAD_STATUS = 22
+    LIGHT_SENSOR_EVENT = 23
+    TEMP_SENSOR_EVENT = 24
+    REMOTE_HANDLING_EVENT = 25
+    MAIN_EVENT = 26
+    END = 27
 
 
 class funcType_e(IntEnum):
@@ -75,7 +95,7 @@ class ProfileData:
 
 
 class LogItem:
-    eventId = logEvent_e.NONE
+    eventId = logMsg_e.NONE
     filename = "TBD"
     lineNum = 0
     time = 0
@@ -85,7 +105,7 @@ class LogItem:
 
 
 def clear_log_item(my_log_item):
-    my_log_item.eventId = logEvent_e.NONE
+    my_log_item.eventId = logMsg_e.NONE
     my_log_item.filename = "TBD"
     my_log_item.lineNum = 0
     my_log_item.time = 0
@@ -186,7 +206,7 @@ while parseState != parseState_e.PARSE_DONE:
         if myStr == '[]':
             parseState = parseState_e.PARSE_DONE
 
-        myLogItem.eventId = logEvent_e(int(myStr, 16))
+        myLogItem.eventId = logMsg_e(int(myStr, 16))
         parseState = parseState_e.PARSE_FILENAME
 
     elif parseState == parseState_e.PARSE_FILENAME:
@@ -248,7 +268,7 @@ while parseState != parseState_e.PARSE_DONE:
     elif parseState == parseState_e.PARSE_PAYLOAD:
 
         if myLogItem.payloadLength != 0:
-            if myLogItem.eventId == logEvent_e.PROFILING_RESULT:
+            if myLogItem.eventId == logMsg_e.PROFILING_RESULT:
                 myProfileData = ProfileData()
 
                 myProfileData.funcType = struct.unpack("=l",  log_file.read(4))

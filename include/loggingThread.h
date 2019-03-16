@@ -19,6 +19,15 @@
 
 #include <stdint.h>
 
+typedef enum {
+    LOG_EVENT_STARTED = 0,
+    LOG_EVENT_FILE_OPEN,
+    LOG_EVENT_WRITE_ERROR,
+    LOG_EVENT_OPEN_ERROR,
+    LOG_EVENT_EXITING,
+    LOG_EVENT_END
+} LogEvent_e;
+
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo);
 
