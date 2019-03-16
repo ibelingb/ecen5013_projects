@@ -47,6 +47,7 @@ int main(int argc, char *argv[]){
   char *taskStatusMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";
   char *sensorSharedMemoryName = "/sensor_sm";
+  char *logFile = "log.txt";
   TaskStatusPacket recvThreadStatus;
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
@@ -128,6 +129,7 @@ int main(int argc, char *argv[]){
 
   strcpy(logThreadInfo.heartbeatMsgQueueName, taskStatusMsgQueueName);
   strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
+  strcpy(logThreadInfo.logFileName, logFile);
 
   pthread_mutex_init(&gSharedMemMutex, NULL);
   pthread_mutex_init(&gI2cBusMutex, NULL);

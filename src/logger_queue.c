@@ -18,6 +18,7 @@
 #include <mqueue.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>	// for write, open, etc
 #include <time.h>	// for timespec
 
 #include "debug.h"
@@ -27,15 +28,13 @@
 #include "conversion.h"
 
 /* globals */
-mqd_t logQueue;
-logItem_t sentItem;
-logItem_t recvItem;
+static mqd_t logQueue = -1;
 
 /* private functions */
-uint8_t log_data(uint8_t *pData, uint32_t len);
-uint8_t log_string(uint8_t *pStr);
-uint8_t log_integer(int32_t num);
-uint8_t log_byte(uint8_t value);
+uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd);
+uint8_t log_string(uint8_t *pStr, int fileFd);
+uint8_t log_integer(int32_t num, int fileFd);
+uint8_t log_byte(uint8_t value, int fileFd);
 
 uint8_t init_queue_logger(void *pArg)
 {
@@ -54,6 +53,11 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 {
 	LogMsgPacket newItem;
 
+	if(logQueue < 0)
+	{
+        ERROR_PRINT("log msg queue not initialized\n");
+        return LOG_STATUS_NOTOK;
+    }
 	newItem.logMsgId = pLogItem->logMsgId;
 	newItem.lineNum = pLogItem->lineNum;
 	newItem.timestamp = pLogItem->time;
@@ -80,6 +84,11 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 
 void log_queue_flush(void)
 {
+	if(logQueue < 0)
+	{
+        ERROR_PRINT("log msg queue not initialized\n");
+        return;
+    }
 	return;
 }
 
@@ -88,6 +97,13 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 	LogMsgPacket newItem;
 	struct timespec rxTimeout;
 	size_t bytesRead;
+
+	if(logQueue < 0)
+	{
+        ERROR_PRINT("log msg queue not initialized\n");
+        return LOG_STATUS_NOTOK;
+    }
+
 	clock_gettime(CLOCK_REALTIME, &rxTimeout);
 	rxTimeout.tv_sec += 2;
 
@@ -97,10 +113,10 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
     {
         if((errno == EINTR) || (errno == ETIMEDOUT))
 		{
-			WARN_PRINT("mq_receive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
+			WARN_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
 			return LOG_STATUS_OK;
 		}
-		ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
+		ERROR_PRINT("mq_timedreceive failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
     }
 	if(bytesRead == sizeof(LogMsgPacket))
@@ -125,25 +141,25 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 	return LOG_STATUS_NOTOK;
 }
 
-uint8_t log_write_item(logItem_t *pLogItem, int filefd)
+uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
 {
-	if(log_byte(FRAME_START_BYTE) != LOG_STATUS_OK)
+	if(log_byte(FRAME_START_BYTE, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->logMsgId) != LOG_STATUS_OK)
+	if(log_integer(pLogItem->logMsgId, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_string(pLogItem->pFilename) != LOG_STATUS_OK)
+	if(log_string(pLogItem->pFilename, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->lineNum) != LOG_STATUS_OK)
+	if(log_integer(pLogItem->lineNum, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->time) != LOG_STATUS_OK)
+	if(log_integer(pLogItem->time, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->payloadLength) != LOG_STATUS_OK)
+	if(log_integer(pLogItem->payloadLength, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_data(pLogItem->pPayload, pLogItem->payloadLength) != LOG_STATUS_OK)
+	if(log_data(pLogItem->pPayload, pLogItem->payloadLength, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->checksum) != LOG_STATUS_OK)
+	if(log_integer(pLogItem->checksum, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	if(log_byte(FRAME_STOP_BYTE) != LOG_STATUS_OK)
+	if(log_byte(FRAME_STOP_BYTE, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
 	printf("\n");
 	return LOG_STATUS_OK;
@@ -151,37 +167,39 @@ uint8_t log_write_item(logItem_t *pLogItem, int filefd)
 
 /***** private functions *****/
 
-uint8_t log_data(uint8_t *pData, uint32_t len)
+uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd)
 {
 	if(pData != NULL)
 	{
 		uint32_t ind = 0;
 		for(;ind < len; ++ind)
-			putchar(*pData++);
+			write(fileFd, pData, len);
 	}
 	return LOG_STATUS_OK;
 }
 
-uint8_t log_byte(uint8_t value)
+uint8_t log_byte(uint8_t value, int fileFd)
 {
-	putchar(value);
+	//putchar(value);
+	write(fileFd, &value, 1);
 	return LOG_STATUS_OK;
 }
 
-uint8_t log_string(uint8_t *pStr)
+uint8_t log_string(uint8_t *pStr, int fileFd)
 {
 	uint8_t *pChar = pStr;
 
 	while(*pChar != '\0')
 	{
-		putchar(*pChar++);
+		//putchar(*pChar++);
+		write(fileFd, pChar++, 1);
 	}
-	putchar(*pChar);
+	write(fileFd, pChar, 1);
 
 	return LOG_STATUS_OK;
 }
 
-uint8_t log_integer(int32_t num)
+uint8_t log_integer(int32_t num, int fileFd)
 {
 	uint8_t numStr[MAX_INT_STRING_SIZE];
 
@@ -193,8 +211,9 @@ uint8_t log_integer(int32_t num)
 	uint32_t ind = 0;
 	uint8_t *pChar = &numStr[0];
 	for(;ind < len; ++ind)
-		putchar(*pChar++);
-
+	{
+		//putchar(*pChar++);
+		write(fileFd, pChar++, 1);
+	}
 	return LOG_STATUS_OK;
 }
-

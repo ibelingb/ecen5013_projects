@@ -17,16 +17,21 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h> /* for strerror() */
 
 #include "loggingThread.h"
 #include "debug.h"
 #include "logger.h"
+#include "packet.h"
 
 extern int gExitLog;
 
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo)
 {
+    int logFd;  /* log file descriptor */
+
     /* instantiate temp msg variable for dequeuing */
     logItem_t logItem;
     uint8_t filename[64];
@@ -39,6 +44,14 @@ void* logThreadHandler(void* threadInfo)
 
     /* add start msg to log msg queue */
     LOG_LOG_EVENT(LOG_EVENT_STARTED);
+
+    /* try to open logfile */
+    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC, 0644);
+    if(logFd < 0)
+    {
+        ERROR_PRINT("failed to open log file, err#%d (%s)\n\r", errno, strerror(errno));
+        return NULL;
+    }
 
     #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
         /* send log msgs */
@@ -73,7 +86,7 @@ void* logThreadHandler(void* threadInfo)
         else
         {
             /* if read from queue successful, right to file */
-            if(log_write_item(&logItem, 0) != LOG_STATUS_OK)
+            if(log_write_item(&logItem, logFd) != LOG_STATUS_OK)
             {
                 /* TODO - set error in status to main */
                 ERROR_PRINT("log_dequeue_item error\n");
@@ -81,7 +94,8 @@ void* logThreadHandler(void* threadInfo)
         }
         /* TODO - replace with timer */
         usleep(1000);
-        /* TODO - send status to main msg queue */
+
+        /* TODO - send status to main status msg queue */
     }
     INFO_PRINT("logger thread exiting\n");
     return NULL;

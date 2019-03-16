@@ -48,6 +48,7 @@ int main(void)
     pthread_t pThread[NUM_THREADS];
     mqd_t logQueue;
     char *logMsgQueueName = "/mq";
+    char *logFile = "log.txt";
     LogThreadInfo logThreadInfo;
     struct mq_attr mqAttr;
 
@@ -56,7 +57,10 @@ int main(void)
     mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH / 2;
     mqAttr.mq_msgsize = sizeof(LogMsgPacket);
     mqAttr.mq_curmsgs = 0;
+
+    /* set thread arg struct */
     strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
+    strcpy(logThreadInfo.logFileName, logFile);
 
     /* Ensure MQs and Shared Memory properly cleaned up before starting */
     mq_unlink(logMsgQueueName);
