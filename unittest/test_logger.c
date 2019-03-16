@@ -1,6 +1,6 @@
 /***********************************************************************************
  * @author Josh Malburg
- * 
+ * joshua.malburg@colorado.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
  * @date March 15, 2019
@@ -31,18 +31,17 @@
 #include "remoteThread.h"
 
 #define NUM_THREADS (4)
-#define SHORT_CIRCUIT_FOR_DEBUG (1)
+
 
 /* global for causing threads to exit */
-static uint8_t gExitSig = 1;
-static uint8_t gExitLog = 1;
+uint8_t gExitSig = 1;
+uint8_t gExitLog = 1;
 
 #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-    static void *tempThread(void *log);
-    static void *lightThread(void *log);
-    static void *remoteThread(void *log);
+    static void *tempThread(void *pArg);
+    static void *lightThread(void *pArg);
+    static void *remoteThread(void *pArg);
 #endif
-static void *logThread(void *log);
 
 int main(void)
 {
@@ -84,7 +83,7 @@ int main(void)
     LOG_LOGGER_INITIALIZED();
 
     /* spaw child threads */
-    pthread_create(&pThread[3], NULL, logThread, NULL);
+    pthread_create(&pThread[3], NULL, logThreadHandler, NULL);
 
     #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
         pthread_create(&pThread[0], NULL, lightThread, NULL);
@@ -130,6 +129,8 @@ int main(void)
     #endif
 
     mq_close(logQueue);
+
+    INFO_PRINT("main exiting\n");
     return EXIT_SUCCESS;
 }
 #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
@@ -147,6 +148,7 @@ int main(void)
         }
 
         LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
+        INFO_PRINT("light thread exiting\n");
         return NULL;
     }
 
@@ -164,6 +166,7 @@ int main(void)
         }
 
         LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
+        INFO_PRINT("temp thread exiting\n");
         return NULL;
     }
 
@@ -184,39 +187,8 @@ int main(void)
         }
 
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
+        INFO_PRINT("remote thread exiting\n");
         return NULL;
     }
 #endif
-static void *logThread(void *log)
-{
-    uint8_t filename[64];
-    uint8_t payload[128];
-    logItem_t logItem;
-    logItem.pFilename = filename;
-    logItem.pPayload = payload;
 
-    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-        /* send log msgs */
-        LOG_LOG_EVENT(LOG_EVENT_STARTED);
-        LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
-        LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
-        LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
-    #endif
-
-    while(gExitLog)
-    {
-        if(log_dequeue_item(&logItem) != LOG_STATUS_OK)
-        {
-            ERROR_PRINT("log_dequeue_item error\n");
-        }
-        if(log_write_item(&logItem, 0) != LOG_STATUS_OK)
-        {
-            ERROR_PRINT("log_dequeue_item error\n");
-        }
-        usleep(1000);
-    }
-    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-        LOG_LOG_EVENT(LOG_EVENT_EXITING);
-    #endif
-    return NULL;
-}

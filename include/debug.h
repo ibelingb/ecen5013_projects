@@ -17,6 +17,8 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
+#include <stdio.h>
+
 #define ERROR_PRINT(...)	(printf(__VA_ARGS__))
 #define WARN_PRINT(...)		(printf(__VA_ARGS__))
 #define INFO_PRINT(...)		(printf(__VA_ARGS__))

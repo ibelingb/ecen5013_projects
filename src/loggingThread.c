@@ -1,15 +1,90 @@
-/* Logging Thread Library */
+/***********************************************************************************
+ * @author Josh Malburg
+ * joshua.malburg@colorado.edu
+ * Advanced Embedded Software Development
+ * ECEN5013 - Rick Heidebrecht
+ * @date March 16, 2019
+ * arm-linux-gnueabi (Buildroot)
+ * gcc (Ubuntu)
+ ************************************************************************************
+ *
+ * @file test_loggingThread.c
+ * @brief thread dequeues and writes msgs to file
+ *
+ ************************************************************************************
+ */
 
-#include "loggingThread.h"
 #include <stdint.h>
 #include <stddef.h>
+#include <unistd.h>
+
+#include "loggingThread.h"
+#include "debug.h"
+#include "logger.h"
+
+extern int gExitLog;
 
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo)
 {
-  // TODO
+    /* instantiate temp msg variable for dequeuing */
+    logItem_t logItem;
+    uint8_t filename[64];
+    uint8_t payload[128];
+    logItem.pFilename = filename;
+    logItem.pPayload = payload;
 
-  return NULL;
+    /* used to stop dequeue/write loop */
+    uint8_t exitFlag = 1;
+
+    /* add start msg to log msg queue */
+    LOG_LOG_EVENT(LOG_EVENT_STARTED);
+
+    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+        /* send log msgs */
+
+        LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
+        #if (DEBUG_TEST_ALL_MSG_TYPES != 0)
+            LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
+            LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
+        #endif
+    #endif
+
+    /* keep dequeuing and writing msgs until self decides to exit */
+    while(exitFlag)
+    {
+        
+        /* if signaled to exit, shove log exit command
+         * (2nd highest priority) in buffer and set exit flag */
+        if(gExitLog == 0)
+        {
+            #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+                LOG_LOG_EVENT(LOG_EVENT_EXITING);
+            #endif
+            exitFlag = 0;
+        }
+        
+        /* dequeue a msg */
+        if(log_dequeue_item(&logItem) != LOG_STATUS_OK)
+        {
+            /* TODO - set error in status to main */
+            ERROR_PRINT("log_dequeue_item error\n");
+        }
+        else
+        {
+            /* if read from queue successful, right to file */
+            if(log_write_item(&logItem, 0) != LOG_STATUS_OK)
+            {
+                /* TODO - set error in status to main */
+                ERROR_PRINT("log_dequeue_item error\n");
+            }
+        }
+        /* TODO - replace with timer */
+        usleep(1000);
+        /* TODO - send status to main msg queue */
+    }
+    INFO_PRINT("logger thread exiting\n");
+    return NULL;
 }
 
 /*---------------------------------------------------------------------------------*/

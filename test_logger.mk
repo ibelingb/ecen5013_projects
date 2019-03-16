@@ -14,5 +14,6 @@
 SRCS += unittest/test_logger.c \
 src/logger_queue.c \
 src/logger_helper.c \
+src/loggingThread.c \
 src/memory.c \
 src/conversion.c

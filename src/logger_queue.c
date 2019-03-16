@@ -69,7 +69,8 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	if(memcpy(newItem.payload, pLogItem->pPayload, pLogItem->payloadLength) == NULL)
 		return LOG_STATUS_NOTOK;
 
-	if(mq_send(logQueue, (char *)&newItem, sizeof(LogMsgPacket), 1) < 0)
+	/* send, use logMsgId as priority */
+	if(mq_send(logQueue, (char *)&newItem, sizeof(LogMsgPacket), (uint8_t)newItem.logMsgId) < 0)
 	{
         ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
@@ -92,13 +93,17 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 
 	/* read oldest highest priority queue */
 	bytesRead = mq_timedreceive(logQueue, (char *)&newItem, sizeof(LogMsgPacket), NULL, &rxTimeout);
-	//bytesRead = mq_receive(logQueue, (char *)&newItem, sizeof(LogMsgPacket), NULL);
-	if(bytesRead <= 0)
+	if(bytesRead == -1)
     {
-        ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
+        if((errno == EINTR) || (errno == ETIMEDOUT))
+		{
+			WARN_PRINT("mq_receive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
+			return LOG_STATUS_OK;
+		}
+		ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
     }
-	if(bytesRead > 0)
+	if(bytesRead == sizeof(LogMsgPacket))
 	{
 		pLogItem->logMsgId = newItem.logMsgId;
 		pLogItem->lineNum = newItem.lineNum;
@@ -114,8 +119,10 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 		/* copy payload */
 		if(memcpy(pLogItem->pPayload, newItem.payload, pLogItem->payloadLength) == NULL)
 			return LOG_STATUS_NOTOK;
+			
+		return LOG_STATUS_OK;
 	}
-	return LOG_STATUS_OK;
+	return LOG_STATUS_NOTOK;
 }
 
 uint8_t log_write_item(logItem_t *pLogItem, int filefd)

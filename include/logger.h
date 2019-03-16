@@ -23,6 +23,9 @@
 #include "logger_helper.h"
 #include "conversion.h"
 
+#define SHORT_CIRCUIT_FOR_DEBUG (1)
+#define DEBUG_TEST_ALL_MSG_TYPES (0)
+
 #define LOG_MSG_QUEUE
 #define LOG
 
