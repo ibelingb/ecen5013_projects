@@ -9,6 +9,7 @@
 
 #define MSG_QUEUE_MSG_SIZE      (8192) // bytes
 #define MSG_QUEUE_DEPTH         (20) // total messages
+#define LOG_MSG_FILENAME_SIZE    (32) // bytes
 #define LOG_MSG_PAYLOAD_SIZE    (128) // bytes
 #define IPC_NAME_SIZE           (30)
 
@@ -47,6 +48,16 @@ typedef enum Task_e
   TASK_LIGHT = 0,
   TASK_TEMP,
 } Task_e;
+
+// TODO - move to header
+typedef enum {
+    MAIN_EVENT_STARTED_THREADS = 0,
+    MAIN_EVENT_THREAD_UNRESPONSIVE,
+    MAIN_EVENT_RESTART_THREAD,
+    MAIN_EVENT_LOG_QUEUE_FULL,
+    MAIN_EVENT_ISSUING_EXIT_CMD,
+    MAIN_EVENT_END
+} MainEvent_e;
 
 // TODO - move to header
 typedef enum {
@@ -106,11 +117,14 @@ typedef struct TaskStatusPacket
 
 typedef struct LogMsgPacket
 {
+  logMsg_e logMsgId;
+  uint8_t filename[LOG_MSG_FILENAME_SIZE];
+  uint16_t lineNum;
   uint32_t timestamp;
-  LogLevel_e logLevel;
-  ProcessId_e processId;
-  LogMsg_e logMsgType;
-  char payload[LOG_MSG_PAYLOAD_SIZE];
+ 	uint32_t payloadLength;
+	uint8_t payload[LOG_MSG_PAYLOAD_SIZE];
+  uint8_t sourceId;
+	uint32_t checksum;  
 } LogMsgPacket;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
@@ -160,7 +174,7 @@ typedef struct SensorThreadInfo
   int lightDataOffset; /* Offset into SharedMemory for LightDataStruct (in bytes) */
 } SensorThreadInfo;
 
-typedef struct LogThreadInfo
+typedef struct
 {
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];

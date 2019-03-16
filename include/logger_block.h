@@ -21,7 +21,7 @@
 
 #include "logger_types.h"
 
-uint8_t init_logger_block(void);
+uint8_t init_logger_block(void * pArg);
 uint8_t log_item(logItem_t *pLogItem);
 uint8_t log_flush(void);
 

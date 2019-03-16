@@ -19,6 +19,9 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <mqueue.h>
+#include <errno.h>
+#include <string.h>     // for strerror()
 
 #include "debug.h"
 #include "logger.h"
@@ -27,116 +30,193 @@
 #include "loggingThread.h"
 #include "remoteThread.h"
 
-#define NUM_THREADS (3)
+#define NUM_THREADS (4)
+#define SHORT_CIRCUIT_FOR_DEBUG (1)
 
 /* global for causing threads to exit */
 static uint8_t gExitSig = 1;
+static uint8_t gExitLog = 1;
 
-static void *sensorThread(void *log);
-static void *remoteThread(void *log);
+#if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+    static void *tempThread(void *log);
+    static void *lightThread(void *log);
+    static void *remoteThread(void *log);
+#endif
 static void *logThread(void *log);
-
 
 int main(void)
 {
     pthread_t pThread[NUM_THREADS];
-    uint8_t loopCount;
+    mqd_t logQueue;
+    char *logMsgQueueName = "/mq";
+    LogThreadInfo logThreadInfo;
+    struct mq_attr mqAttr;
 
-    /* initialize the logger and other resources */
-    LOG_INIT();
+    /* Define MQ attributes */
+    mqAttr.mq_flags   = 0;
+    mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH / 2;
+    mqAttr.mq_msgsize = sizeof(LogMsgPacket);
+    mqAttr.mq_curmsgs = 0;
+    strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
+
+    /* Ensure MQs and Shared Memory properly cleaned up before starting */
+    mq_unlink(logMsgQueueName);
+
+    if(remove(logMsgQueueName) == -1 && errno != ENOENT)
+	    ERROR_PRINT("couldn't delete path, err#%d (%s)\n\r", errno, strerror(errno));
+
+    logQueue = mq_open(logMsgQueueName, O_CREAT, 0666, &mqAttr);
+    if(logQueue < 0)
+    {
+        ERROR_PRINT("failed to open log msg queue, err#%d (%s)\n\r", errno, strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    /* initialize the logger (i.e. queue & writeability) 
+     * main should probably do this before creating
+     * other threads to ensure logger is working before
+     * main or other threads start send msgs to mog queue */
+    if(LOG_INIT(&logThreadInfo) != LOG_STATUS_OK)
+    {
+        ERROR_PRINT("failed to init logger\n");
+        return EXIT_FAILURE;
+    }
     LOG_LOGGER_INITIALIZED();
-    LOG_GPIO_INITIALIZED();
 
     /* spaw child threads */
-    pthread_create(&pThread[0], NULL, sensorThread, NULL);
-    pthread_create(&pThread[1], NULL, remoteThread, NULL);
-    pthread_create(&pThread[2], NULL, logThread, NULL);
+    pthread_create(&pThread[3], NULL, logThread, NULL);
 
-    /* system is now fully functional */
-    gExitSig = 0;
-    LOG_SYSTEM_INITIALIZED();
+    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+        pthread_create(&pThread[0], NULL, lightThread, NULL);
+        pthread_create(&pThread[1], NULL, tempThread, NULL);
+        pthread_create(&pThread[2], NULL, remoteThread, NULL);
+        
 
-    /* do stuff, wait for exit signal 
-    (e.g. in this case, when count to expire) */
-    while(loopCount++ < 8)
-    {
-        LOG_HEARTBEAT();
-        sleep(1);
-    }
+        /* events logged by main */
+        LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
+        LOG_MAIN_EVENT(MAIN_EVENT_THREAD_UNRESPONSIVE);
+        LOG_MAIN_EVENT(MAIN_EVENT_RESTART_THREAD);
+        LOG_MAIN_EVENT(MAIN_EVENT_LOG_QUEUE_FULL);
+        LOG_MAIN_EVENT(MAIN_EVENT_ISSUING_EXIT_CMD);
 
-    /* add exit notification msg to log */
-    LOG_SYSTEM_HALTED();
+        /* initialize other resources */
+        LOG_GPIO_INITIALIZED();
 
-    for(uint8_t ind; ind < NUM_THREADS; ++ind)
- 	    pthread_join(pThread[ind], NULL);
+        /* system is now fully functional */
+        LOG_SYSTEM_INITIALIZED();
 
-    return EXIT_SUCCESS;
-}
-
-static void *sensorThread(void *log)
-{
-    uint8_t count = 0;
-    /* send status (started (i.e. running)) to log */
-
-    /* init sensor, run BIST */
-
-    /* log BIST sensor results */
-    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STARTED);
-    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
-
-    while(gExitSig)
-    {
-        /* log event */
-        if((count++ % 4) == 0)
+        /* do stuff, wait for exit signal 
+        (e.g. in this case, when count to expire) */
+        uint8_t loopCount;
+        while(loopCount++ < 8)
         {
-            LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
-            LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
+            LOG_HEARTBEAT();
+            sleep(1);
         }
 
-        sleep(1);
-    }
+        /* add exit notification msg to log */
+        gExitSig = 0;
+        LOG_SYSTEM_HALTED();
 
-    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
-    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
-    return NULL;
+        /* wait to kill log so exit msgs get logged */
+        sleep(2);
+        gExitLog = 0;
+
+        for(uint8_t ind; ind < NUM_THREADS; ++ind)
+            pthread_join(pThread[ind], NULL);
+    #else
+            gExitSig = 0;
+            pthread_join(pThread[3], NULL);
+    #endif
+
+    mq_close(logQueue);
+    return EXIT_SUCCESS;
 }
-
-static void *remoteThread(void *log)
-{
-    /* send status (started (i.e. running)) to log */
-
-    /* init sensor, run BIST */
-    /* log BIST server results */
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
-
-    while(gExitSig)
+#if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+    static void *lightThread(void *log)
     {
-        /* log event */
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
-        sleep(1);
+        /* send log msgs */
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
+
+        while(gExitSig)
+        {
+            sleep(1);
+        }
+
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
+        return NULL;
     }
 
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
-    return NULL;
-}
+    static void *tempThread(void *log)
+    {
+        /* send log msgs */
+        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STARTED);
+        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
+        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
+        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+        
+        while(gExitSig)
+        {
+            sleep(1);
+        }
 
+        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
+        return NULL;
+    }
+
+    static void *remoteThread(void *log)
+    {
+        /* send log msgs */
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+
+        while(gExitSig)
+        {
+            sleep(1);
+        }
+
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
+        return NULL;
+    }
+#endif
 static void *logThread(void *log)
 {
-    /* send status (started (i.e. running)) to log */
-    LOG_LOG_EVENT(LOG_EVENT_STARTED);
+    uint8_t filename[64];
+    uint8_t payload[128];
+    logItem_t logItem;
+    logItem.pFilename = filename;
+    logItem.pPayload = payload;
 
-    /* init file / queue (run BIST) */
+    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+        /* send log msgs */
+        LOG_LOG_EVENT(LOG_EVENT_STARTED);
+        LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
+        LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
+        LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
+    #endif
 
-    /* log BIST results */
-    LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
-
-    while(gExitSig)
+    while(gExitLog)
     {
-        /* read from queue */
-
-        /* and write to file */
-        sleep(1);
+        if(log_dequeue_item(&logItem) != LOG_STATUS_OK)
+        {
+            ERROR_PRINT("log_dequeue_item error\n");
+        }
+        if(log_write_item(&logItem, 0) != LOG_STATUS_OK)
+        {
+            ERROR_PRINT("log_dequeue_item error\n");
+        }
+        usleep(1000);
     }
-    LOG_LOG_EVENT(LOG_EVENT_EXITING);
+    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
+        LOG_LOG_EVENT(LOG_EVENT_EXITING);
+    #endif
     return NULL;
 }

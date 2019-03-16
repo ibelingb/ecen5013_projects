@@ -15,7 +15,6 @@
  ************************************************************************************
  */
 
-
 #ifndef LOGGER_H
 #define	LOGGER_H
 
@@ -24,13 +23,13 @@
 #include "logger_helper.h"
 #include "conversion.h"
 
-#define LOG_BLOCKING
+#define LOG_MSG_QUEUE
 #define LOG
 
 #ifndef LOG
 
 #define LOG_FLUSH()
-#define LOG_INIT()					/* implemented */
+#define LOG_INIT()						/* implemented */
 #define LOG_SYSTEM_ID()					/* implemented */
 #define LOG_SYSTEM_VERSION()			/* implemented */
 #define LOG_LOGGER_INITIALIZED()		/* implemented */
@@ -52,28 +51,39 @@
 #define LOG_DATA_ANALYSIS_COMPLETED()	/* implemented */
 #define LOG_HEARTBEAT()					/* implemented */
 #define LOG_CORE_DUMP()
+#define LOG_THREAD_STATUS(tid)
+#define LOG_THREAD_EVENT(event_e, eventId)
+#define LOG_TEMP_SENSOR_EVENT(event_e)
+#define LOG_LIGHT_SENSOR_EVENT(event_e)	
+#define LOG_REMOTE_HANDLING_EVENT(event_e)	
+#define LOG_LOG_EVENT(event_e)				
+#define LOG_MAIN_EVENT(event_e)	
 
 #else /* LOGging enabled */
 
 #ifdef __linux__
 #ifdef LOG_MSG_QUEUE
+#include "logger_queue.h"
+#define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
+#define LOG_INIT(pArg)			(init_queue_logger(pArg))
+#define LOG_FLUSH()				(log_queue_flush())
 #else
 #include "logger_block.h"
-#define LOG_ITEM(pLogItem)	(log_item(pLogItem))
-#define LOG_INIT()			(init_logger_block())
-#define LOG_FLUSH()			(log_flush())
+#define LOG_ITEM(pLogItem)		(log_item(pLogItem))
+#define LOG_INIT(pArg)			(init_logger_block(pArg))
+#define LOG_FLUSH()				(log_flush())
 #endif
 #else
 #ifdef LOG_BLOCKING
 #include "logger_block.h"
-#define LOG_ITEM(pLogItem)	(log_item(pLogItem))
-#define LOG_INIT()			(init_logger_block())
-#define LOG_FLUSH()			(log_flush())
+#define LOG_ITEM(pLogItem)		(log_item(pLogItem))
+#define LOG_INIT()				(init_logger_block())
+#define LOG_FLUSH()				(log_flush())
 #else
 #include "logger_queue.h"
-#define LOG_ITEM(pLogItem)	(log_queue_item(pLogItem))
-#define LOG_INIT()			(init_queue_logger())
-#define LOG_FLUSH()			(log_queue_flush())
+#define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
+#define LOG_INIT()				(init_queue_logger())
+#define LOG_FLUSH()				(log_queue_flush())
 #endif
 #endif
 
@@ -386,7 +396,7 @@
 #define LOG_TEMP_SENSOR_EVENT(event_e)		(LOG_THREAD_EVENT(event_e, LOG_MSG_TEMP_SENSOR_EVENT))
 #define LOG_LIGHT_SENSOR_EVENT(event_e)		(LOG_THREAD_EVENT(event_e, LOG_MSG_LIGHT_SENSOR_EVENT))
 #define LOG_REMOTE_HANDLING_EVENT(event_e)	(LOG_THREAD_EVENT(event_e, LOG_MSG_REMOTE_HANDLING_EVENT))
-#define LOG_LOG_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_REMOTE_HANDLING_EVENT))
+#define LOG_LOG_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_LOG_EVENT))
 #define LOG_MAIN_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_MAIN_EVENT))
 
 #endif  /* DEBUG */

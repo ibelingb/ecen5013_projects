@@ -10,7 +10,7 @@
  ************************************************************************************
  *
  * @file logger.h
- * @brief blocking functions for sending data to logger
+ * @brief send log messages via queue
  *
  ************************************************************************************
  */
@@ -20,10 +20,13 @@
 #define	LOGGER_QUEUE_H
 
 #include "logger_types.h"
-#include "circbuf.h"
+#include <mqueue.h>
 
-uint8_t init_queue_logger(void);
+uint8_t init_queue_logger(void *pQueue);
+
 uint8_t log_queue_flush(void);
 uint8_t log_queue_item(logItem_t *pLogItem);
+uint8_t log_dequeue_item(logItem_t *pLogItem);
+uint8_t log_write_item(logItem_t *pLogItem, int filefd);
 
 #endif	/* LOGGER_QUEUE_H */

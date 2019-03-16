@@ -57,8 +57,9 @@ typedef enum {
 	LOG_MSG_LIGHT_SENSOR_EVENT = 23,
 	LOG_MSG_TEMP_SENSOR_EVENT = 24,
 	LOG_MSG_REMOTE_HANDLING_EVENT = 25,
-	LOG_MSG_MAIN_EVENT = 26,
-	LOG_MSG_END = 27
+	LOG_MSG_LOG_EVENT = 26,
+	LOG_MSG_MAIN_EVENT = 27,
+	LOG_MSG_END = 28
 } logMsg_e;
 
 typedef struct {
@@ -68,6 +69,7 @@ typedef struct {
 	uint32_t time;
 	uint32_t payloadLength;
 	uint8_t *pPayload;
+	uint8_t sourceId;
 	uint32_t checksum;
 } logItem_t;
 

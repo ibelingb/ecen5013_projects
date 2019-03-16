@@ -12,7 +12,7 @@
 
 # source files
 SRCS += unittest/test_logger.c \
-src/logger_block.c \
+src/logger_queue.c \
 src/logger_helper.c \
 src/memory.c \
 src/conversion.c

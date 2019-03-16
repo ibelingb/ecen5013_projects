@@ -27,7 +27,7 @@ uint8_t log_integer(int32_t num);
 uint8_t log_byte(uint8_t value);
 
 
-uint8_t init_logger_block(void)
+uint8_t init_logger_block(void *pArg)
 {
 	return LOG_STATUS_OK;
 }
