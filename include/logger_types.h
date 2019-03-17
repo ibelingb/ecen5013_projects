@@ -69,7 +69,7 @@ typedef struct {
 	uint32_t time;
 	uint32_t payloadLength;
 	uint8_t *pPayload;
-	uint8_t sourceId;
+	uint16_t sourceId;
 	uint32_t checksum;
 } logItem_t;
 

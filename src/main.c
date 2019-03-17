@@ -43,6 +43,10 @@ pthread_t gThreads[NUM_THREADS];
 pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
 pthread_mutex_t gI2cBusMutex; 
 
+/* temp globals for causing threads to exit */
+int gExitSig = 1;
+int gExitLog = 1;
+
 int main(int argc, char *argv[]){
   char *taskStatusMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";

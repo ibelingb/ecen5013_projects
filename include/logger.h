@@ -19,6 +19,7 @@
 #define	LOGGER_H
 
 #include <stddef.h>
+#include <sys/syscall.h>
 #include "logger_types.h"
 #include "logger_helper.h"
 #include "conversion.h"
@@ -70,11 +71,13 @@
 #define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
 #define LOG_INIT(pArg)			(init_queue_logger(pArg))
 #define LOG_FLUSH()				(log_queue_flush())
+#define LOG_GET_SRC_ID()		((pid_t)syscall(SYS_gettid))
 #else
 #include "logger_block.h"
 #define LOG_ITEM(pLogItem)		(log_item(pLogItem))
 #define LOG_INIT(pArg)			(init_logger_block(pArg))
 #define LOG_FLUSH()				(log_flush())
+#define LOG_GET_SRC_ID()		((pid_t)syscall(SYS_gettid))
 #endif
 #else
 #ifdef LOG_BLOCKING
@@ -82,11 +85,13 @@
 #define LOG_ITEM(pLogItem)		(log_item(pLogItem))
 #define LOG_INIT()				(init_logger_block())
 #define LOG_FLUSH()				(log_flush())
+#define LOG_GET_SRC_ID()		(0)
 #else
 #include "logger_queue.h"
 #define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
 #define LOG_INIT()				(init_queue_logger())
 #define LOG_FLUSH()				(log_queue_flush())
+#define LOG_GET_SRC_ID()		(0)
 #endif
 #endif
 
@@ -102,6 +107,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(deviceId, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -117,6 +123,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(versionId, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -134,6 +141,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -147,6 +155,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -160,6 +169,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -173,6 +183,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -186,6 +197,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = log_strlen((uint8_t *)pStr);\
 	logItem.pPayload = (uint8_t *)pStr;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -199,6 +211,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = log_strlen((uint8_t *)pStr);\
 	logItem.pPayload = (uint8_t *)pStr;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -212,6 +225,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = log_strlen((uint8_t *)pStr);\
 	logItem.pPayload = (uint8_t *)pStr;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -225,6 +239,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -238,6 +253,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = statPayloadLength;\
 	logItem.pPayload = (uint8_t *)pArray;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -251,6 +267,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -267,6 +284,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = 2;\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -280,6 +298,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -294,6 +313,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -308,6 +328,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -322,6 +343,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -336,6 +358,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -349,6 +372,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -362,6 +386,7 @@
 	logItem.time = log_get_time();\
 	logItem.pPayload = NULL;\
 	logItem.payloadLength = 0;\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -378,6 +403,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa(tid, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })
@@ -392,6 +418,7 @@
 	logItem.time = log_get_time();\
 	logItem.payloadLength = my_itoa((uint8_t)event_e, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
+	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\
 	LOG_ITEM(&logItem);\
 })

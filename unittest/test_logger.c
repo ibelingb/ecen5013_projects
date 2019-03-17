@@ -85,6 +85,7 @@ int main(void)
         return EXIT_FAILURE;
     }
     LOG_LOGGER_INITIALIZED();
+    INFO_PRINT("main tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     /* spaw child threads */
     pthread_create(&pThread[3], NULL, logThreadHandler, &logThreadInfo);
@@ -145,6 +146,7 @@ int main(void)
         LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
         LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
         LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
+        INFO_PRINT("light tid: %d\n",(pid_t)syscall(SYS_gettid));
 
         while(gExitSig)
         {
@@ -163,6 +165,7 @@ int main(void)
         LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
         LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
         LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+        INFO_PRINT("temp tid: %d\n",(pid_t)syscall(SYS_gettid));
         
         while(gExitSig)
         {
@@ -184,6 +187,7 @@ int main(void)
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+        INFO_PRINT("remote tid: %d\n",(pid_t)syscall(SYS_gettid));
 
         while(gExitSig)
         {
