@@ -45,7 +45,8 @@ typedef enum RemoteCmd_e
   LIGHTCMD_GETCTRL,
   LIGHTCMD_GETTIMING,
   LIGHTCMD_GETLOWTHRES,
-  LIGHTCMD_GETHIGHTHRES
+  LIGHTCMD_GETHIGHTHRES,
+  MAX_CMDS
 } RemoteCmd_e;
 
 typedef struct RemoteCmdPacket

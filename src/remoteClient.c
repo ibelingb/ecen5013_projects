@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -14,6 +15,7 @@
 
 // TODO: Update dynamically as command line argument
 #define SERV_ADDR "192.168.1.220"
+#define BUFFER_SIZE (3)
 
 /* Prototypes for private/helper functions */
 void appUsage();
@@ -28,6 +30,7 @@ int main()
   int sockfd;
   struct sockaddr_in servAddr;
   int inputCmd = 0;
+  char inputBuffer[BUFFER_SIZE];
 
   /** Establish connection on remote socket **/
   /* Open Socket */
@@ -53,15 +56,23 @@ int main()
   while(1) {
     /* Display usage info and wait for user input */
     appUsage();
-    scanf("%d", &inputCmd);
-    cmdPacket.cmd = inputCmd;
+    if(scanf("%s", inputBuffer) == 1){
+      /* Convert received input and verify cmd is valid */
+      inputCmd = atoi(inputBuffer);
+      if((inputCmd >= MAX_CMDS) || inputCmd <= 0) {
+        printf("Invalid command received of {%s} - ignoring cmd\n", inputBuffer);
+        continue;
+      }
 
-    /* Transmit received cmd to server app */
-    send(sockfd, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
+      cmdPacket.cmd = inputCmd;
 
-    /* Receive response from server app and print data */
-    recv(sockfd, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
-    getCmdResponse(&cmdPacket);
+      /* Transmit received cmd to server app */
+      send(sockfd, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
+
+      /* Receive response from server app and print data */
+      recv(sockfd, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
+      getCmdResponse(&cmdPacket);
+    }
   }
 
   /* Cleanup */

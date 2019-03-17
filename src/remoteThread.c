@@ -14,6 +14,7 @@
 
 #include "remoteThread.h"
 #include "packet.h"
+#include "logger.h"
 
 #define MAX_CLIENTS (5)
 
@@ -42,6 +43,9 @@ void* remoteThreadHandler(void* threadInfo)
   unsigned int cliLen;
   threadAlive = true;
 
+  /* Log Remote Thread Started */
+  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+
   /* Register Signal Handler */
   // TODO
 
@@ -50,10 +54,12 @@ void* remoteThreadHandler(void* threadInfo)
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
   if(logMsgQueue == -1){
     printf("ERROR: remoteThread Failed to Open Logging MessageQueue - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
   if(hbMsgQueue == -1) {
     printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
@@ -61,6 +67,7 @@ void* remoteThreadHandler(void* threadInfo)
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
     printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
@@ -68,6 +75,7 @@ void* remoteThreadHandler(void* threadInfo)
   sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
   if(*(int *)sharedMemPtr == -1) {
     printf("ERROR: remoteThread Failed to complete memory mapping of shared memory - exiting\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
@@ -76,6 +84,7 @@ void* remoteThreadHandler(void* threadInfo)
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfd == -1){
     printf("ERROR: remoteThread failed to create socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
@@ -85,16 +94,17 @@ void* remoteThreadHandler(void* threadInfo)
   servAddr.sin_port = htons((int)PORT);
   if(bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
     printf("ERROR: remoteThread failed to bind socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
   /* Log RemoteThread successfully created */
   printf("Created remoteThread to listen on port %d.\n", PORT);
-  // TODO - send msg to log
 
   /* Listen for Client Connection */
   if(listen(sockfd, MAX_CLIENTS) == -1) {
     printf("ERROR: remoteThread failed to successfully listen for client connection - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
@@ -103,16 +113,21 @@ void* remoteThreadHandler(void* threadInfo)
   sockfd2 = accept(sockfd, (struct sockaddr*)&cliAddr, &cliLen);
   if(sockfd2 == -1){
     printf("ERROR: remoteThread failed to accept client connection for socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
   /* Log RemoteThread successfully Connected to client */
   printf("Connected remoteThread to external Client on port %d.\n", PORT);
-  // TODO - send msg to log
+  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
   while(threadAlive) {
     /* Check for incoming commands from remote clients on socket port */
-    recv(sockfd2, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
+    if(recv(sockfd2, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1){
+      printf("ERROR: remoteThread failed to handle incoming command from remote client.\n");
+      threadAlive = false;
+      break;
+    }
 
     /* Read from Shared Memory and pass requested data back to client */
     pthread_mutex_lock(sensorInfo.sharedMemMutex);
@@ -124,14 +139,17 @@ void* remoteThreadHandler(void* threadInfo)
     getCmdResponse(&cmdPacket);
 
     /* Transmit data packet back to remote client requesting data */
-    send(sockfd2, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
-
-    // TODO Move to timer
-    txHeartbeatMsg();
+    if(send(sockfd2, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
+      printf("ERROR: remoteThread failed to handle outgoing requested data to remote client.\n");
+      threadAlive = false;
+      break;
+    }
   }
 
   /* Setup timer to periodically send heartbeat to parent thread */
   // TODO
+  // TODO Move to timer
+  txHeartbeatMsg();
 
   /* Thread Cleanup */
   mq_close(logMsgQueue);
@@ -144,15 +162,12 @@ void* remoteThreadHandler(void* threadInfo)
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
 static void txHeartbeatMsg(){
-  // TODO
-
+  LOG_HEARTBEAT();
   return;
 }
 
 static void getCmdResponse(RemoteCmdPacket* packet){
-
-  /* Log cmd received */
-  // TODO - send msg to log about external cmd received
+  bool validCmdRecv = true;
 
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
@@ -234,8 +249,13 @@ static void getCmdResponse(RemoteCmdPacket* packet){
       break;
     default:
       printf("cmd received not recognized - cmd ignored\n");
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
+      validCmdRecv = false;
       break;
   }
+
+  if(validCmdRecv)
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
 
   return;
 }
