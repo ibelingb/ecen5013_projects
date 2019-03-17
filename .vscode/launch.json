@@ -6,7 +6,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "Host-gdb-Logger",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/test_logger",
@@ -25,12 +25,52 @@
             ]
         },
         {
-            "name": "Remote-gdb",
+            "name": "Remote-gdb-Logger",
             "type": "cppdbg",
             "request": "launch",
             "miDebuggerServerAddress": "10.0.0.87:2345",
             "miDebuggerPath": "/home/shua/tools_workspace/dropb/buildroot/output/host/bin/arm-linux-gdb",
             "program": "${workspaceFolder}/test_logger",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Host-gdb-Main",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/main",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Remote-gdb-Main",
+            "type": "cppdbg",
+            "request": "launch",
+            "miDebuggerServerAddress": "10.0.0.87:2345",
+            "miDebuggerPath": "/home/shua/tools_workspace/dropb/buildroot/output/host/bin/arm-linux-gdb",
+            "program": "${workspaceFolder}/main",
             "args": [],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}",

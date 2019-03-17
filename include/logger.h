@@ -393,7 +393,7 @@
 
 #define CORE_DUMP()
 
-#define LOG_THREAD_STATUS(tid)({\
+#define LOG_THREAD_STATUS(status)({\
 	logItem_t logItem;\
 	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
 	uint8_t numStr[32];\
@@ -401,7 +401,7 @@
 	logItem.pFilename = &fileStr[0];\
 	logItem.lineNum = __LINE__;\
 	logItem.time = log_get_time();\
-	logItem.payloadLength = my_itoa(tid, &numStr[0], HEX_BASE);\
+	logItem.payloadLength = my_itoa((uint8_t)status, &numStr[0], HEX_BASE);\
 	logItem.pPayload = &numStr[0];\
 	logItem.sourceId = LOG_GET_SRC_ID();\
 	log_set_checksum(&logItem);\

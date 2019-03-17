@@ -281,6 +281,9 @@ while parseState != parseState_e.PARSE_DONE:
         if myStr == '[]':
             parseState = parseState_e.PARSE_DONE
 
+        if myStr == b'':
+            parseState = parseState_e.PARSE_DONE
+
         myLogItem.filename = myStr
         parseState = parseState_e.PARSE_LINENUM
 

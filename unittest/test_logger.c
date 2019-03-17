@@ -32,7 +32,6 @@
 
 #define NUM_THREADS (4)
 
-
 /* global for causing threads to exit */
 int gExitSig = 1;
 int gExitLog = 1;
@@ -52,8 +51,8 @@ int main(void)
 
     /* Define MQ attributes */
     mqAttr.mq_flags   = 0;
-    mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH / 2;
-    mqAttr.mq_msgsize = sizeof(LogMsgPacket);
+    mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH;
+    mqAttr.mq_msgsize = MSG_QUEUE_MSG_SIZE;
     mqAttr.mq_curmsgs = 0;
 
     /* set thread arg struct */
@@ -95,7 +94,6 @@ int main(void)
     pthread_create(&pThread[1], NULL, tempThread, NULL);
     pthread_create(&pThread[2], NULL, remoteThread, NULL);
     
-
     /* events logged by main */
     LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
     LOG_MAIN_EVENT(MAIN_EVENT_THREAD_UNRESPONSIVE);
@@ -111,7 +109,7 @@ int main(void)
 
     /* do stuff, wait for exit signal 
     (e.g. in this case, when count to expire) */
-    uint8_t loopCount;
+    uint8_t loopCount = 0;
     while(loopCount++ < 8)
     {
         LOG_HEARTBEAT();
@@ -123,7 +121,7 @@ int main(void)
     LOG_SYSTEM_HALTED();
 
     /* wait to kill log so exit msgs get logged */
-    sleep(2);
+    usleep(10*1000);
     gExitLog = 0;
 
     for(uint8_t ind; ind < NUM_THREADS; ++ind)

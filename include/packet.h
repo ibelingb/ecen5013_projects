@@ -7,8 +7,8 @@
 #include <pthread.h>
 #include "tempSensor.h"
 
-#define MSG_QUEUE_MSG_SIZE      (8192) // bytes
-#define MSG_QUEUE_DEPTH         (20) // total messages
+#define MSG_QUEUE_MSG_SIZE      (sizeof(LogMsgPacket)) // bytes
+#define MSG_QUEUE_DEPTH         (10) // total messages
 #define LOG_MSG_FILENAME_SIZE   (32) // bytes
 #define LOG_MSG_PAYLOAD_SIZE    (128) // bytes
 #define IPC_NAME_SIZE           (30)

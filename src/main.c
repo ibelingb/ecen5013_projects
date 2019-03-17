@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
+#include <errno.h>
 
 #include "tempThread.h"
 #include "lightThread.h"
@@ -35,6 +36,8 @@
 #include "loggingThread.h"
 #include "packet.h"
 #include "bbgLeds.h"
+#include "debug.h"
+#include "logger.h"
 
 #define NUM_THREADS (4)
 
@@ -51,7 +54,7 @@ int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";
   char *sensorSharedMemoryName = "/sensor_sm";
-  char *logFile = "log.txt";
+  char *logFile = "scripts/log.bin";
   TaskStatusPacket recvThreadStatus;
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
@@ -61,6 +64,7 @@ int main(int argc, char *argv[]){
   mqd_t heartbeatMsgQueue;
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
+  char ind;
 
   /* Check inputs */
   // TODO
@@ -79,15 +83,19 @@ int main(int argc, char *argv[]){
   mq_unlink(logMsgQueueName);
   mq_unlink(heartbeatMsgQueueName);
   shm_unlink(sensorSharedMemoryName);
+
+  if(remove(logMsgQueueName) == -1 && errno != ENOENT)
+	  ERROR_PRINT("ERROR: main() couldn't delete log queue path, err#%d (%s)\n\r", errno, strerror(errno));
+
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
   mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH;
   mqAttr.mq_msgsize = MSG_QUEUE_MSG_SIZE;
   mqAttr.mq_curmsgs = 0;
 
-  /*** Create all IPC mechanisms used by children threads ***/
+  /*** get logger up and running before initializing the rest of the system ***/
   /* Create MessageQueue for logger to receive log messages */
-  logMsgQueue = mq_open(logMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
+  logMsgQueue = mq_open(logMsgQueueName, O_CREAT, 0666, &mqAttr);
   if(logMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Logger - exiting.\n");
@@ -102,6 +110,32 @@ int main(int argc, char *argv[]){
     return EXIT_FAILURE;
   }
 
+  /* initialize thread args for logging thread */
+  strcpy(logThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
+  strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
+  strcpy(logThreadInfo.logFileName, logFile);
+
+  /* initialize the logger (i.e. queue & writeability) 
+    * main should probably do this before creating
+    * other threads to ensure logger is working before
+    * main or other threads start send msgs to mog queue */
+  if(LOG_INIT(&logThreadInfo) != LOG_STATUS_OK)
+  {
+    ERROR_PRINT("failed to init logger\n");
+    return EXIT_FAILURE;
+  }
+
+  /* logger (i.e. queue writer) init complete */
+  LOG_LOGGER_INITIALIZED();
+
+  /* create logger thread */
+  if(pthread_create(&gThreads[0], NULL, logThreadHandler, (void*)&logThreadInfo) != 0)
+  {
+    printf("ERROR: Failed to create Logging Thread - exiting main().\n");
+    return EXIT_FAILURE;
+  }
+
+  /*** initialize rest of IPC resources ***/
   /* Create Shared Memory for data sharing between SensorThreads and RemoteThread */
   sharedMemFd = shm_open(sensorSharedMemoryName, O_CREAT | O_RDWR, 0666);
   if(sharedMemFd == -1)
@@ -131,52 +165,54 @@ int main(int argc, char *argv[]){
   sensorThreadInfo.sharedMemMutex = &gSharedMemMutex;
   sensorThreadInfo.i2cBusMutex = &gI2cBusMutex;
 
-  strcpy(logThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
-  strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
-  strcpy(logThreadInfo.logFileName, logFile);
-
   pthread_mutex_init(&gSharedMemMutex, NULL);
   pthread_mutex_init(&gI2cBusMutex, NULL);
 
-  /* Create threads */
-  if(pthread_create(&gThreads[0], NULL, logThreadHandler, (void*)&logThreadInfo) != 0)
-  {
-    printf("ERROR: Failed to create Logging Thread - exiting main().\n");
-    return EXIT_FAILURE;
-  }
-  if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
-  {
-    printf("ERROR: Failed to create Remote Thread - exiting main().\n");
-    return EXIT_FAILURE;
-  }
-  if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
-  {
-    printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
-    return EXIT_FAILURE;
-  }
-  if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
-  {
-    printf("ERROR: Failed to create LightSensor Thread - exiting main().\n");
-    return EXIT_FAILURE;
-  }
+  // /* Create other threads */
+  // if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
+  // {
+  //   printf("ERROR: Failed to create Remote Thread - exiting main().\n");
+  //   return EXIT_FAILURE;
+  // }
+  // if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
+  // {
+  //   printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
+  //   return EXIT_FAILURE;
+  // }
+  // if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
+  // {
+  //   printf("ERROR: Failed to create LightSensor Thread - exiting main().\n");
+  //   return EXIT_FAILURE;
+  // }
+  LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
 
   /* Log main thread started succesfully */
   printf("The Main() thread has successfully started with all child threads created.\n");
-  // TODO - add msg to log
 
+  /* system is now fully functional */
+  LOG_SYSTEM_INITIALIZED();
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
   // TODO: Setup timer
-  while(1){
+
+  ind = 0;
+  while(ind++ < 8)
+  {
     // TODO
-
-    sleep(10);
+    LOG_HEARTBEAT();
+    sleep(1);
   }
+  LOG_SYSTEM_HALTED();
 
+  /* wait to kill log so exit msgs get logged */
+  usleep(10 * 1000);
+  gExitLog = 0;
 
-
-  // TODO: Since not joining threads, is there a cleanup method for the created pthreads? pthread_exit()?
+  /* join to clean up children */
+  for(ind = 0; ind < NUM_THREADS; ++ind)
+    pthread_join(gThreads[(uint8_t)ind], NULL);
+  
   /* Cleanup */
   printf("main() Cleanup.\n");
   mq_unlink(heartbeatMsgQueueName);

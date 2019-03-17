@@ -4,9 +4,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "HOST-BUILD",
+            "label": "HOST-BUILD-TEMP",
             "type": "shell",
-            "command": "make clean all TARGET=test_temp",
+            "command": "make clean all TARGET=test_temp PLATFORM=HOST",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -14,7 +14,7 @@
             "problemMatcher": []
         },
         {
-            "label": "BBG-BUILD",
+            "label": "BBG-BUILD-TEMP",
             "type": "shell",
             "command": "make clean all TARGET=test_temp PLATFORM=BBG",
             "group": {
@@ -26,7 +26,37 @@
         {
             "label": "HOST-BUILD-LOGGER",
             "type": "shell",
-            "command": "make clean all TARGET=test_logger",
+            "command": "make clean all TARGET=test_logger PLATFORM=HOST",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "BBG-BUILD-LOGGER",
+            "type": "shell",
+            "command": "make clean all TARGET=test_logger PLATFORM=BBG",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "HOST-BUILD-MAIN",
+            "type": "shell",
+            "command": "make clean all TARGET=main PLATFORM=HOST",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "BBG-BUILD-MAIN",
+            "type": "shell",
+            "command": "make clean all TARGET=main PLATFORM=BBG",
             "group": {
                 "kind": "build",
                 "isDefault": true

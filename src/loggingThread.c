@@ -29,16 +29,10 @@
 #include "logger.h"
 #include "packet.h"
 
-// TODO - Remove? Defined in test_logger.c
-int gExitLog;
-
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo)
 {
     int logFd;  /* log file descriptor */
-
-    //TODO - Remove? Defined in test_logger.c
-    gExitLog = 1;
 
     /* timer variables */
     struct sigevent timer_sigevent;
@@ -118,9 +112,7 @@ void* logThreadHandler(void* threadInfo)
          * (2nd highest priority) in buffer and set exit flag */
         if(gExitLog == 0)
         {
-            #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-                LOG_LOG_EVENT(LOG_EVENT_EXITING);
-            #endif
+            LOG_LOG_EVENT(LOG_EVENT_EXITING);
             INFO_PRINT("logger exit triggered\n");
             exitFlag = 0;
         }
@@ -145,7 +137,7 @@ void* logThreadHandler(void* threadInfo)
 
     /* clean up */
     timer_delete(timerid);
-	  close(logFd);
+    close(logFd);
     INFO_PRINT("logger thread exiting\n");
     return NULL;
 }
