@@ -17,19 +17,38 @@
 
 
 #include "logger_types.h"
+#include "debug.h"
 #include <stddef.h>
 
 #ifdef __linux__
 #include <time.h>
+#define TIMESPEC_TO_uSEC(time)	((((double)time.tv_sec) * 1.0e6) + (((double)time.tv_nsec) / 1.0e3))
+#define TIMESPEC_TO_mSEC(time)	((((double)time.tv_sec) * 1.0e3) + (((double)time.tv_nsec) / 1.0e6))
+#define TIMESPEC_TO_SEC(time)	(((double)time.tv_sec) + (((double)time.tv_nsec) / 1.0e9))
 #else
 #include "rtc.h"
 #endif
+
+uint8_t firstCall = 1;
 
 
 uint32_t log_get_time(void)
 {
 #ifdef __linux__
-	return((uint32_t)clock());
+static struct timespec start_time, log_time;
+
+	if(firstCall)
+	{
+		clock_gettime(CLOCK_REALTIME, &start_time);
+		firstCall = 0;
+	}
+
+	/* get time now */
+	clock_gettime(CLOCK_REALTIME, &log_time);
+
+	float diffTime = TIMESPEC_TO_uSEC(log_time) - TIMESPEC_TO_uSEC(start_time);
+
+	return((uint32_t)diffTime);
 #else
 	return(rtc_get_seconds());
 #endif

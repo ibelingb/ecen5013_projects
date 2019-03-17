@@ -19,7 +19,6 @@
 #define	LOGGER_H
 
 #include <stddef.h>
-#include <sys/syscall.h>
 #include "logger_types.h"
 #include "logger_helper.h"
 #include "conversion.h"
@@ -66,6 +65,7 @@
 #else /* LOGging enabled */
 
 #ifdef __linux__
+#include <sys/syscall.h>
 #ifdef LOG_MSG_QUEUE
 #include "logger_queue.h"
 #define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))

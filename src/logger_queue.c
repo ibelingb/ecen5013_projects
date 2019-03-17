@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <unistd.h>	// for write, open, etc
 #include <time.h>	// for timespec
+#include <pthread.h>
+#include <sys/syscall.h>
 
 #include "debug.h"
 #include "logger_types.h"
@@ -73,8 +75,8 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	if(memcpy(newItem.payload, pLogItem->pPayload, pLogItem->payloadLength) == NULL)
 		return LOG_STATUS_NOTOK;
 
-	/* send, use logMsgId as priority */
-	if(mq_send(logQueue, (char *)&newItem, sizeof(LogMsgPacket), (uint8_t)newItem.logMsgId) < 0)
+	/* send, use 7 as priority */
+	if(mq_send(logQueue, (char *)&newItem, sizeof(LogMsgPacket), 7) < 0)
 	{
         ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
@@ -143,46 +145,46 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 
 uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
 {
-	if(log_byte(FRAME_START_BYTE, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->logMsgId, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_string(pLogItem->pFilename, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->lineNum, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->time, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->payloadLength, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_data(pLogItem->pPayload, pLogItem->payloadLength, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->sourceId, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_integer(pLogItem->checksum, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	if(log_byte(FRAME_STOP_BYTE, fileFd) != LOG_STATUS_OK)
-		return LOG_STATUS_NOTOK;
-	//printf("\n");
-	return LOG_STATUS_OK;
+	if(log_byte(FRAME_START_BYTE, fileFd) == LOG_STATUS_OK){
+		if(log_integer(pLogItem->logMsgId, fileFd) == LOG_STATUS_OK){
+			if(log_string(pLogItem->pFilename, fileFd) == LOG_STATUS_OK){
+				if(log_integer(pLogItem->lineNum, fileFd) == LOG_STATUS_OK){
+					if(log_integer(pLogItem->time, fileFd) == LOG_STATUS_OK){
+						if(log_integer(pLogItem->payloadLength, fileFd) == LOG_STATUS_OK){
+							if(log_data(pLogItem->pPayload, pLogItem->payloadLength, fileFd) == LOG_STATUS_OK){
+								if(log_integer(pLogItem->sourceId, fileFd) == LOG_STATUS_OK){
+									if(log_integer(pLogItem->checksum, fileFd) == LOG_STATUS_OK){
+										if(log_byte(FRAME_STOP_BYTE, fileFd) == LOG_STATUS_OK){
+											{
+												return LOG_STATUS_OK;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	ERROR_PRINT("error writing logItem\n");
+	return LOG_STATUS_NOTOK;
 }
 
 /***** private functions *****/
 
 uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd)
 {
-	if(pData != NULL)
-	{
-		uint32_t ind = 0;
-		for(;ind < len; ++ind)
-			write(fileFd, pData, len);
-	}
+	if(pData == NULL)
+		return LOG_STATUS_NOTOK;
+
+	write(fileFd, pData, len);
 	return LOG_STATUS_OK;
 }
 
 uint8_t log_byte(uint8_t value, int fileFd)
 {
-	//putchar(value);
 	write(fileFd, &value, 1);
 	return LOG_STATUS_OK;
 }
@@ -193,7 +195,6 @@ uint8_t log_string(uint8_t *pStr, int fileFd)
 
 	while(*pChar != '\0')
 	{
-		//putchar(*pChar++);
 		write(fileFd, pChar++, 1);
 	}
 	write(fileFd, pChar, 1);
@@ -214,7 +215,6 @@ uint8_t log_integer(int32_t num, int fileFd)
 	uint8_t *pChar = &numStr[0];
 	for(;ind < len; ++ind)
 	{
-		//putchar(*pChar++);
 		write(fileFd, pChar++, 1);
 	}
 	return LOG_STATUS_OK;

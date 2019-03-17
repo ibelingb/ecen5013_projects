@@ -76,13 +76,11 @@ void* logThreadHandler(void* threadInfo)
     /* add log event msg to queue */
     LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
 
-    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
         
-        /* send all log msgs for testing log parser, etc */
-        #if (DEBUG_TEST_ALL_MSG_TYPES != 0)
-            LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
-            LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
-        #endif
+    /* send all log msgs for testing log parser, etc */
+    #if (DEBUG_TEST_ALL_MSG_TYPES != 0)
+        LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
+        LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
     #endif
 
     /* Clear memory objects */

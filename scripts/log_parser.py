@@ -195,22 +195,16 @@ def print_source(item):
           "]: ", end="")
 
 def print_tid(item):
-    print(",tid:", item.sourceId,
-          "]: ", end="")
+    print(", tid:", item.sourceId,
+          "]", end="")
 
 def print_time(item):
-    print("[", item.time, "cycles]", end="")
+    print("[", item.time, "us]", end="")
 
 
 def print_file_location(item):
     print("["
           , item.filename.split('/')[-1], ":", item.lineNum, end="")
-
-    # LIGHT_SENSOR_EVENT = 23
-    # TEMP_SENSOR_EVENT = 24
-    # REMOTE_HANDLING_EVENT = 25
-    # LOG_EVENT = 26
-    # MAIN_EVENT = 27
 
 def print_message(item):
     if item.payloadLength != 0:

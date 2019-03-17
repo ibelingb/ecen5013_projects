@@ -37,11 +37,9 @@
 int gExitSig = 1;
 int gExitLog = 1;
 
-#if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-    static void *tempThread(void *pArg);
-    static void *lightThread(void *pArg);
-    static void *remoteThread(void *pArg);
-#endif
+static void *tempThread(void *pArg);
+static void *lightThread(void *pArg);
+static void *remoteThread(void *pArg);
 
 int main(void)
 {
@@ -84,119 +82,115 @@ int main(void)
         ERROR_PRINT("failed to init logger\n");
         return EXIT_FAILURE;
     }
+
+    /* and create logging thread before writing first log msg */
+    pthread_create(&pThread[3], NULL, logThreadHandler, &logThreadInfo);
+
+    usleep(20 * 1000);
     LOG_LOGGER_INITIALIZED();
     INFO_PRINT("main tid: %d\n",(pid_t)syscall(SYS_gettid));
 
-    /* spaw child threads */
-    pthread_create(&pThread[3], NULL, logThreadHandler, &logThreadInfo);
+    /* create other threads */
+    pthread_create(&pThread[0], NULL, lightThread, NULL);
+    pthread_create(&pThread[1], NULL, tempThread, NULL);
+    pthread_create(&pThread[2], NULL, remoteThread, NULL);
+    
 
-    #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-        pthread_create(&pThread[0], NULL, lightThread, NULL);
-        pthread_create(&pThread[1], NULL, tempThread, NULL);
-        pthread_create(&pThread[2], NULL, remoteThread, NULL);
-        
+    /* events logged by main */
+    LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
+    LOG_MAIN_EVENT(MAIN_EVENT_THREAD_UNRESPONSIVE);
+    LOG_MAIN_EVENT(MAIN_EVENT_RESTART_THREAD);
+    LOG_MAIN_EVENT(MAIN_EVENT_LOG_QUEUE_FULL);
+    LOG_MAIN_EVENT(MAIN_EVENT_ISSUING_EXIT_CMD);
 
-        /* events logged by main */
-        LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
-        LOG_MAIN_EVENT(MAIN_EVENT_THREAD_UNRESPONSIVE);
-        LOG_MAIN_EVENT(MAIN_EVENT_RESTART_THREAD);
-        LOG_MAIN_EVENT(MAIN_EVENT_LOG_QUEUE_FULL);
-        LOG_MAIN_EVENT(MAIN_EVENT_ISSUING_EXIT_CMD);
+    /* initialize other resources */
+    LOG_GPIO_INITIALIZED();
 
-        /* initialize other resources */
-        LOG_GPIO_INITIALIZED();
+    /* system is now fully functional */
+    LOG_SYSTEM_INITIALIZED();
 
-        /* system is now fully functional */
-        LOG_SYSTEM_INITIALIZED();
+    /* do stuff, wait for exit signal 
+    (e.g. in this case, when count to expire) */
+    uint8_t loopCount;
+    while(loopCount++ < 8)
+    {
+        LOG_HEARTBEAT();
+        sleep(1);
+    }
 
-        /* do stuff, wait for exit signal 
-        (e.g. in this case, when count to expire) */
-        uint8_t loopCount;
-        while(loopCount++ < 8)
-        {
-            LOG_HEARTBEAT();
-            sleep(1);
-        }
+    /* add exit notification msg to log */
+    gExitSig = 0;
+    LOG_SYSTEM_HALTED();
 
-        /* add exit notification msg to log */
-        gExitSig = 0;
-        LOG_SYSTEM_HALTED();
+    /* wait to kill log so exit msgs get logged */
+    sleep(2);
+    gExitLog = 0;
 
-        /* wait to kill log so exit msgs get logged */
-        sleep(2);
-        gExitLog = 0;
-
-        for(uint8_t ind; ind < NUM_THREADS; ++ind)
-            pthread_join(pThread[ind], NULL);
-    #else
-            gExitSig = 0;
-            pthread_join(pThread[3], NULL);
-    #endif
+    for(uint8_t ind; ind < NUM_THREADS; ++ind)
+        pthread_join(pThread[ind], NULL);
 
     mq_close(logQueue);
 
     INFO_PRINT("main exiting\n");
     return EXIT_SUCCESS;
 }
-#if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-    static void *lightThread(void *log)
+static void *lightThread(void *log)
+{
+    /* send log msgs */
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
+    INFO_PRINT("light tid: %d\n",(pid_t)syscall(SYS_gettid));
+
+    while(gExitSig)
     {
-        /* send log msgs */
-        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
-        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
-        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
-        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
-        INFO_PRINT("light tid: %d\n",(pid_t)syscall(SYS_gettid));
-
-        while(gExitSig)
-        {
-            sleep(1);
-        }
-
-        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
-        INFO_PRINT("light thread exiting\n");
-        return NULL;
+        sleep(1);
     }
 
-    static void *tempThread(void *log)
-    {
-        /* send log msgs */
-        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STARTED);
-        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
-        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
-        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
-        INFO_PRINT("temp tid: %d\n",(pid_t)syscall(SYS_gettid));
-        
-        while(gExitSig)
-        {
-            sleep(1);
-        }
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
+    INFO_PRINT("light thread exiting\n");
+    return NULL;
+}
 
-        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
-        INFO_PRINT("temp thread exiting\n");
-        return NULL;
+static void *tempThread(void *log)
+{
+    /* send log msgs */
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STARTED);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+    INFO_PRINT("temp tid: %d\n",(pid_t)syscall(SYS_gettid));
+    
+    while(gExitSig)
+    {
+        sleep(1);
     }
 
-    static void *remoteThread(void *log)
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
+    INFO_PRINT("temp thread exiting\n");
+    return NULL;
+}
+
+static void *remoteThread(void *log)
+{
+    /* send log msgs */
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+    INFO_PRINT("remote tid: %d\n",(pid_t)syscall(SYS_gettid));
+
+    while(gExitSig)
     {
-        /* send log msgs */
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
-        INFO_PRINT("remote tid: %d\n",(pid_t)syscall(SYS_gettid));
-
-        while(gExitSig)
-        {
-            sleep(1);
-        }
-
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
-        INFO_PRINT("remote thread exiting\n");
-        return NULL;
+        sleep(1);
     }
-#endif
+
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
+    INFO_PRINT("remote thread exiting\n");
+    return NULL;
+}
 
