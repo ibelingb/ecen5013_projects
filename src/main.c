@@ -39,7 +39,9 @@
 #include "debug.h"
 #include "logger.h"
 
-#define NUM_THREADS (4)
+#define NUM_THREADS           (4)
+#define MAIN_LOOP_TIME        (499e-3 * 1e9)
+#define MAIN_LOG_EXIT_DELAY   (100 * 1000)
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
@@ -65,6 +67,13 @@ int main(int argc, char *argv[]){
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
   char ind;
+
+  /* timer variables */
+  struct sigevent timer_sigevent;
+  static timer_t timerid;
+  struct itimerspec trig;
+  sigset_t set;
+  int signum = SIGALRM;
 
   /* Check inputs */
   // TODO
@@ -168,23 +177,48 @@ int main(int argc, char *argv[]){
   pthread_mutex_init(&gSharedMemMutex, NULL);
   pthread_mutex_init(&gI2cBusMutex, NULL);
 
-  // /* Create other threads */
-  // if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
-  // {
-  //   printf("ERROR: Failed to create Remote Thread - exiting main().\n");
-  //   return EXIT_FAILURE;
-  // }
-  // if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
-  // {
-  //   printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
-  //   return EXIT_FAILURE;
-  // }
+  /* Create other threads */
+  if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
+  {
+    printf("ERROR: Failed to create Remote Thread - exiting main().\n");
+    return EXIT_FAILURE;
+  }
+  if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
+  {
+    printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
+    return EXIT_FAILURE;
+  }
   // if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
   // {
   //   printf("ERROR: Failed to create LightSensor Thread - exiting main().\n");
   //   return EXIT_FAILURE;
   // }
   LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
+
+  /* Clear memory objects */
+  memset(&timer_sigevent, 0, sizeof(struct sigevent));
+  memset(&trig, 0, sizeof(struct itimerspec));
+
+  /* create and initiate timer */
+  /* Set the notification method as SIGEV_THREAD_ID:
+   * Upon timer expiration, only this thread gets notified */
+  timer_sigevent.sigev_notify = SIGEV_THREAD_ID;
+  timer_sigevent._sigev_un._tid = (pid_t)syscall(SYS_gettid);
+  timer_sigevent.sigev_signo = SIGALRM;
+
+  sigemptyset(&set);
+  sigaddset(&set, signum);
+  sigprocmask(SIG_BLOCK, &set, NULL);
+
+  /* Create timer */
+  timer_create(CLOCK_REALTIME, &timer_sigevent, &timerid);
+
+  /* Set expiration and interval time */
+  trig.it_value.tv_nsec = MAIN_LOOP_TIME;
+  trig.it_interval.tv_nsec = MAIN_LOOP_TIME;
+
+  /* Arm / start the timer */
+  timer_settime(timerid, 0, &trig, NULL);
 
   /* Log main thread started succesfully */
   printf("The Main() thread has successfully started with all child threads created.\n");
@@ -199,14 +233,15 @@ int main(int argc, char *argv[]){
   ind = 0;
   while(ind++ < 8)
   {
-    // TODO
+    /* wait on signal timer */
+    sigwait(&set, &signum);
+
     LOG_HEARTBEAT();
-    sleep(1);
   }
   LOG_SYSTEM_HALTED();
 
   /* wait to kill log so exit msgs get logged */
-  usleep(10 * 1000);
+  usleep(MAIN_LOG_EXIT_DELAY);
   gExitLog = 0;
 
   /* join to clean up children */
@@ -215,6 +250,7 @@ int main(int argc, char *argv[]){
   
   /* Cleanup */
   printf("main() Cleanup.\n");
+  timer_delete(timerid);
   mq_unlink(heartbeatMsgQueueName);
   mq_unlink(logMsgQueueName);
   shm_unlink(sensorSharedMemoryName);
