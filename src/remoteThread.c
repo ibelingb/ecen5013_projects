@@ -1,7 +1,5 @@
 /* Remote Thread Library */
 
-#include "remoteThread.h"
-#include "packet.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -13,6 +11,9 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+
+#include "remoteThread.h"
+#include "packet.h"
 
 #define PORT (5001)
 #define MAX_CLIENTS (5)

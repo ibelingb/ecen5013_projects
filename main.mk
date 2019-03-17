@@ -19,5 +19,9 @@ SRCS += src/tempSensor.c \
         src/tempThread.c \
         src/lightThread.c \
         src/lu_iic.c \
+        src/logger_queue.c \
+        src/logger_helper.c \
+        src/memory.c \
+        src/conversion.c \
         src/bbgLeds.c \
         src/main.c

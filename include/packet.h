@@ -9,7 +9,7 @@
 
 #define MSG_QUEUE_MSG_SIZE      (8192) // bytes
 #define MSG_QUEUE_DEPTH         (20) // total messages
-#define LOG_MSG_FILENAME_SIZE    (32) // bytes
+#define LOG_MSG_FILENAME_SIZE   (32) // bytes
 #define LOG_MSG_PAYLOAD_SIZE    (128) // bytes
 #define IPC_NAME_SIZE           (30)
 
@@ -117,7 +117,7 @@ typedef struct TaskStatusPacket
 
 typedef struct LogMsgPacket
 {
-  logMsg_e logMsgId;
+  LogMsg_e logMsgId;
   uint8_t filename[LOG_MSG_FILENAME_SIZE];
   uint16_t lineNum;
   uint32_t timestamp;
@@ -174,7 +174,7 @@ typedef struct SensorThreadInfo
   int lightDataOffset; /* Offset into SharedMemory for LightDataStruct (in bytes) */
 } SensorThreadInfo;
 
-typedef struct
+typedef struct LogThreadInfo
 {
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
