@@ -34,24 +34,26 @@ typedef enum
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief 
  *
  * @param file
- * @param luxData0
+ * @param luxData0Low
+ * @param luxData0High
  *
  * @return 
  */
-int8_t apds9301_getLuxData0(uint8_t file, uint8_t *luxData0);
+int8_t apds9301_getLuxData0(uint8_t file, uint8_t *luxData0Low, uint8_t *luxData0High);
 
 /**
- * @brief TODO
+ * @brief 
  *
  * @param file
- * @param luxData1
+ * @param luxData1Low
+ * @param luxData1High
  *
  * @return 
  */
-int8_t apds9301_getLuxData1(uint8_t file, uint8_t *luxData1);
+int8_t apds9301_getLuxData1(uint8_t file, uint8_t *luxData1Low, uint8_t *luxData1High);
 
 /**
  * @brief TODO

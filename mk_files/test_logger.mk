@@ -1,27 +1,19 @@
 #*****************************************************************************
-# @author Brian Ibeling and Joshua Malburg (joma0364)
-# brian.ibeling@colorado.edu
+# @author Joshua Malburg (joma0364)
 # joshua.malburg@colorado.edu
 # Advanced Embedded Software Development
 # ECEN5013-002 - Rick Heidebrecht
-# @date March 7, 2018
+# @date March 15, 2018
 #*****************************************************************************
-# @file main.mk
-# @brief project 1 source library
+# @file temp.mk
+# @brief unit tests for logger writes and reads to logger msg queue
 #
 #*****************************************************************************
 
 # source files
-SRCS += src/tempSensor.c \
-        src/lightSensor.c \
-        src/loggingThread.c \
-        src/remoteThread.c \
-        src/tempThread.c \
-        src/lightThread.c \
-        src/lu_iic.c \
+SRCS += unittest/test_logger.c \
         src/logger_queue.c \
         src/logger_helper.c \
+        src/loggingThread.c \
         src/memory.c \
-        src/conversion.c \
-        src/bbgLeds.c \
-        src/main.c
+        src/conversion.c

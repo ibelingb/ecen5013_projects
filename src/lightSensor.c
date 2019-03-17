@@ -22,13 +22,13 @@
 #define APDS9301_DATA1HIGH      (0x0F)
 
 /*---------------------------------------------------------------------------------*/
-int8_t apds9301_getLuxData0(uint8_t file, uint8_t *luxData0)
+int8_t apds9301_getLuxData0(uint8_t file, uint8_t *luxData0Low, uint8_t *luxData0High)
 {
 
   return EXIT_SUCCESS;
 }
 
-int8_t apds9301_getLuxData1(uint8_t file, uint8_t *luxData1)
+int8_t apds9301_getLuxData1(uint8_t file, uint8_t *luxData1Low, uint8_t *luxData1High)
 {
 
   return EXIT_SUCCESS;

@@ -16,7 +16,7 @@ CFLAGS = -Wall -g -O0 -Werror -pthread
 CPPFLAGS = -MD -MP
 TARGET = main
 LDFLAGS = -lrt
-include $(TARGET).mk
+include mk_files/$(TARGET).mk
 INCLDS = -I./include
 
 ifeq ($(PLATFORM),BBG)

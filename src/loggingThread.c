@@ -145,7 +145,7 @@ void* logThreadHandler(void* threadInfo)
 
     /* clean up */
     timer_delete(timerid);
-	close(logFd);
+	  close(logFd);
     INFO_PRINT("logger thread exiting\n");
     return NULL;
 }

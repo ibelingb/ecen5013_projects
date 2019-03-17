@@ -48,7 +48,7 @@ int gExitSig = 1;
 int gExitLog = 1;
 
 int main(int argc, char *argv[]){
-  char *taskStatusMsgQueueName = "/heartbeat_mq";
+  char *heartbeatMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";
   char *sensorSharedMemoryName = "/sensor_sm";
   char *logFile = "log.txt";
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]){
   LogMsgPacket logPacket;
   struct mq_attr mqAttr;
   mqd_t logMsgQueue;
-  mqd_t taskStatusMsgQueue;
+  mqd_t heartbeatMsgQueue;
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
 
@@ -76,8 +76,8 @@ int main(int argc, char *argv[]){
   memset(&mqAttr,           0, sizeof(struct mq_attr));
 
   /* Ensure MQs and Shared Memory properly cleaned up before starting */
-  mq_unlink(taskStatusMsgQueueName);
   mq_unlink(logMsgQueueName);
+  mq_unlink(heartbeatMsgQueueName);
   shm_unlink(sensorSharedMemoryName);
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]){
 
   /*** Create all IPC mechanisms used by children threads ***/
   /* Create MessageQueue for logger to receive log messages */
-  logMsgQueue = mq_open(logMsgQueueName, O_CREAT, 0666, &mqAttr);
+  logMsgQueue = mq_open(logMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
   if(logMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Logger - exiting.\n");
@@ -95,15 +95,15 @@ int main(int argc, char *argv[]){
   }
 
   /* Create MessageQueue to receive thread status from all children */
-  taskStatusMsgQueue = mq_open(logMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
-  if(taskStatusMsgQueue == -1)
+  heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
+  if(heartbeatMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n");
     return EXIT_FAILURE;
   }
 
   /* Create Shared Memory for data sharing between SensorThreads and RemoteThread */
-  sharedMemFd = shm_open(sensorSharedMemoryName, O_CREAT, 0666);
+  sharedMemFd = shm_open(sensorSharedMemoryName, O_CREAT | O_RDWR, 0666);
   if(sharedMemFd == -1)
   {
     printf("ERROR: main() failed to create shared memory for sensor and remote threads - exiting.\n");
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]){
   }
 
   /* Populate ThreadInfo objects to pass names for created IPC pieces to threads */
-  strcpy(sensorThreadInfo.heartbeatMsgQueueName, taskStatusMsgQueueName);
+  strcpy(sensorThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
   strcpy(sensorThreadInfo.logMsgQueueName, logMsgQueueName);
   strcpy(sensorThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
   sensorThreadInfo.sharedMemSize = sharedMemSize;
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]){
   sensorThreadInfo.sharedMemMutex = &gSharedMemMutex;
   sensorThreadInfo.i2cBusMutex = &gI2cBusMutex;
 
-  strcpy(logThreadInfo.heartbeatMsgQueueName, taskStatusMsgQueueName);
+  strcpy(logThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
   strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
   strcpy(logThreadInfo.logFileName, logFile);
 
@@ -164,6 +164,7 @@ int main(int argc, char *argv[]){
   printf("The Main() thread has successfully started with all child threads created.\n");
   // TODO - add msg to log
 
+
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
   // TODO: Setup timer
@@ -174,12 +175,14 @@ int main(int argc, char *argv[]){
   }
 
 
+
   // TODO: Since not joining threads, is there a cleanup method for the created pthreads? pthread_exit()?
   /* Cleanup */
-  mq_unlink(taskStatusMsgQueueName);
+  printf("main() Cleanup.\n");
+  mq_unlink(heartbeatMsgQueueName);
   mq_unlink(logMsgQueueName);
   shm_unlink(sensorSharedMemoryName);
-  mq_close(taskStatusMsgQueue);
+  mq_close(heartbeatMsgQueue);
   mq_close(logMsgQueue);
   pthread_mutex_destroy(&gSharedMemMutex);
   pthread_mutex_destroy(&gI2cBusMutex);
