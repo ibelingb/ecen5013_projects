@@ -161,7 +161,7 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
 		return LOG_STATUS_NOTOK;
 	if(log_byte(FRAME_STOP_BYTE, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
-	printf("\n");
+	//printf("\n");
 	return LOG_STATUS_OK;
 }
 

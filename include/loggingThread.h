@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+#define TIMER_INTERVAL	(100e-3)
+
 typedef enum {
     LOG_EVENT_STARTED = 0,
     LOG_EVENT_FILE_OPEN,
@@ -27,6 +29,8 @@ typedef enum {
     LOG_EVENT_EXITING,
     LOG_EVENT_END
 } LogEvent_e;
+
+extern int gExitLog;
 
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo);

@@ -34,8 +34,8 @@
 
 
 /* global for causing threads to exit */
-uint8_t gExitSig = 1;
-uint8_t gExitLog = 1;
+int gExitSig = 1;
+int gExitLog = 1;
 
 #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
     static void *tempThread(void *pArg);
@@ -48,7 +48,7 @@ int main(void)
     pthread_t pThread[NUM_THREADS];
     mqd_t logQueue;
     char *logMsgQueueName = "/mq";
-    char *logFile = "log.txt";
+    char *logFile = "scripts/log.bin";
     LogThreadInfo logThreadInfo;
     struct mq_attr mqAttr;
 
@@ -87,7 +87,7 @@ int main(void)
     LOG_LOGGER_INITIALIZED();
 
     /* spaw child threads */
-    pthread_create(&pThread[3], NULL, logThreadHandler, NULL);
+    pthread_create(&pThread[3], NULL, logThreadHandler, &logThreadInfo);
 
     #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
         pthread_create(&pThread[0], NULL, lightThread, NULL);

@@ -178,7 +178,7 @@ typedef struct
 {
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
-  char logFileName[IPC_NAME_SIZE];
+  char logFileName[64];
 } LogThreadInfo;
 
 #endif // PACKET_H_

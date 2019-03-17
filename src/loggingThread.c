@@ -19,18 +19,27 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h> /* for strerror() */
+#include <signal.h>
+#include <time.h>
+#include <sys/syscall.h>
+#include <signal.h>
 
 #include "loggingThread.h"
 #include "debug.h"
 #include "logger.h"
 #include "packet.h"
 
-extern int gExitLog;
-
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo)
 {
     int logFd;  /* log file descriptor */
+
+    /* timer variables */
+    struct sigevent timer_sigevent;
+    static timer_t timerid;
+    struct itimerspec trig;
+    sigset_t set;
+    int signum = SIGALRM;
 
     /* instantiate temp msg variable for dequeuing */
     logItem_t logItem;
@@ -50,23 +59,56 @@ void* logThreadHandler(void* threadInfo)
     if(logFd < 0)
     {
         ERROR_PRINT("failed to open log file, err#%d (%s)\n\r", errno, strerror(errno));
+
+        /* add log event msg to queue; probably only
+         * useful if log thread is restarted and sucesfully 
+         * opens file and starts reading from queue */
+        LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
         return NULL;
     }
+    /* add log event msg to queue */
+    LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
 
     #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
-        /* send log msgs */
-
-        LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
+        
+        /* send all log msgs for testing log parser, etc */
         #if (DEBUG_TEST_ALL_MSG_TYPES != 0)
             LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
             LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
         #endif
     #endif
 
+    /* Clear memory objects */
+    memset(&timer_sigevent, 0, sizeof(struct sigevent));
+    memset(&trig, 0, sizeof(struct itimerspec));
+
+    /* create and initiate timer */
+    /* Set the notification method as SIGEV_THREAD_ID:
+     * Upon timer expiration, only this thread gets notified */
+    timer_sigevent.sigev_notify = SIGEV_THREAD_ID;
+    timer_sigevent._sigev_un._tid = (pid_t)syscall(SYS_gettid);
+    timer_sigevent.sigev_signo = SIGALRM;
+
+    sigemptyset(&set);
+    sigaddset(&set, signum);
+    sigprocmask(SIG_BLOCK, &set, NULL);
+
+    /* Create timer */
+    timer_create(CLOCK_REALTIME, &timer_sigevent, &timerid);
+
+    /* Set expiration and interval time */
+    trig.it_value.tv_nsec = TIMER_INTERVAL * 1e9;
+    trig.it_interval.tv_nsec = TIMER_INTERVAL * 1e9;
+
+    /* Arm / start the timer */
+    timer_settime(timerid, 0, &trig, NULL);
+
     /* keep dequeuing and writing msgs until self decides to exit */
     while(exitFlag)
     {
-        
+        /* wait on signal timer */
+        sigwait(&set, &signum);
+
         /* if signaled to exit, shove log exit command
          * (2nd highest priority) in buffer and set exit flag */
         if(gExitLog == 0)
@@ -74,6 +116,7 @@ void* logThreadHandler(void* threadInfo)
             #if (SHORT_CIRCUIT_FOR_DEBUG != 0)
                 LOG_LOG_EVENT(LOG_EVENT_EXITING);
             #endif
+            INFO_PRINT("logger exit triggered\n");
             exitFlag = 0;
         }
         
@@ -92,11 +135,12 @@ void* logThreadHandler(void* threadInfo)
                 ERROR_PRINT("log_dequeue_item error\n");
             }
         }
-        /* TODO - replace with timer */
-        usleep(1000);
-
         /* TODO - send status to main status msg queue */
     }
+
+    /* clean up */
+    timer_delete(timerid);
+	close(logFd);
     INFO_PRINT("logger thread exiting\n");
     return NULL;
 }
