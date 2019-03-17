@@ -157,6 +157,8 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
 		return LOG_STATUS_NOTOK;
 	if(log_data(pLogItem->pPayload, pLogItem->payloadLength, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
+	if(log_integer(pLogItem->sourceId, fileFd) != LOG_STATUS_OK)
+		return LOG_STATUS_NOTOK;
 	if(log_integer(pLogItem->checksum, fileFd) != LOG_STATUS_OK)
 		return LOG_STATUS_NOTOK;
 	if(log_byte(FRAME_STOP_BYTE, fileFd) != LOG_STATUS_OK)

@@ -123,7 +123,7 @@ typedef struct LogMsgPacket
   uint32_t timestamp;
  	uint32_t payloadLength;
 	uint8_t payload[LOG_MSG_PAYLOAD_SIZE];
-  uint8_t sourceId;
+  uint16_t sourceId;
 	uint32_t checksum;  
 } LogMsgPacket;
 

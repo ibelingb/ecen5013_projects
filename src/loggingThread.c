@@ -59,6 +59,7 @@ void* logThreadHandler(void* threadInfo)
 
     /* add start msg to log msg queue */
     LOG_LOG_EVENT(LOG_EVENT_STARTED);
+    INFO_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     /* try to open logfile */
     logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC, 0644);

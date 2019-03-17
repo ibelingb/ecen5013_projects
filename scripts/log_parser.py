@@ -39,10 +39,11 @@ class parseState_e(IntEnum):
     PARSE_TIME = 4
     PARSE_PAYLOAD_LEN = 5
     PARSE_PAYLOAD = 6
-    PARSE_CHECKSUM = 7
-    PARSE_STOP_FRAME_BYTE = 8
-    PARSE_DONE = 9
-    PARSE_END = 10
+    PARSE_SOURCEID = 7
+    PARSE_CHECKSUM = 8
+    PARSE_STOP_FRAME_BYTE = 9
+    PARSE_DONE = 10
+    PARSE_END = 11
 
 
 class logMsg_e(IntEnum):
@@ -72,8 +73,9 @@ class logMsg_e(IntEnum):
     LIGHT_SENSOR_EVENT = 23
     TEMP_SENSOR_EVENT = 24
     REMOTE_HANDLING_EVENT = 25
-    MAIN_EVENT = 26
-    END = 27
+    LOG_EVENT = 26
+    MAIN_EVENT = 27
+    END = 28
 
 
 class funcType_e(IntEnum):
@@ -101,7 +103,53 @@ class LogItem:
     time = 0
     payloadLength = 0
     payload = "TBD"
+    sourceId = 0
     checksum = 0
+
+class LogEvent_e(IntEnum):
+    STARTED = 0
+    FILE_OPEN = 1
+    WRITE_ERROR = 2
+    OPEN_ERROR = 3
+    EXITING = 4
+    END = 5
+
+
+class MainEvent_e(IntEnum):
+    STARTED_THREADS = 0
+    THREAD_UNRESPONSIVE = 1
+    RESTART_THREAD = 2
+    LOG_QUEUE_FULL = 3
+    ISSUING_EXIT_CMD = 4
+    END = 5
+
+
+class RemoteEvent_e(IntEnum):
+    STARTED = 0
+    CNCT_ACCEPTED = 1
+    CNCT_LOST = 2
+    CMD_RECV = 3
+    INVALID_RECV = 4
+    ERROR = 5
+    EXITING = 6
+    END = 7
+
+class LightEvent_e(IntEnum):
+    STARTED = 0
+    DAY = 1
+    NIGHT = 2
+    ERROR = 3
+    EXITING = 4
+    END = 5
+
+
+class TempEvent_e(IntEnum):
+    STARTED = 0
+    OVERTEMP = 1
+    OVERTEMP_RELEQUISHED = 2
+    ERROR = 3
+    EXITING = 4
+    END = 5
 
 
 def clear_log_item(my_log_item):
@@ -143,22 +191,41 @@ def verify_checksum(item):
 
 
 def print_source(item):
-    print("[", item.eventId,
+    print("[", item.eventId.name,
           "]: ", end="")
 
+def print_tid(item):
+    print(",tid:", item.sourceId,
+          "]: ", end="")
 
 def print_time(item):
-    print(item.time, " cycles", end="")
+    print("[", item.time, "cycles]", end="")
 
 
 def print_file_location(item):
     print("["
-          , item.filename, ": ", item.lineNum, "]", end="")
+          , item.filename.split('/')[-1], ":", item.lineNum, end="")
 
+    # LIGHT_SENSOR_EVENT = 23
+    # TEMP_SENSOR_EVENT = 24
+    # REMOTE_HANDLING_EVENT = 25
+    # LOG_EVENT = 26
+    # MAIN_EVENT = 27
 
 def print_message(item):
     if item.payloadLength != 0:
-        print(" - ", item.payload)
+        if item.eventId == logMsg_e.LIGHT_SENSOR_EVENT:
+            print(LightEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.TEMP_SENSOR_EVENT:
+            print(TempEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.REMOTE_HANDLING_EVENT:
+            print(RemoteEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.LOG_EVENT:
+            print(LogEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.MAIN_EVENT:
+            print(MainEvent_e(int(item.payload, 16)).name, end="")
+        else:
+            print(":", item.payload)
     print("")
 
 
@@ -167,10 +234,10 @@ def print_log_item(item):
 #    if not verify_checksum(item):
 #        print("ERROR - checksum invalid")
 #    else:
-
-        print_source(item)
-        print_time(item)
         print_file_location(item)
+        print_tid(item)
+        print_time(item)
+        print_source(item)
         print_message(item)
 
 
@@ -296,8 +363,20 @@ while parseState != parseState_e.PARSE_DONE:
 
                 myLogItem.payload = myStr
 
-        parseState = parseState_e.PARSE_CHECKSUM
+        parseState = parseState_e.PARSE_SOURCEID
+    elif parseState == parseState_e.PARSE_SOURCEID:
 
+        myStr = read_string(log_file)
+
+        if DEBUG:
+            print_state(parseState)
+            print(myStr)
+
+        if myStr == '[]':
+            parseState = parseState_e.PARSE_DONE
+
+        myLogItem.sourceId = int(myStr, 16)
+        parseState = parseState_e.PARSE_CHECKSUM
     elif parseState == parseState_e.PARSE_CHECKSUM:
 
         myStr = read_string(log_file)

@@ -38,7 +38,7 @@ uint32_t log_get_time(void)
 void log_set_checksum(logItem_t *pLogItem)
 {
 	uint32_t sum = pLogItem->logMsgId + pLogItem->lineNum
-			+ pLogItem->time + pLogItem->payloadLength;
+			+ pLogItem->time + pLogItem->payloadLength + pLogItem->sourceId;
 
 	uint8_t *ptr = pLogItem->pFilename;
 	if (ptr == NULL)
