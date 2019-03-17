@@ -12,5 +12,5 @@
 
 # source files
 SRCS += unittest/test_temp.c \
-src/tempSensor.c \
-src/lu_iic.c
+        src/tempSensor.c \
+        src/lu_iic.c

@@ -109,8 +109,8 @@ void getLightSensorData(LightDataStruct *lightData) {
   if(deviceAvailable) {
     /* Collect data from all available Light Sensor registers */
     pthread_mutex_lock(i2cBusMutex);
-    apds9301_getLuxData0(sensorFd, &lightData->apds9301_luxData0);
-    apds9301_getLuxData1(sensorFd, &lightData->apds9301_luxData1);
+    apds9301_getLuxData0(sensorFd, &lightData->apds9301_luxData0Low, &lightData->apds9301_luxData0High);
+    apds9301_getLuxData1(sensorFd, &lightData->apds9301_luxData1Low, &lightData->apds9301_luxData1High);
     apds9301_getControl(sensorFd, &lightData->apds9301_controlReg);
     apds9301_getTiming(sensorFd, &lightData->apds9301_timingReg);
     apds9301_getInterruptThreshold(sensorFd, LOWTHRES_LOWBYTE, &lightData->apds9301_intThresLowLow);

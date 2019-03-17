@@ -146,16 +146,17 @@ typedef struct TempDataStruct
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
 typedef struct LightDataStruct
 {
-  uint8_t apds9301_luxData0;
-  uint8_t apds9301_luxData1;
+  uint8_t apds9301_luxData0Low;
+  uint8_t apds9301_luxData0High;
+  uint8_t apds9301_luxData1Low;
+  uint8_t apds9301_luxData1High;
   uint8_t apds9301_deviceId;
   uint8_t apds9301_controlReg;
   uint8_t apds9301_timingReg;
-  uint8_t apds9301_intThresLowLow;  // Low Byte, low thres
-  uint8_t apds9301_intThresLowHigh; // Low Byte, high thres
-  uint8_t apds9301_intThresHighLow; // High Byte, low thres
+  uint8_t apds9301_intThresLowLow;   // Low Byte, low thres
+  uint8_t apds9301_intThresLowHigh;  // Low Byte, high thres
+  uint8_t apds9301_intThresHighLow;  // High Byte, low thres
   uint8_t apds9301_intThresHighHigh; // High Byte, high thres
-  //TODO - Add any needed additional fields
 } LightDataStruct;
 
 /* ------------------------------------------------------------- */

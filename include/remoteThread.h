@@ -19,12 +19,19 @@
 
 #include <stdint.h>
 
+#define PORT (5001)
 #define REMOTE_MSG_PAYLOAD_SIZE (256) // Bytes
+
+typedef union StatusData {
+  uint32_t status_uint32;
+  float status_float;
+} StatusData;
 
 typedef enum RemoteCmd_e
 {
-  TEMPCMD_GETTEMP,
-  TEMPCMD_GETTHRES,
+  TEMPCMD_GETTEMP = 1,
+  TEMPCMD_GETLOWTHRES,
+  TEMPCMD_GETHIGHTHRES,
   TEMPCMD_GETCONFIG,
   TEMPCMD_GETRESOLUTION,
   TEMPCMD_GETFAULT,
@@ -32,20 +39,21 @@ typedef enum RemoteCmd_e
   TEMPCMD_GETSHUTDOWNMODE,
   TEMPCMD_GETALERT,
   TEMPCMD_GETCONVRATE,
-  LIGHTCMD_GETLUX,
+  LIGHTCMD_GETLUXLOW,
+  LIGHTCMD_GETLUXHIGH,
   LIGHTCMD_GETDEVID,
   LIGHTCMD_GETCTRL,
   LIGHTCMD_GETTIMING,
   LIGHTCMD_GETLOWTHRES,
-  LIGHTCMD_GETHIGHTHRES,
-  NUM_CMDS
+  LIGHTCMD_GETHIGHTHRES
 } RemoteCmd_e;
 
 typedef struct RemoteCmdPacket
 {
   uint16_t header;
   RemoteCmd_e cmd;
-  char payload[REMOTE_MSG_PAYLOAD_SIZE];
+  StatusData data0;
+  StatusData data1;
   uint32_t crc;
 } RemoteCmdPacket;
 
