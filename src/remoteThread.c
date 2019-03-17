@@ -38,10 +38,11 @@ void* remoteThreadHandler(void* threadInfo)
   struct mq_attr mqAttr;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
-  int sockfd, sockfd2;
+  int sockfdServer, sockfdClient;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen;
   threadAlive = true;
+  ssize_t clientResponse = 1; /* Used to determine if client has disconnected from server */
 
   /* Log Remote Thread Started */
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
@@ -81,8 +82,8 @@ void* remoteThreadHandler(void* threadInfo)
 
   /** Establish connection on remote socket **/
   /* Create Socket */
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfd == -1){
+  sockfdServer = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfdServer == -1){
     printf("ERROR: remoteThread failed to create socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
@@ -92,7 +93,7 @@ void* remoteThreadHandler(void* threadInfo)
   servAddr.sin_family = AF_INET;
   servAddr.sin_addr.s_addr = INADDR_ANY;
   servAddr.sin_port = htons((int)PORT);
-  if(bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
+  if(bind(sockfdServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
     printf("ERROR: remoteThread failed to bind socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
@@ -102,7 +103,7 @@ void* remoteThreadHandler(void* threadInfo)
   printf("Created remoteThread to listen on port %d.\n", PORT);
 
   /* Listen for Client Connection */
-  if(listen(sockfd, MAX_CLIENTS) == -1) {
+  if(listen(sockfdServer, MAX_CLIENTS) == -1) {
     printf("ERROR: remoteThread failed to successfully listen for client connection - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
@@ -110,8 +111,8 @@ void* remoteThreadHandler(void* threadInfo)
 
   /* Accept Client Connection */
   cliLen = sizeof(cliAddr);
-  sockfd2 = accept(sockfd, (struct sockaddr*)&cliAddr, &cliLen);
-  if(sockfd2 == -1){
+  sockfdClient = accept(sockfdServer, (struct sockaddr*)&cliAddr, &cliLen);
+  if(sockfdClient == -1){
     printf("ERROR: remoteThread failed to accept client connection for socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
@@ -122,11 +123,32 @@ void* remoteThreadHandler(void* threadInfo)
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
   while(threadAlive) {
+    /* Determine if client has disconnected from server */
+    if(clientResponse == 0){
+      sockfdClient = accept(sockfdServer, (struct sockaddr*)&cliAddr, &cliLen);
+      if(sockfdClient == -1){
+        printf("ERROR: remoteThread failed to accept client connection for socket - exiting.\n");
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+        continue;
+      } else if(sockfdClient > 0) {
+        /* Log RemoteThread successfully Connected to client */
+        printf("Connected remoteThread to external Client on port %d.\n", PORT);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+      }
+    }
+
     /* Check for incoming commands from remote clients on socket port */
-    if(recv(sockfd2, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1){
+    clientResponse = recv(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
+    if (clientResponse == -1) { 
+      /* Handle error with receiving data from client socket */
       printf("ERROR: remoteThread failed to handle incoming command from remote client.\n");
-      threadAlive = false;
-      break;
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+      continue;
+    } else if(clientResponse == 0) { 
+      /* Handle disconnect error from client socket */
+      printf("ERROR: remoteThread lost connection with client on port %d.\n", PORT);
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
+      continue;
     }
 
     /* Read from Shared Memory and pass requested data back to client */
@@ -139,10 +161,10 @@ void* remoteThreadHandler(void* threadInfo)
     getCmdResponse(&cmdPacket);
 
     /* Transmit data packet back to remote client requesting data */
-    if(send(sockfd2, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
+    if(send(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
       printf("ERROR: remoteThread failed to handle outgoing requested data to remote client.\n");
-      threadAlive = false;
-      break;
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+      continue;
     }
   }
 
@@ -152,6 +174,7 @@ void* remoteThreadHandler(void* threadInfo)
   txHeartbeatMsg();
 
   /* Thread Cleanup */
+  printf("remoteThread Cleanup\n");
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
   close(sharedMemFd);
