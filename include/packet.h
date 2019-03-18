@@ -138,7 +138,9 @@ typedef struct LightDataStruct
   uint8_t apds9301_luxData1High;
   uint8_t apds9301_deviceId;
   uint8_t apds9301_controlReg;
-  uint8_t apds9301_timingReg;
+  uint8_t apds9301_timingReg;  // TODO: remove
+  Apds9301_TimingGain_e apds9301_timingGain;
+  Apds9301_TimingInt_e apds9301_timingIntegration;
   uint8_t apds9301_intThresLowLow;   // Low Byte, low thres
   uint8_t apds9301_intThresLowHigh;  // Low Byte, high thres
   uint8_t apds9301_intThresHighLow;  // High Byte, low thres

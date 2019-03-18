@@ -178,6 +178,8 @@ void* remoteThreadHandler(void* threadInfo)
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
   close(sharedMemFd);
+  close(sockfdClient);
+  close(sockfdServer);
 
   return NULL;
 }
