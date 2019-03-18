@@ -20,6 +20,10 @@
 #include <time.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/shm.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <fcntl.h>    //for O_RDWR
 
 #include "tempThread.h"
 #include "debug.h"
@@ -40,6 +44,10 @@ uint8_t getData(int fd, TempDataStruct *pData);
 /*---------------------------------------------------------------------------------*/
 void* tempSensorThreadHandler(void* threadInfo)
 {
+  SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
+  void* sharedMemPtr = NULL;
+  int sharedMemFd;
+
   /* timer variables */
   timer_t timerid;
   sigset_t set;
@@ -55,7 +63,22 @@ void* tempSensorThreadHandler(void* threadInfo)
 	int fd = initIic("/dev/i2c-2");
 	if(fd < 0)
 	  ERROR_PRINT("ERROR: tempSensorThreadHandler() couldn't init i2c handle, err#%d (%s)\n\r", errno, strerror(errno));
+  
+  /* Setup Shared memory for thread */
+  sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
+  if(sharedMemFd == -1) {
+    printf("ERROR: lightSensorThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    return NULL;
+  }
 
+  /* Memory map the shared memory */
+  sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
+  if(*(int *)sharedMemPtr == -1) {
+    printf("ERROR: lightSensorThread Failed to complete memory mapping of shared memory - exiting\n");
+    return NULL;
+  }
+  
+  
   /* initialize sensor */
   //if(tmp102_initialize(fd) == EXIT_FAILURE)
   //{ ERROR_PRINT("tmp102_initialize failed\n"); errCount++; }
@@ -78,7 +101,9 @@ void* tempSensorThreadHandler(void* threadInfo)
     INFO_PRINT("temp alive\n");
 
     /* get data */
+    pthread_mutex_lock(sensorInfo.i2cBusMutex);
     errCount += getData(fd, &data);
+    pthread_mutex_unlock(sensorInfo.i2cBusMutex);
 
     if(errCount > TEMP_ERR_COUNT_LIMIT)
     {
@@ -109,6 +134,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
   INFO_PRINT("temp thread exiting\n");
   timer_delete(timerid);
+  close(sharedMemFd);
   return NULL;
 }
 

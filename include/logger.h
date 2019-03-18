@@ -27,12 +27,14 @@
 #define DEBUG_TEST_ALL_MSG_TYPES (0)
 
 #define LOG_MSG_QUEUE
-#define LOG
+//#define LOG
 
 #ifndef LOG
 
 #define LOG_FLUSH()
-#define LOG_INIT()						/* implemented */
+#define LOG_INIT(threadArgs)			(LOG_STATUS_OK)
+#define LOG_DEQUEUE_ITEM(pLogItem)		(LOG_STATUS_OK)
+#define LOG_WRITE_ITEM(pLogItem, fd)	(LOG_STATUS_OK)
 #define LOG_SYSTEM_ID()					/* implemented */
 #define LOG_SYSTEM_VERSION()			/* implemented */
 #define LOG_LOGGER_INITIALIZED()		/* implemented */
@@ -68,10 +70,12 @@
 #include <sys/syscall.h>
 #ifdef LOG_MSG_QUEUE
 #include "logger_queue.h"
-#define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
-#define LOG_INIT(pArg)			(init_queue_logger(pArg))
-#define LOG_FLUSH()				(log_queue_flush())
-#define LOG_GET_SRC_ID()		((pid_t)syscall(SYS_gettid))
+#define LOG_ITEM(pLogItem)				(log_queue_item(pLogItem))
+#define LOG_DEQUEUE_ITEM(pLogItem)		(log_dequeue_item(pLogItem))
+#define LOG_WRITE_ITEM(pLogItem, fd)	(log_write_item(pLogItem, fd))
+#define LOG_INIT(pArg)					(init_queue_logger(pArg))
+#define LOG_FLUSH()						(log_queue_flush())
+#define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
 #else
 #include "logger_block.h"
 #define LOG_ITEM(pLogItem)		(log_item(pLogItem))

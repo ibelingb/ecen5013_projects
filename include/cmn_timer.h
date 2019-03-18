@@ -24,7 +24,7 @@
 #define MAIN_LOOP_TIME_SEC      (1)
 #define MAIN_LOOP_TIME_NSEC     (0)
 #define LOG_LOOP_TIME_SEC       (0)
-#define LOG_LOOP_TIME_NSEC      (49e-3 * 1e9)
+#define LOG_LOOP_TIME_NSEC      (50e-3 * 1e9)
 
 int8_t setupTimer(sigset_t *pSet, timer_t *pTimer, int signum, const struct timespec *pRate);
 

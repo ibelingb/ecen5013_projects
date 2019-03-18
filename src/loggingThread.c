@@ -23,6 +23,7 @@
 #include <time.h>
 #include <sys/syscall.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #include "loggingThread.h"
 #include "debug.h"
@@ -47,6 +48,7 @@ void* logThreadHandler(void* threadInfo)
     uint8_t payload[128];
     logItem.pFilename = filename;
     logItem.pPayload = payload;
+    logItem.logMsgId = LOG_MSG_INFO;
 
     /* used to stop dequeue/write loop */
     uint8_t exitFlag = 1;
@@ -101,15 +103,18 @@ void* logThreadHandler(void* threadInfo)
         }
         
         /* dequeue a msg */
-        if(log_dequeue_item(&logItem) != LOG_STATUS_OK)
+        if(LOG_DEQUEUE_ITEM(&logItem) != LOG_STATUS_OK)
         {
             /* TODO - set error in status to main */
             ERROR_PRINT("log_dequeue_item error\n");
         }
         else
         {
+            if(logItem.logMsgId == LOG_MSG_CORE_DUMP)
+                INFO_PRINT("core dump not implemented\n");
+
             /* if read from queue successful, right to file */
-            if(log_write_item(&logItem, logFd) != LOG_STATUS_OK)
+            if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
             {
                 /* TODO - set error in status to main */
                 ERROR_PRINT("log_dequeue_item error\n");
