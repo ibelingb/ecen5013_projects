@@ -24,6 +24,7 @@ SRCS += src/tempSensor.c \
         src/memory.c \
         src/conversion.c \
         src/bbgLeds.c \
+        src/cmn_timer.c \
         src/main.c
 
 PLATFORM = BBG

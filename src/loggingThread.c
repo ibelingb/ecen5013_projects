@@ -28,6 +28,7 @@
 #include "debug.h"
 #include "logger.h"
 #include "packet.h"
+#include "cmn_timer.h"
 
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo)
@@ -35,11 +36,10 @@ void* logThreadHandler(void* threadInfo)
     int logFd;  /* log file descriptor */
 
     /* timer variables */
-    struct sigevent timer_sigevent;
     static timer_t timerid;
-    struct itimerspec trig;
     sigset_t set;
     int signum = SIGALRM;
+    struct timespec timer_interval;
 
     /* instantiate temp msg variable for dequeuing */
     logItem_t logItem;
@@ -56,7 +56,7 @@ void* logThreadHandler(void* threadInfo)
     INFO_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     /* try to open logfile */
-    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC, 0644);
+    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_TRUNC, 0644);
     if(logFd < 0)
     {
         ERROR_PRINT("failed to open log file, err#%d (%s)\n\r", errno, strerror(errno));
@@ -78,29 +78,12 @@ void* logThreadHandler(void* threadInfo)
     #endif
 
     /* Clear memory objects */
-    memset(&timer_sigevent, 0, sizeof(struct sigevent));
-    memset(&trig, 0, sizeof(struct itimerspec));
+    memset(&set, 0, sizeof(sigset_t));
+    memset(&timerid, 0, sizeof(timer_t));
 
-    /* create and initiate timer */
-    /* Set the notification method as SIGEV_THREAD_ID:
-     * Upon timer expiration, only this thread gets notified */
-    timer_sigevent.sigev_notify = SIGEV_THREAD_ID;
-    timer_sigevent._sigev_un._tid = (pid_t)syscall(SYS_gettid);
-    timer_sigevent.sigev_signo = SIGALRM;
-
-    sigemptyset(&set);
-    sigaddset(&set, signum);
-    sigprocmask(SIG_BLOCK, &set, NULL);
-
-    /* Create timer */
-    timer_create(CLOCK_REALTIME, &timer_sigevent, &timerid);
-
-    /* Set expiration and interval time */
-    trig.it_value.tv_nsec = TIMER_INTERVAL * 1e9;
-    trig.it_interval.tv_nsec = TIMER_INTERVAL * 1e9;
-
-    /* Arm / start the timer */
-    timer_settime(timerid, 0, &trig, NULL);
+    timer_interval.tv_nsec = LOG_LOOP_TIME_NSEC;
+    timer_interval.tv_sec = LOG_LOOP_TIME_SEC;
+    setupTimer(&set, &timerid, signum, &timer_interval);
 
     /* keep dequeuing and writing msgs until self decides to exit */
     while(exitFlag)

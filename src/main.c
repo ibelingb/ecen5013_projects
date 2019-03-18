@@ -38,9 +38,9 @@
 #include "bbgLeds.h"
 #include "debug.h"
 #include "logger.h"
+#include "cmn_timer.h"
 
 #define NUM_THREADS           (4)
-#define MAIN_LOOP_TIME        (499e-3 * 1e9)
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
 
 /* Define static and global variables */
@@ -69,11 +69,10 @@ int main(int argc, char *argv[]){
   char ind;
 
   /* timer variables */
-  struct sigevent timer_sigevent;
   static timer_t timerid;
-  struct itimerspec trig;
   sigset_t set;
   int signum = SIGALRM;
+  struct timespec timer_interval;
 
   /* Check inputs */
   // TODO
@@ -196,29 +195,12 @@ int main(int argc, char *argv[]){
   LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
 
   /* Clear memory objects */
-  memset(&timer_sigevent, 0, sizeof(struct sigevent));
-  memset(&trig, 0, sizeof(struct itimerspec));
+  memset(&set, 0, sizeof(sigset_t));
+  memset(&timerid, 0, sizeof(timer_t));
 
-  /* create and initiate timer */
-  /* Set the notification method as SIGEV_THREAD_ID:
-   * Upon timer expiration, only this thread gets notified */
-  timer_sigevent.sigev_notify = SIGEV_THREAD_ID;
-  timer_sigevent._sigev_un._tid = (pid_t)syscall(SYS_gettid);
-  timer_sigevent.sigev_signo = SIGALRM;
-
-  sigemptyset(&set);
-  sigaddset(&set, signum);
-  sigprocmask(SIG_BLOCK, &set, NULL);
-
-  /* Create timer */
-  timer_create(CLOCK_REALTIME, &timer_sigevent, &timerid);
-
-  /* Set expiration and interval time */
-  trig.it_value.tv_nsec = MAIN_LOOP_TIME;
-  trig.it_interval.tv_nsec = MAIN_LOOP_TIME;
-
-  /* Arm / start the timer */
-  timer_settime(timerid, 0, &trig, NULL);
+  timer_interval.tv_nsec = MAIN_LOOP_TIME_NSEC;
+  timer_interval.tv_sec = MAIN_LOOP_TIME_SEC;
+  setupTimer(&set, &timerid, signum, &timer_interval);
 
   /* Log main thread started succesfully */
   printf("The Main() thread has successfully started with all child threads created.\n");
@@ -228,14 +210,12 @@ int main(int argc, char *argv[]){
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
-  // TODO: Setup timer
 
   ind = 0;
   while(ind++ < 8)
   {
     /* wait on signal timer */
     sigwait(&set, &signum);
-
     LOG_HEARTBEAT();
   }
   LOG_SYSTEM_HALTED();

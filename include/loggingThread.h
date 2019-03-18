@@ -19,8 +19,6 @@
 
 #include <stdint.h>
 
-#define TIMER_INTERVAL	(50e-3)
-
 typedef enum {
     LOG_EVENT_STARTED = 0,
     LOG_EVENT_FILE_OPEN,
