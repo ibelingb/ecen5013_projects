@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include "tempSensor.h"
+#include "logger_types.h"
 
 #define MSG_QUEUE_MSG_SIZE      (sizeof(LogMsgPacket)) // bytes
 #define MSG_QUEUE_DEPTH         (10) // total messages
@@ -71,7 +72,6 @@ typedef enum {
     REMOTE_EVENT_END
 } RemoteEvent_e;
 
-
 // TODO - move to header
 typedef enum {
     LIGHT_EVENT_STARTED = 0,
@@ -81,20 +81,6 @@ typedef enum {
     LIGHT_EVENT_EXITING,
     LIGHT_EVENT_END
 } LightEvent_e;
-
-// TODO - delete, defined in logger_types.h
-typedef enum LogMsg_e
-{
-  LOG_MSG_SYS_ERROR = 0,
-  LOG_MSG_MAIN_START,
-  LOG_MSG_TEMP_START,
-  LOG_MSG_LIGHT_START,
-  LOG_MSG_REMOTE_START,
-  LOG_MSG_TEMP_EVENT,
-  LOG_MSG_LIGHT_EVENT,
-  LOG_MSG_REMOTE_EVENT,
-  LOG_MSG_REMOTE_REQ
-} LogMsg_e;
 
 typedef enum LogLevel_e
 {
@@ -117,7 +103,7 @@ typedef struct TaskStatusPacket
 
 typedef struct LogMsgPacket
 {
-  LogMsg_e logMsgId;
+  logMsg_e logMsgId;
   uint8_t filename[LOG_MSG_FILENAME_SIZE];
   uint16_t lineNum;
   uint32_t timestamp;

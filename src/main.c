@@ -214,9 +214,10 @@ int main(int argc, char *argv[]){
   ind = 0;
   while(ind++ < 8)
   {
+    LOG_HEARTBEAT();
+
     /* wait on signal timer */
     sigwait(&set, &signum);
-    LOG_HEARTBEAT();
   }
   LOG_SYSTEM_HALTED();
 

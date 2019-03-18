@@ -45,7 +45,7 @@ int main(void)
     pthread_t pThread[NUM_THREADS];
     mqd_t logQueue;
     char *logMsgQueueName = "/mq";
-    char *logFile = "scripts/log.bin";
+    char *logFile = "/usr/bin/log.bin";
     LogThreadInfo logThreadInfo;
     struct mq_attr mqAttr;
 
