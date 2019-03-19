@@ -43,6 +43,26 @@ typedef enum
   APDS9301_TIMING_INT_402       /* Nominal integration time of 402 msec */
 } Apds9301_TimingInt_e;
 
+typedef enum
+{
+  APDS9301_INT_PERSIST_EVERY_CYCLE = 0, /* Every ADC cycle generates interrupt */
+  APDS9301_INT_PERSIST_OUTSIDE_CYCLE, /* Any value outside of threshold range */
+  APDS9301_INT_PERSIST_OUTSIDE_2P,  /* 2 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_3P,  /* 3 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_4P,  /* 4 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_5P,  /* 5 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_6P,  /* 6 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_7P,  /* 7 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_8P,  /* 8 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_9P,  /* 9 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_10P,  /* 10 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_11P,  /* 11 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_12P,  /* 12 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_13P,  /* 13 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_14P,  /* 14 integration time periods out of range */
+  APDS9301_INT_PERSIST_OUTSIDE_15P,  /* 15 integration time periods out of range */
+} Apds9301_IntPersist_e;
+
 /* Enum used to specify which Interrupt Threshold byte is being set/get */
 typedef enum
 {

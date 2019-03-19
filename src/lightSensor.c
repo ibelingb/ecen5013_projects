@@ -27,14 +27,19 @@
 #define APDS9301_CONTROL_MASK       (0x03)
 #define APDS9301_TIMING_REG_MASK    (0x1B)
 #define APDS9301_TIMING_GAIN_MASK   (0x10)
-#define APDS9301_TIMING_MANUAL_MASK (0x08)
-#define APDS9301_TIMING_INT_MASK    (0x03)
 #define APDS9301_TIMING_GAIN_OFFSET   (0x04)
+#define APDS9301_TIMING_MANUAL_MASK (0x08)
 #define APDS9301_TIMING_MANUAL_OFFSET (0x03)
+#define APDS9301_TIMING_INT_MASK    (0x03)
 #define APDS9301_TIMING_INT_OFFSET    (0x00)
 
+#define APDS9301_INT_CONTROL_INT_MASK       (0x30)
+#define APDS9301_INT_CONTROL_INT_OFFSET     (0x04)
+#define APDS9301_INT_CONTROL_PERSIST_MASK   (0x0F)
+#define APDS9301_INT_CONTROL_PERSIST_OFFSET (0x00)
 
 #define APDS9301_REG_SIZE       (1) /* Size of APDS9301 register in bytes */
+#define APDS9301_WORD_SIZE      (2) /* Size of APDS9301 Word in bytes */
 #define APDS9301_ENDIANNESS     (0) /* APDS9301 device endianness of returned data */
 
 /* Prototypes for private/helper functions */
