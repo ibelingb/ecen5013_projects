@@ -12,6 +12,7 @@
  * @brief Light sensor library for APDS-9301 device
  *
  * https://www.sparkfun.com/products/14350
+ * https://learn.sparkfun.com/tutorials/apds-9301-sensor-hookup-guide
  *
  ************************************************************************************
  */
@@ -42,6 +43,12 @@ typedef enum
   APDS9301_TIMING_INT_101,      /* Nominal integration time of 101 msec */
   APDS9301_TIMING_INT_402       /* Nominal integration time of 402 msec */
 } Apds9301_TimingInt_e;
+
+typedef enum
+{
+  APDS9301_INT_SELECT_LEVEL_DISABLE = 0,
+  APDS9301_INT_SELECT_LEVEL_ENABLE
+} Apds9301_IntSelect_e;
 
 typedef enum
 {
@@ -77,23 +84,21 @@ typedef enum
  * @brief 
  *
  * @param file
- * @param luxData0Low
- * @param luxData0High
+ * @param luxData
  *
  * @return 
  */
-int8_t apds9301_getLuxData0(uint8_t file, uint8_t *luxData0Low, uint8_t *luxData0High);
+int8_t apds9301_getLuxData0(uint8_t file, float *luxData);
 
 /**
  * @brief 
  *
  * @param file
- * @param luxData1Low
- * @param luxData1High
+ * @param luxData
  *
  * @return 
  */
-int8_t apds9301_getLuxData1(uint8_t file, uint8_t *luxData1Low, uint8_t *luxData1High);
+int8_t apds9301_getLuxData1(uint8_t file, float *luxData);
 
 /**
  * @brief TODO
@@ -135,27 +140,28 @@ int8_t apds9301_getTimingGain(uint8_t file, Apds9301_TimingGain_e *gain);
  */
 int8_t apds9301_getDeviceId(uint8_t file, uint8_t *deviceId);
 
+
 /**
- * @brief TODO
+ * @brief 
  *
  * @param file
  * @param intThreshold
  *
  * @return 
  */
-int8_t apds9301_getInterruptThreshold(uint8_t file, Apds9301_IntThresholdByte_e intByte, uint8_t *intThreshold);
-
-/*---------------------------------------------------------------------------------*/
+int8_t apds9301_getLowIntThreshold(uint8_t file, uint16_t *intThreshold);
 
 /**
- * @brief TODO
+ * @brief 
  *
  * @param file
- * @param cmd
+ * @param intThreshold
  *
  * @return 
  */
-int8_t apds9301_setCommand(uint8_t file, uint8_t cmd);
+int8_t apds9301_getHighIntThreshold(uint8_t file, uint16_t *intThreshold);
+
+/*---------------------------------------------------------------------------------*/
 
 /**
  * @brief TODO
@@ -188,23 +194,41 @@ int8_t apds9301_setTimingGain(uint8_t file, Apds9301_TimingGain_e gain);
 int8_t apds9301_setTimingIntegration(uint8_t file, Apds9301_TimingInt_e integration);
 
 /**
- * @brief TODO
- *
- * @param file
- * @param state
+ * @brief * * @param file
+ * @param intSelect
+ * @param persist
  *
  * @return 
  */
-int8_t apds9301_setInterruptControl(uint8_t file, bool state);
+int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect, Apds9301_IntPersist_e persist);
 
 /**
- * @brief TODO
+ * @brief 
+ *
+ * @param file
+ *
+ * @return 
+ */
+int8_t apds9301_clearInterrupt(uint8_t file);
+
+/**
+ * @brief 
  *
  * @param file
  * @param intThreshold
  *
  * @return 
  */
-int8_t apds9301_setInterruptThreshold(uint8_t file, uint8_t intThreshold);
+int8_t apds9301_setLowIntThreshold(uint8_t file, uint16_t intThreshold);
+
+/**
+ * @brief 
+ *
+ * @param file
+ * @param intThreshold
+ *
+ * @return 
+ */
+int8_t apds9301_setHighIntThreshold(uint8_t file, uint16_t intThreshold);
 
 #endif /* LIGHT_SENSOR_H_ */

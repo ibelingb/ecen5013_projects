@@ -56,7 +56,6 @@ int main(void)
 
 	sleep(2);
 
-  //testFails += test_CommandWrite();
   testFails += test_ControlReadWrite();
   testFails += test_TimingGainReadWrite();
   testFails += test_TimingIntReadWrite();
