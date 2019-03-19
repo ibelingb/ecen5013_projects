@@ -34,7 +34,7 @@ int8_t test_CommandWrite(void);
 int8_t test_ControlReadWrite(void);
 int8_t test_TimingGainReadWrite(void);
 int8_t test_TimingIntReadWrite(void);
-int8_t test_InterruptCtrlEnDs(void);
+int8_t test_InterruptControl(void);
 int8_t test_DeviceIdRead(void);
 int8_t test_InterruptThresholdReadWrite(void);
 int8_t test_LuxDataRead(void);
@@ -59,29 +59,13 @@ int main(void)
   testFails += test_ControlReadWrite();
   testFails += test_TimingGainReadWrite();
   testFails += test_TimingIntReadWrite();
-  //testFails += test_InterruptCtrlEnDs();
+  //testFails += test_InterruptControl();
   testFails += test_DeviceIdRead();
   //testFails += test_InterruptThresholdReadWrite();
   //testFails += test_LuxDataRead();
 
 	printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);
 
-	return EXIT_SUCCESS;
-}
-
-/*---------------------------------------------------------------------------------*/
-/**
- * @brief TODO
- * @return int8_t test pass / fail (EXIT_FAILURE)
- */
-int8_t test_CommandWrite(void)
-{
-  //uint8_t tmp = 0;
-	testCount++;
-	INFO_PRINT("start of test_CommandWrite, test #%d\n",testCount);
-
-  //TODO
-	
 	return EXIT_SUCCESS;
 }
 
@@ -277,14 +261,94 @@ int8_t test_TimingIntReadWrite(void)
  * @brief TODO
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
-int8_t test_InterruptCtrlEnDs(void)
+int8_t test_InterruptControl(void)
 {
-  //uint8_t tmp = 0;
-	testCount++;
-	INFO_PRINT("start of test_InterruptCtrlEnDs, test #%d\n",testCount);
+  Apds9301_IntSelect_e intSelect;
+  Apds9301_IntPersist_e intPersist;
 
-  //TODO
+	testCount++;
+	INFO_PRINT("start of test_InterruptControl, test #%d\n",testCount);
+  INFO_PRINT("Test read/write to Interrupt Control\n");
+
+	/* Set device Interrupt Control to have Level disabled, Interrupt every 15 periods */
+  intSelect = APDS9301_INT_SELECT_LEVEL_DISABLE;
+  intPersist = APDS9301_INT_PERSIST_OUTSIDE_15P;
+	if(EXIT_FAILURE == apds9301_setInterruptControl(fd, intSelect, intPersist)) { 
+    ERROR_PRINT("test_InterruptControl  write failed\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Interrupt Control reg to receive Interrupt select and persist info */
+	if(EXIT_FAILURE == apds9301_getInterruptControl(fd, &intSelect, &intPersist)) { 
+    ERROR_PRINT("test_InterruptControl read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Control register returned Select value: 0x%x | Persist value: 0x%x\n", intSelect, intPersist); 
+  }
+	/* Verify device Interrupt select and Persist set to specified values */
+	if(intSelect != APDS9301_INT_SELECT_LEVEL_DISABLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Select value to be 0x%x\n", APDS9301_INT_SELECT_LEVEL_DISABLE);
+		return EXIT_FAILURE;
+	}
+	if(intPersist != APDS9301_INT_PERSIST_OUTSIDE_15P)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Persist value to be 0x%x\n", APDS9301_INT_PERSIST_EVERY_CYCLE);
+		return EXIT_FAILURE;
+	}
 	
+
+	/* Set device Interrupt Control to have Level enabled, Interrupt every 7 periods */
+  intSelect = APDS9301_INT_SELECT_LEVEL_ENABLE;
+  intPersist = APDS9301_INT_PERSIST_OUTSIDE_7P;
+	if(EXIT_FAILURE == apds9301_setInterruptControl(fd, intSelect, intPersist)) { 
+    ERROR_PRINT("test_InterruptControl  write failed\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Interrupt Control reg to receive Interrupt select and persist info */
+	if(EXIT_FAILURE == apds9301_getInterruptControl(fd, &intSelect, &intPersist)) { 
+    ERROR_PRINT("test_InterruptControl read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Control register returned Select value: 0x%x | Persist value: 0x%x\n", intSelect, intPersist); 
+  }
+	/* Verify device Interrupt select and Persist set to specified values */
+	if(intSelect != APDS9301_INT_SELECT_LEVEL_ENABLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Select value to be 0x%x\n", APDS9301_INT_SELECT_LEVEL_DISABLE);
+		return EXIT_FAILURE;
+	}
+	if(intPersist != APDS9301_INT_PERSIST_OUTSIDE_7P)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Persist value to be 0x%x\n", APDS9301_INT_PERSIST_EVERY_CYCLE);
+		return EXIT_FAILURE;
+	}
+
+	/* Set device Interrupt Control to have Level disabled, Interrupt every cycle */
+  intSelect = APDS9301_INT_SELECT_LEVEL_DISABLE;
+  intPersist = APDS9301_INT_PERSIST_EVERY_CYCLE;
+	if(EXIT_FAILURE == apds9301_setInterruptControl(fd, intSelect, intPersist)) { 
+    ERROR_PRINT("test_InterruptControl  write failed\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Interrupt Control reg to receive Interrupt select and persist info */
+	if(EXIT_FAILURE == apds9301_getInterruptControl(fd, &intSelect, &intPersist)) { 
+    ERROR_PRINT("test_InterruptControl read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Control register returned Select value: 0x%x | Persist value: 0x%x\n", intSelect, intPersist); 
+  }
+	/* Verify device Interrupt select and Persist set to specified values */
+	if(intSelect != APDS9301_INT_SELECT_LEVEL_DISABLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Select value to be 0x%x\n", APDS9301_INT_SELECT_LEVEL_DISABLE);
+		return EXIT_FAILURE;
+	}
+	if(intPersist != APDS9301_INT_PERSIST_EVERY_CYCLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Persist value to be 0x%x\n", APDS9301_INT_PERSIST_EVERY_CYCLE);
+		return EXIT_FAILURE;
+	}
+
 	return EXIT_SUCCESS;
 }
 
@@ -295,22 +359,28 @@ int8_t test_InterruptCtrlEnDs(void)
  */
 int8_t test_DeviceIdRead(void)
 {
-  uint8_t deviceId = 0;
+  uint8_t partNo = 0;
+  uint8_t revNo = 0;
 	testCount++;
 	INFO_PRINT("start of test_DeviceIdRead, test #%d\n",testCount);
 	
 	/* Read Device ID */
-	if(EXIT_FAILURE == apds9301_getDeviceId(fd, &deviceId)) { 
+	if(EXIT_FAILURE == apds9301_getDeviceId(fd, &partNo, &revNo)) { 
     ERROR_PRINT("test_DeviceIdRead read failed\n"); 
     return EXIT_FAILURE; 
   } else { 
-    INFO_PRINT("APDS9301 returned DeviceID value: 0x%x\n", deviceId); 
+    INFO_PRINT("APDS9301 returned Part No value: 0x%x | Rev No value: 0x%x\n", partNo, revNo); 
   }
 
-	/* verify read back value greater than 0 */
-	if(deviceId != 0x50)
+	/* verify values returned */
+	if(partNo != APDS9301_PARTNO)
 	{ 
-		ERROR_PRINT("test_DeviceIdRead read failed to get APDS9301 Device ID of 0x50\n");
+		ERROR_PRINT("test_DeviceIdRead read failed to get APDS9301 Part Number of 0x%x\n", APDS9301_PARTNO);
+		return EXIT_FAILURE;
+	}
+	if(revNo != 0x00)
+	{ 
+		ERROR_PRINT("test_DeviceIdRead read failed to get APDS9301 Rev Number of 0x%x\n", APDS9301_PARTNO);
 		return EXIT_FAILURE;
 	}
 

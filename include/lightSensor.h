@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define APDS9301_PARTNO (0x50)
+
 /*---------------------------------------------------------------------------------*/
 /* */
 typedef enum
@@ -46,8 +48,8 @@ typedef enum
 
 typedef enum
 {
-  APDS9301_INT_SELECT_LEVEL_DISABLE = 0,
-  APDS9301_INT_SELECT_LEVEL_ENABLE
+  APDS9301_INT_SELECT_LEVEL_DISABLE = 0, /* Level Interrupt output disabled */
+  APDS9301_INT_SELECT_LEVEL_ENABLE       /* Level Interrupt output enabled */
 } Apds9301_IntSelect_e;
 
 typedef enum
@@ -138,7 +140,7 @@ int8_t apds9301_getTimingGain(uint8_t file, Apds9301_TimingGain_e *gain);
  *
  * @return 
  */
-int8_t apds9301_getDeviceId(uint8_t file, uint8_t *deviceId);
+int8_t apds9301_getDeviceId(uint8_t file, uint8_t *partNo, uint8_t *revNo);
 
 
 /**
@@ -161,6 +163,8 @@ int8_t apds9301_getLowIntThreshold(uint8_t file, uint16_t *intThreshold);
  */
 int8_t apds9301_getHighIntThreshold(uint8_t file, uint16_t *intThreshold);
 
+// TODO
+int8_t apds9301_getInterruptControl(uint8_t file, Apds9301_IntSelect_e *intSelect, Apds9301_IntPersist_e *persist);
 /*---------------------------------------------------------------------------------*/
 
 /**

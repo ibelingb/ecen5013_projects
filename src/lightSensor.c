@@ -25,16 +25,20 @@
 #define APDS9301_DATA1HIGH_REG  (0x8Ful)
 
 #define APDS9301_CONTROL_MASK       (0x03)
+#define APDS9301_DEV_PARTNO_MASK    (0xF0)
+#define APDS9301_DEV_PARTNO_OFFSET  (0x04)
+#define APDS9301_DEV_REVNO_MASK     (0x0F)
+#define APDS9301_DEV_REVNO_OFFSET   (0x00)
 #define APDS9301_TIMING_REG_MASK    (0x1B)
 #define APDS9301_TIMING_GAIN_MASK   (0x10)
-#define APDS9301_TIMING_GAIN_OFFSET   (0x04)
+#define APDS9301_TIMING_GAIN_OFFSET (0x04)
 #define APDS9301_TIMING_MANUAL_MASK (0x08)
 #define APDS9301_TIMING_MANUAL_OFFSET (0x03)
 #define APDS9301_TIMING_INT_MASK    (0x03)
 #define APDS9301_TIMING_INT_OFFSET    (0x00)
 
-#define APDS9301_INT_CONTROL_INT_MASK       (0x30)
-#define APDS9301_INT_CONTROL_INT_OFFSET     (0x04)
+#define APDS9301_INT_CONTROL_SEL_MASK       (0x30)
+#define APDS9301_INT_CONTROL_SEL_OFFSET     (0x04)
 #define APDS9301_INT_CONTROL_PERSIST_MASK   (0x0F)
 #define APDS9301_INT_CONTROL_PERSIST_OFFSET (0x00)
 
@@ -107,11 +111,7 @@ int8_t apds9301_getControl(uint8_t file, Apds9301_PowerCtrl_e *control)
   regValue &= APDS9301_CONTROL_MASK;
 
   /* Return current power state */
-  if(regValue == APDS9301_CONTROL_MASK){
-    *control = APDS9301_CTRL_POWERUP;
-  } else {
-    *control = APDS9301_CTRL_POWERDOWN;
-  }
+  *control = (Apds9301_PowerCtrl_e)regValue;
 
   return EXIT_SUCCESS;
 }
@@ -155,20 +155,22 @@ int8_t apds9301_getTimingGain(uint8_t file, Apds9301_TimingGain_e *gain)
 }
 
 /*---------------------------------------------------------------------------------*/
-int8_t apds9301_getDeviceId(uint8_t file, uint8_t *deviceId)
+int8_t apds9301_getDeviceId(uint8_t file, uint8_t *partNo, uint8_t *revNo)
 {
   uint8_t regValue;
 
   /* Validate inputs */
-  if(deviceId == NULL)
+  if((partNo == NULL) || revNo == NULL)
     return EXIT_FAILURE;
 
   /* Get DeviceID register value */
   if(EXIT_FAILURE == apds9301_getReg(file, &regValue, APDS9301_ID_REG))
     return EXIT_FAILURE;  
 
-  /* Set read value */
-  *deviceId = regValue;
+  /* Set read values */
+
+  *partNo = (uint8_t)((regValue & APDS9301_DEV_PARTNO_MASK) >> APDS9301_DEV_PARTNO_OFFSET);
+  *revNo = (uint8_t)((regValue & APDS9301_DEV_REVNO_MASK) >> APDS9301_DEV_REVNO_OFFSET);
 
   return EXIT_SUCCESS;
 }
@@ -207,6 +209,26 @@ int8_t apds9301_getHighIntThreshold(uint8_t file, uint16_t *intThreshold)
 
   /* Set read value */
   *intThreshold = wordValue;
+
+  return EXIT_SUCCESS;
+}
+
+/*---------------------------------------------------------------------------------*/
+int8_t apds9301_getInterruptControl(uint8_t file, Apds9301_IntSelect_e *intSelect, Apds9301_IntPersist_e *intPersist)
+{
+  uint8_t regValue;
+
+  /* Validate inputs */
+  if((intSelect == NULL) || (intPersist == NULL))
+    return EXIT_FAILURE;
+
+  /* Get Interrupt Control register value */
+  if(EXIT_FAILURE == apds9301_getReg(file, &regValue, APDS9301_INTERRUPT_CTRL_REG))
+    return EXIT_FAILURE;  
+
+  /* Mask and shift Interrupt Select bits and Persist bits for Int control reg */
+  *intSelect = (Apds9301_IntSelect_e)((regValue & APDS9301_INT_CONTROL_SEL_MASK) >> APDS9301_INT_CONTROL_SEL_OFFSET);
+  *intPersist = (Apds9301_IntPersist_e)((regValue & APDS9301_INT_CONTROL_PERSIST_MASK) >> APDS9301_INT_CONTROL_PERSIST_OFFSET);
 
   return EXIT_SUCCESS;
 }
@@ -304,9 +326,9 @@ int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect
 
   /* Determine Interrupt Control Select value to set based on input */
   if(intSelect == APDS9301_INT_SELECT_LEVEL_DISABLE){
-    reg &= ~(APDS9301_INT_CONTROL_INT_MASK);
+    reg &= ~(APDS9301_INT_CONTROL_SEL_MASK);
   } else {
-    reg |= APDS9301_INT_CONTROL_INT_MASK;
+    reg |= APDS9301_INT_CONTROL_SEL_MASK;
   }
 
   /* Determine Interrupt Persist Select value to set based on input */
