@@ -93,34 +93,28 @@ void* lightSensorThreadHandler(void* threadInfo)
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
 void getLightSensorData(LightDataStruct *lightData) {
-  bool deviceAvailable = true;
 
   /* Verify able to communicate with device - check device ID */
   pthread_mutex_lock(i2cBusMutex);
-  //apds9301_getDeviceId(sensorFd, &lightData->apds9301_deviceId);
+  apds9301_getDeviceId(sensorFd, &lightData->apds9301_devicePartNo, &lightData->apds9301_deviceRevNo);
   pthread_mutex_unlock(i2cBusMutex);
-  if(lightData->apds9301_deviceId != APDS9301_ID){
+  if(lightData->apds9301_devicePartNo != APDS9301_PARTNO){
     /* Unable to read device ID successfully - transmit error message to Logger and */
     // TODO
-    //deviceAvailable = false; 
     //threadAlive = false;
+    return;
   }
 
-  if(deviceAvailable) {
-    /* Collect data from all available Light Sensor registers */
-    /*
-    pthread_mutex_lock(i2cBusMutex);
-    apds9301_getLuxData0(sensorFd, &lightData->apds9301_luxData0Low, &lightData->apds9301_luxData0High);
-    apds9301_getLuxData1(sensorFd, &lightData->apds9301_luxData1Low, &lightData->apds9301_luxData1High);
-    apds9301_getControl(sensorFd, &lightData->apds9301_controlReg);
-    apds9301_getTiming(sensorFd, &lightData->apds9301_timingReg);
-    apds9301_getInterruptThreshold(sensorFd, LOWTHRES_LOWBYTE, &lightData->apds9301_intThresLowLow);
-    apds9301_getInterruptThreshold(sensorFd, LOWTHRES_HIGHBYTE, &lightData->apds9301_intThresLowHigh);
-    apds9301_getInterruptThreshold(sensorFd, HIGHTHRES_LOWBYTE, &lightData->apds9301_intThresHighLow);
-    apds9301_getInterruptThreshold(sensorFd, HIGHTHRES_HIGHBYTE, &lightData->apds9301_intThresHighHigh);
-    pthread_mutex_unlock(i2cBusMutex);
-    */
-  }
+  /* Collect data from all available Light Sensor registers */
+  pthread_mutex_lock(i2cBusMutex);
+  apds9301_getLuxData(sensorFd, &lightData->apds9301_luxData);
+  apds9301_getControl(sensorFd, &lightData->apds9301_powerControl);
+  apds9301_getTimingGain(sensorFd, &lightData->apds9301_timingGain);
+  apds9301_getTimingIntegration(sensorFd, &lightData->apds9301_timingIntegration);
+  apds9301_getInterruptControl(sensorFd, &lightData->apds9301_intSelect, &lightData->apds9301_intPersist);
+  apds9301_getLowIntThreshold(sensorFd, &lightData->apds9301_intThresLow);
+  apds9301_getHighIntThreshold(sensorFd, &lightData->apds9301_intThresHigh);
+  pthread_mutex_unlock(i2cBusMutex);
 }
 
 static void txHeartbeatMsg() {

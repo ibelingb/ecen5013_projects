@@ -197,80 +197,84 @@ static void getCmdResponse(RemoteCmdPacket* packet){
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
     case TEMPCMD_GETTEMP :
-      packet->data0.status_float = tempData.tmp102_temp;
-      printf("TEMPCMD_GETTEMP cmd received | Transmitting data: {%.3f}\n", packet->data0.status_float);
+      packet->data.status_float = tempData.tmp102_temp;
+      printf("TEMPCMD_GETTEMP cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETLOWTHRES :
-      packet->data0.status_float = tempData.tmp102_lowThreshold;
-      printf("TEMPCMD_GETLOWTHRES cmd received | Transmitting data: {%.3f}\n", packet->data0.status_float);
+      packet->data.status_float = tempData.tmp102_lowThreshold;
+      printf("TEMPCMD_GETLOWTHRES cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETHIGHTHRES :
-      packet->data0.status_float = tempData.tmp102_highThreshold;
-      printf("TEMPCMD_GETHIGHTHRES cmd received | Transmitting data: {%.3f}\n", packet->data0.status_float);
+      packet->data.status_float = tempData.tmp102_highThreshold;
+      printf("TEMPCMD_GETHIGHTHRES cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETCONFIG :
-      packet->data0.status_float = tempData.tmp102_config;
-      printf("TEMPCMD_GETCONFIG cmd received | Transmitting data: {%.3f}\n", packet->data0.status_float);
+      packet->data.status_float = tempData.tmp102_config;
+      printf("TEMPCMD_GETCONFIG cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETRESOLUTION :
-      packet->data0.status_float = tempData.tmp102_tempResolution;
-      printf("TEMPCMD_GETRESOLUTION cmd received | Transmitting data: {%.3f}\n", packet->data0.status_float);
+      packet->data.status_float = tempData.tmp102_tempResolution;
+      printf("TEMPCMD_GETRESOLUTION cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETFAULT :
-      packet->data0.status_uint32 = tempData.tmp102_fault;
-      printf("TEMPCMD_GETFAULT case cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+      packet->data.status_uint32 = tempData.tmp102_fault;
+      printf("TEMPCMD_GETFAULT case cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETEXTMODE :
-      packet->data0.status_uint32 = tempData.tmp102_extendedMode;
-      printf("TEMPCMD_GETEXTMODE cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+      packet->data.status_uint32 = tempData.tmp102_extendedMode;
+      printf("TEMPCMD_GETEXTMODE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETSHUTDOWNMODE :
-      packet->data0.status_uint32 = tempData.tmp102_shutdownMode;
-      printf("TEMPCMD_GETSHUTDOWNMODE cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+      packet->data.status_uint32 = tempData.tmp102_shutdownMode;
+      printf("TEMPCMD_GETSHUTDOWNMODE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETALERT :
-      packet->data0.status_uint32 = tempData.tmp102_alert;
-      printf("TEMPCMD_GETALERT cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+      packet->data.status_uint32 = tempData.tmp102_alert;
+      printf("TEMPCMD_GETALERT cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETCONVRATE :
-      packet->data0.status_uint32 = tempData.tmp102_convRate;
-      printf("TEMPCMD_GETCONVRATE cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+      packet->data.status_uint32 = tempData.tmp102_convRate;
+      printf("TEMPCMD_GETCONVRATE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETLUXLOW :
-      packet->data0.status_uint32 = lightData.apds9301_luxData0Low;
-      packet->data1.status_uint32 = lightData.apds9301_luxData1Low;
-      printf("LIGHTCMD_GETLUXLOW cmd received | Transmitting data: {%d}{%d}\n", 
-              packet->data0.status_uint32, packet->data1.status_uint32);
+    case LIGHTCMD_GETLUXDATA :
+      packet->data.status_float = lightData.apds9301_luxData;
+      printf("LIGHTCMD_GETLUX cmd received | Transmitting data: {%f}\n", packet->data.status_float);
       break;
-    case LIGHTCMD_GETLUXHIGH :
-      packet->data0.status_uint32 = lightData.apds9301_luxData0High;
-      packet->data1.status_uint32 = lightData.apds9301_luxData1High;
-      printf("LIGHTCMD_GETLUXHIGH cmd received | Transmitting data: {%d}{%d}\n",
-              packet->data0.status_uint32, packet->data1.status_uint32);
+    case LIGHTCMD_GETDEVPARTNO :
+      packet->data.status_uint32 = lightData.apds9301_devicePartNo;
+      printf("LIGHTCMD_GETDEVPARTNO cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETDEVID :
-      packet->data0.status_uint32 = lightData.apds9301_deviceId;
-      printf("LIGHTCMD_GETDEVID cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+    case LIGHTCMD_GETDEVREVNO :
+      packet->data.status_uint32 = lightData.apds9301_deviceRevNo;
+      printf("LIGHTCMD_GETDEVREVNO cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETCTRL :
-      packet->data0.status_uint32 = lightData.apds9301_controlReg;
-      printf("LIGHTCMD_GETCTRL cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+    case LIGHTCMD_GETPOWERCTRL :
+      packet->data.status_uint32 = lightData.apds9301_powerControl;
+      printf("LIGHTCMD_GETCTRL cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETTIMING :
-      packet->data0.status_uint32 = lightData.apds9301_timingReg;
-      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data0.status_uint32);
+    case LIGHTCMD_GETTIMINGGAIN :
+      packet->data.status_uint32 = lightData.apds9301_timingGain;
+      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETTIMINGINTEGRATION :
+      packet->data.status_uint32 = lightData.apds9301_timingIntegration;
+      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETINTSELECT :
+      packet->data.status_uint32 = lightData.apds9301_intSelect;
+      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETINTPERSIST :
+      packet->data.status_uint32 = lightData.apds9301_intPersist;
+      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETLOWTHRES :
-      packet->data0.status_uint32 = lightData.apds9301_intThresLowLow;
-      packet->data1.status_uint32 = lightData.apds9301_intThresLowHigh;
-      printf("LIGHTCMD_GETLOWTHRES cmd received | Transmitting data: {%d}{%d}\n",
-              packet->data0.status_uint32, packet->data1.status_uint32);
+      packet->data.status_uint32 = lightData.apds9301_intThresLow;
+      printf("LIGHTCMD_GETLOWTHRES cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETHIGHTHRES :
-      packet->data0.status_uint32 = lightData.apds9301_intThresHighLow;
-      packet->data1.status_uint32 = lightData.apds9301_intThresHighHigh;
-      printf("LIGHTCMD_GETHIGHTHRES cmd received | Transmitting data: {%d}{%d}\n",
-              packet->data0.status_uint32, packet->data1.status_uint32);
+      packet->data.status_uint32 = lightData.apds9301_intThresHigh;
+      printf("LIGHTCMD_GETHIGHTHRES cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     default:
       printf("cmd received not recognized - cmd ignored\n");
