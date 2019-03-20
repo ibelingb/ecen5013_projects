@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include "tempSensor.h"
+#include "lightSensor.h"
 #include "logger_types.h"
 
 #define MSG_QUEUE_MSG_SIZE      (sizeof(LogMsgPacket)) // bytes

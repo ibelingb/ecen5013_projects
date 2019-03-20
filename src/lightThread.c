@@ -97,7 +97,7 @@ void getLightSensorData(LightDataStruct *lightData) {
 
   /* Verify able to communicate with device - check device ID */
   pthread_mutex_lock(i2cBusMutex);
-  apds9301_getDeviceId(sensorFd, &lightData->apds9301_deviceId);
+  //apds9301_getDeviceId(sensorFd, &lightData->apds9301_deviceId);
   pthread_mutex_unlock(i2cBusMutex);
   if(lightData->apds9301_deviceId != APDS9301_ID){
     /* Unable to read device ID successfully - transmit error message to Logger and */
@@ -108,6 +108,7 @@ void getLightSensorData(LightDataStruct *lightData) {
 
   if(deviceAvailable) {
     /* Collect data from all available Light Sensor registers */
+    /*
     pthread_mutex_lock(i2cBusMutex);
     apds9301_getLuxData0(sensorFd, &lightData->apds9301_luxData0Low, &lightData->apds9301_luxData0High);
     apds9301_getLuxData1(sensorFd, &lightData->apds9301_luxData1Low, &lightData->apds9301_luxData1High);
@@ -118,7 +119,7 @@ void getLightSensorData(LightDataStruct *lightData) {
     apds9301_getInterruptThreshold(sensorFd, HIGHTHRES_LOWBYTE, &lightData->apds9301_intThresHighLow);
     apds9301_getInterruptThreshold(sensorFd, HIGHTHRES_HIGHBYTE, &lightData->apds9301_intThresHighHigh);
     pthread_mutex_unlock(i2cBusMutex);
-    return; 
+    */
   }
 }
 
