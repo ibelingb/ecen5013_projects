@@ -1,11 +1,13 @@
 /* APDS-9301 light sensor library */
 
-#include "lightSensor.h"
-#include "lu_iic.h"
-#include "debug.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
+
+#include "lightSensor.h"
+#include "lu_iic.h"
+#include "debug.h"
 
 #define APDS9301_I2C_ADDR           (0x39ul)
 #define APDS9301_CMD_WORD_BIT       (0x20)
@@ -55,41 +57,51 @@ int8_t apds9301_writeWord(uint8_t file, uint16_t word, uint8_t REG);
 /* Define static and global variables */
 
 /*---------------------------------------------------------------------------------*/
-int8_t apds9301_getLuxData0(uint8_t file, float *luxData)
+int8_t apds9301_getLuxData(uint8_t file, float *luxData)
 {
-  uint16_t wordValue;
+  uint16_t data0;
+  uint16_t data1;
+  float luxRatio;
+  float sensorLux;
 
   /* Validate inputs */
   if(luxData == NULL)
     return EXIT_FAILURE;
+
+  /* Verify device is powered on and responsive */
+  Apds9301_PowerCtrl_e powerCtrl;
+  apds9301_setControl(file, APDS9301_CTRL_POWERUP);
+  apds9301_getControl(file, &powerCtrl);
+  if(powerCtrl == APDS9301_CTRL_POWERDOWN)
+  {
+    ERROR_PRINT("apds9301_getLuxData() failed to power on device via apds9301_setControl() - read failed.\n");
+    return EXIT_FAILURE;
+  }
 
   /* Get Lux Data0 Low and High register values */
-  if(EXIT_FAILURE == apds9301_getWord(file, &wordValue, APDS9301_DATA0LOW_REG))
+  if(EXIT_FAILURE == apds9301_getWord(file, &data0, APDS9301_DATA0LOW_REG))
     return EXIT_FAILURE;
-
-  *luxData = (float)wordValue;
-  /* Convert Lux value based on device settings */ 
-  // TODO
-
-  return EXIT_SUCCESS;
-}
-
-/*---------------------------------------------------------------------------------*/
-int8_t apds9301_getLuxData1(uint8_t file, float *luxData)
-{
-  uint16_t wordValue;
-
-  /* Validate inputs */
-  if(luxData == NULL)
-    return EXIT_FAILURE;
-
   /* Get Lux Data1 Low and High register values */
-  if(EXIT_FAILURE == apds9301_getWord(file, &wordValue, APDS9301_DATA1LOW_REG))
+  if(EXIT_FAILURE == apds9301_getWord(file, &data1, APDS9301_DATA1LOW_REG))
     return EXIT_FAILURE;
 
-  *luxData = (float)wordValue;
-  /* Convert Lux value based on device settings */ 
-  // TODO
+  /* Get Lux Calculation value based on device settings */ 
+  /* See Note 8 on Page 3 of APDS9301 datasheet for below calculation */
+  luxRatio = (float)data1/data0;
+  if((luxRatio > 0) && (luxRatio <= 0.50)){
+    sensorLux = ((0.0304 * data0) - (0.062 * data0 * pow((data1/data0), 1.4)));
+  } else if((luxRatio > 0.50) && (luxRatio <= 0.61)) {
+    sensorLux = ((0.0224 * data0) - (0.031 * data1));
+  } else if((luxRatio > 0.61) && (luxRatio <= 0.80)) {
+    sensorLux = ((0.0128 * data0) - (0.0153 * data1));
+  } else if((luxRatio > 0.80) && (luxRatio <= 1.30)) {
+    sensorLux = ((0.00146 * data0) - (0.00112 * data1));
+  } else if(luxRatio > 1.30) {
+    sensorLux = 0;
+  }
+
+  /* Return calculated value */
+  *luxData = sensorLux;
 
   return EXIT_SUCCESS;
 }
@@ -296,12 +308,12 @@ int8_t apds9301_setTimingIntegration(uint8_t file, Apds9301_TimingInt_e integrat
 
   /* Determine register value to set based on provided input */
   if(integration == APDS9301_TIMING_INT_13P7){
-    reg &= ~(APDS9301_TIMING_GAIN_MASK);
+    reg &= ~(APDS9301_TIMING_INT_MASK);
   } else if(integration == APDS9301_TIMING_INT_101) {
-    reg &= ~(APDS9301_TIMING_GAIN_MASK);
+    reg &= ~(APDS9301_TIMING_INT_MASK);
     reg |= APDS9301_TIMING_INT_101;
   } else if(integration == APDS9301_TIMING_INT_402) {
-    reg &= ~(APDS9301_TIMING_GAIN_MASK);
+    reg &= ~(APDS9301_TIMING_INT_MASK);
     reg |= APDS9301_TIMING_INT_402;
   } else {
     ERROR_PRINT("apds9301_setTimingIntegration() received an invalid input for setting the APDS9301 Timing reg - write ignored.\n");
@@ -328,12 +340,16 @@ int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect
   if(intSelect == APDS9301_INT_SELECT_LEVEL_DISABLE){
     reg &= ~(APDS9301_INT_CONTROL_SEL_MASK);
   } else {
-    reg |= APDS9301_INT_CONTROL_SEL_MASK;
+    reg |= 0x10;
   }
 
   /* Determine Interrupt Persist Select value to set based on input */
   reg &= ~(APDS9301_INT_CONTROL_PERSIST_MASK);
   reg |= persist;
+
+  /* Write to device */
+  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+    return EXIT_FAILURE;
 
   return EXIT_SUCCESS;
 }

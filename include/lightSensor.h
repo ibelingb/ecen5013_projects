@@ -23,14 +23,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define APDS9301_PARTNO (0x50)
+#define APDS9301_PARTNO (0x05)
 
 /*---------------------------------------------------------------------------------*/
 /* */
 typedef enum
 {
-  APDS9301_CTRL_POWERUP = 0,
-  APDS9301_CTRL_POWERDOWN
+  APDS9301_CTRL_POWERDOWN = 0,
+  APDS9301_CTRL_POWERUP = 3
 } Apds9301_PowerCtrl_e;
 
 typedef enum
@@ -90,17 +90,7 @@ typedef enum
  *
  * @return 
  */
-int8_t apds9301_getLuxData0(uint8_t file, float *luxData);
-
-/**
- * @brief 
- *
- * @param file
- * @param luxData
- *
- * @return 
- */
-int8_t apds9301_getLuxData1(uint8_t file, float *luxData);
+int8_t apds9301_getLuxData(uint8_t file, float *luxData);
 
 /**
  * @brief TODO
@@ -163,7 +153,15 @@ int8_t apds9301_getLowIntThreshold(uint8_t file, uint16_t *intThreshold);
  */
 int8_t apds9301_getHighIntThreshold(uint8_t file, uint16_t *intThreshold);
 
-// TODO
+/**
+ * @brief 
+ *
+ * @param file
+ * @param intSelect
+ * @param persist
+ *
+ * @return 
+ */
 int8_t apds9301_getInterruptControl(uint8_t file, Apds9301_IntSelect_e *intSelect, Apds9301_IntPersist_e *persist);
 /*---------------------------------------------------------------------------------*/
 

@@ -1,7 +1,7 @@
 /***********************************************************************************
  * @author Brian Ibeling
  * brian.ibeling@colorado.edu
- * Advanced Embedded Software Development
+* Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
  * @date March 16, 2019
  * arm-linux-gnueabi (Buildroot)
@@ -56,13 +56,13 @@ int main(void)
 
 	sleep(2);
 
+  testFails += test_LuxDataRead();
   testFails += test_ControlReadWrite();
   testFails += test_TimingGainReadWrite();
   testFails += test_TimingIntReadWrite();
-  //testFails += test_InterruptControl();
+  testFails += test_InterruptControl();
   testFails += test_DeviceIdRead();
-  //testFails += test_InterruptThresholdReadWrite();
-  //testFails += test_LuxDataRead();
+  testFails += test_InterruptThresholdReadWrite();
 
 	printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);
 
@@ -79,7 +79,7 @@ int8_t test_ControlReadWrite(void)
   Apds9301_PowerCtrl_e controlRegWrite;
   Apds9301_PowerCtrl_e controlRegRead;
 	testCount++;
-	INFO_PRINT("start of test_ControlReadWrite, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_ControlReadWrite, test #%d **\n",testCount);
 
 	/* Set device to be powered off */
   controlRegWrite = APDS9301_CTRL_POWERDOWN;
@@ -92,7 +92,7 @@ int8_t test_ControlReadWrite(void)
     ERROR_PRINT("test_ControlReadWrite read failed\n"); 
     return EXIT_FAILURE; 
   } else { 
-    INFO_PRINT("APDS9301 control register returned value: 0x%x\n", controlRegRead); 
+    INFO_PRINT("APDS9301 control register returned value after PowerDown signal sent: 0x%x\n", controlRegRead); 
   }
 	/* Verify device is powered off */
 	if(controlRegRead != APDS9301_CTRL_POWERDOWN)
@@ -113,7 +113,7 @@ int8_t test_ControlReadWrite(void)
     ERROR_PRINT("test_ControlReadWrite read failed\n"); 
     return EXIT_FAILURE; 
   } else { 
-    INFO_PRINT("APDS9301 control register returned value: 0x%x\n", controlRegRead); 
+    INFO_PRINT("APDS9301 control register returned value after PowerUp signal sent: 0x%x\n", controlRegRead); 
   }
 	/* Verify device is powered on */
 	if(controlRegRead != APDS9301_CTRL_POWERUP)
@@ -135,10 +135,10 @@ int8_t test_TimingGainReadWrite(void)
   Apds9301_TimingGain_e timingGainWrite;
   Apds9301_TimingGain_e timingGainRead;
 	testCount++;
-	INFO_PRINT("start of test_TimingGainReadWrite, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_TimingGainReadWrite, test #%d **\n",testCount);
 
   INFO_PRINT("Test read/write to Timing Gain\n");
-	/* Set device gain to HIGH */
+	/* Set device gain to HIGH (16x) */
   timingGainWrite = APDS9301_TIMING_GAIN_HIGH;
 	if(EXIT_FAILURE == apds9301_setTimingGain(fd, timingGainWrite)) { 
     ERROR_PRINT("test_TimingGainReadWrite write failed\n"); 
@@ -149,7 +149,7 @@ int8_t test_TimingGainReadWrite(void)
     ERROR_PRINT("test_TimingGainReadWrite read failed\n"); 
     return EXIT_FAILURE; 
   } else { 
-    INFO_PRINT("APDS9301 Timing register returned gain value: 0x%x\n", timingGainRead); 
+    INFO_PRINT("APDS9301 Timing register returned gain register value: 0x%x\n", timingGainRead); 
   }
 	/* Verify device gain is high */
 	if(timingGainRead != APDS9301_TIMING_GAIN_HIGH)
@@ -158,7 +158,7 @@ int8_t test_TimingGainReadWrite(void)
 		return EXIT_FAILURE;
 	}
 
-	/* Set device gain to LOW */
+	/* Set device gain to LOW (1x) */
   timingGainWrite = APDS9301_TIMING_GAIN_LOW;
 	if(EXIT_FAILURE == apds9301_setTimingGain(fd, timingGainWrite)) { 
     ERROR_PRINT("test_TimingGainReadWrite write failed\n"); 
@@ -169,9 +169,9 @@ int8_t test_TimingGainReadWrite(void)
     ERROR_PRINT("test_TimingGainReadWrite read failed\n"); 
     return EXIT_FAILURE; 
   } else { 
-    INFO_PRINT("APDS9301 Timing register returned gain value: 0x%x\n", timingGainRead); 
+    INFO_PRINT("APDS9301 Timing register returned gain register value: 0x%x\n", timingGainRead); 
   }
-	/* Verify device gain is high */
+	/* Verify device gain is low */
 	if(timingGainRead != APDS9301_TIMING_GAIN_LOW)
 	{ 
 		ERROR_PRINT("test_TimingGainReadWrite failed to set/get APDS9301 gain to be 0x%x\n", APDS9301_TIMING_GAIN_LOW);
@@ -191,7 +191,7 @@ int8_t test_TimingIntReadWrite(void)
   Apds9301_TimingInt_e timingIntWrite;
   Apds9301_TimingInt_e timingIntRead;
 	testCount++;
-	INFO_PRINT("start of test_TimingIntReadWrite, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_TimingIntReadWrite, test #%d **\n",testCount);
 
   INFO_PRINT("Test read/write to Timing Integration\n");
 	/* Set device Integration time to 13.7 msec */
@@ -208,9 +208,9 @@ int8_t test_TimingIntReadWrite(void)
     INFO_PRINT("APDS9301 Timing register returned integration value: 0x%x\n", timingIntRead); 
   }
 	/* Verify device integration is 13.7 msec */
-	if(timingIntRead != APDS9301_TIMING_INT_13P7)
+	if(timingIntRead != timingIntWrite)
 	{ 
-		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", APDS9301_TIMING_INT_13P7);
+		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", timingIntWrite);
 		return EXIT_FAILURE;
 	}
 
@@ -228,9 +228,9 @@ int8_t test_TimingIntReadWrite(void)
     INFO_PRINT("APDS9301 Timing register returned integration value: 0x%x\n", timingIntRead); 
   }
 	/* Verify device integration is 101 msec */
-	if(timingIntRead != APDS9301_TIMING_INT_101)
+	if(timingIntRead != timingIntWrite)
 	{
-		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", APDS9301_TIMING_INT_101);
+		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", timingIntWrite);
 		return EXIT_FAILURE;
 	}
 
@@ -248,9 +248,9 @@ int8_t test_TimingIntReadWrite(void)
     INFO_PRINT("APDS9301 Timing register returned integration value: 0x%x\n", timingIntRead); 
   }
 	/* Verify device integration is 402 msec */
-	if(timingIntRead != APDS9301_TIMING_INT_402)
+	if(timingIntRead != timingIntWrite)
 	{ 
-		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", APDS9301_TIMING_INT_402);
+		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", timingIntWrite);
 		return EXIT_FAILURE;
 	}
 
@@ -267,7 +267,7 @@ int8_t test_InterruptControl(void)
   Apds9301_IntPersist_e intPersist;
 
 	testCount++;
-	INFO_PRINT("start of test_InterruptControl, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_InterruptControl, test #%d **\n",testCount);
   INFO_PRINT("Test read/write to Interrupt Control\n");
 
 	/* Set device Interrupt Control to have Level disabled, Interrupt every 15 periods */
@@ -360,9 +360,9 @@ int8_t test_InterruptControl(void)
 int8_t test_DeviceIdRead(void)
 {
   uint8_t partNo = 0;
-  uint8_t revNo = 0;
+  uint8_t revNo = 1; /* Expected rev number is 0x00, set initial value to non-zero value */
 	testCount++;
-	INFO_PRINT("start of test_DeviceIdRead, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_DeviceIdRead, test #%d **\n",testCount);
 	
 	/* Read Device ID */
 	if(EXIT_FAILURE == apds9301_getDeviceId(fd, &partNo, &revNo)) { 
@@ -394,12 +394,52 @@ int8_t test_DeviceIdRead(void)
  */
 int8_t test_InterruptThresholdReadWrite(void)
 {
-  //uint8_t tmp = 0;
+  uint16_t lowThresholdRead = 0;
+  uint16_t lowThresholdWrite = 0x1111;
+  uint16_t highThresholdRead = 0;
+  uint16_t highThresholdWrite = 0x9999;
 	testCount++;
-	INFO_PRINT("start of test_InterruptThresholdReadWrite, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_InterruptThresholdReadWrite, test #%d **\n",testCount);
 
-  //TODO
+	/* Set device Interrupt low Threshold to 0x1111 */
+	if(EXIT_FAILURE == apds9301_setLowIntThreshold(fd, lowThresholdWrite)) { 
+    ERROR_PRINT("test_InterruptThresholdReadWrite write failed\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read register for low threshold value */
+	if(EXIT_FAILURE == apds9301_getLowIntThreshold(fd, &lowThresholdRead)) { 
+    ERROR_PRINT("test_InterruptThresholdReadWrite read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Threshold register returned low threshold value: 0x%x\n", lowThresholdRead); 
+  }
+	/* Verify device low interrupt threshold is 0x1111 */
+	if(lowThresholdRead != lowThresholdWrite)
+	{ 
+		ERROR_PRINT("test_InterruptThresholdReadWrite failed to set/get APDS9301 Low Threshold to be 0x%x\n", lowThresholdWrite);
+		return EXIT_FAILURE;
+	}
 	
+
+	/* Set device Interrupt high Threshold to 0x9999 */
+	if(EXIT_FAILURE == apds9301_setLowIntThreshold(fd, highThresholdWrite)) { 
+    ERROR_PRINT("test_InterruptThresholdReadWrite write failed\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read register for high threshold value */
+	if(EXIT_FAILURE == apds9301_getLowIntThreshold(fd, &highThresholdRead)) { 
+    ERROR_PRINT("test_InterruptThresholdReadWrite read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Threshold register returned high threshold value: 0x%x\n", highThresholdRead); 
+  }
+	/* Verify device high interrupt threshold is 0x1111 */
+	if(highThresholdRead != highThresholdWrite)
+	{ 
+		ERROR_PRINT("test_InterruptThresholdReadWrite failed to set/get APDS9301 high Threshold to be 0x%x\n", highThresholdWrite);
+		return EXIT_FAILURE;
+	}
+
 	return EXIT_SUCCESS;
 }
 
@@ -410,10 +450,25 @@ int8_t test_InterruptThresholdReadWrite(void)
  */
 int8_t test_LuxDataRead(void)
 {
-  //uint8_t tmp = 0;
+  float luxData = 0;
 	testCount++;
-	INFO_PRINT("start of test_LuxDataRead, test #%d\n",testCount);
+	INFO_PRINT("\n\n** Start of test_LuxDataRead, test #%d **\n",testCount);
 	
+	/* Read Data0 and Data1 Registers */
+	if(EXIT_FAILURE == apds9301_getLuxData(fd, &luxData)) { 
+    ERROR_PRINT("test_LuxDataRead read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 returned Lux Data value of: %.3f\n", luxData); 
+  }
+
+	/* Verify non-zero value returned */
+	if(luxData == 0.0)
+	{ 
+		ERROR_PRINT("test_LuxDataRead read failed to get non-zero Lux value from Data0 reg\n");
+		return EXIT_FAILURE;
+	}
+
 	return EXIT_SUCCESS;
 }
 
