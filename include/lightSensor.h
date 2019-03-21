@@ -72,15 +72,6 @@ typedef enum
   APDS9301_INT_PERSIST_OUTSIDE_15P,  /* 15 integration time periods out of range */
 } Apds9301_IntPersist_e;
 
-/* Enum used to specify which Interrupt Threshold byte is being set/get */
-typedef enum
-{
-  APDS9301_LOWTHRES_LOWBYTE = 0,
-  APDS9301_LOWTHRES_HIGHBYTE,
-  APDS9301_HIGHTHRES_LOWBYTE,
-  APDS9301_HIGHTHRES_HIGHBYTE,
-} Apds9301_IntThresholdByte_e;
-
 /*---------------------------------------------------------------------------------*/
 /**
  * @brief 
@@ -99,7 +90,7 @@ int8_t apds9301_getLuxData(uint8_t file, float *luxData);
  * @param config
  *
  * @return 
- */
+ */ // TODO: Update name to be apds9301_getPowerState
 int8_t apds9301_getControl(uint8_t file, Apds9301_PowerCtrl_e *control);
 
 /**
@@ -172,7 +163,7 @@ int8_t apds9301_getInterruptControl(uint8_t file, Apds9301_IntSelect_e *intSelec
  * @param control
  *
  * @return 
- */
+ */ // TODO: Update name to be apds9301_setPowerState
 int8_t apds9301_setControl(uint8_t file, Apds9301_PowerCtrl_e control);
 
 /**

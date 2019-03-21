@@ -85,29 +85,30 @@ int main()
 /* HELPER METHODS */
 void appUsage(){
   printf("\nEnter a value to specify a command to send to the Sensor Application:\n"
-         "\t1 = TEMPCMD_GETTEMP\n"
-         "\t2 = TEMPCMD_GETLOWTHRES\n"
-         "\t3 = TEMPCMD_GETHIGHTHRES\n"
-         "\t4 = TEMPCMD_GETCONFIG\n"
-         "\t5 = TEMPCMD_GETRESOLUTION\n"
-         "\t6 = TEMPCMD_GETFAULT\n"
-         "\t7 = TEMPCMD_GETEXTMODE\n"
-         "\t8 = TEMPCMD_GETSHUTDOWNMODE\n"
-         "\t9 = TEMPCMD_GETALERT\n"
+         "\t1  = TEMPCMD_GETTEMP\n"
+         "\t2  = TEMPCMD_GETLOWTHRES\n"
+         "\t3  = TEMPCMD_GETHIGHTHRES\n"
+         "\t4  = TEMPCMD_GETCONFIG\n"
+         "\t5  = TEMPCMD_GETRESOLUTION\n"
+         "\t6  = TEMPCMD_GETFAULT\n"
+         "\t7  = TEMPCMD_GETEXTMODE\n"
+         "\t8  = TEMPCMD_GETSHUTDOWNMODE\n"
+         "\t9  = TEMPCMD_GETALERT\n"
          "\t10 = TEMPCMD_GETCONVRATE\n"
          "\t11 = LIGHTCMD_GETLUXDATA\n"
-         "\t12 = LIGHTCMD_GETLUXHIGH\n"
-         "\t13 = LIGHTCMD_GETDEVID\n"
-         "\t14 = LIGHTCMD_GETCTRL\n"
-         "\t15 = LIGHTCMD_GETTIMING\n"
-         "\t16 = LIGHTCMD_GETLOWTHRES\n"
-         "\t17 = LIGHTCMD_GETHIGHTHRES\n"
+         "\t12 = LIGHTCMD_GETPOWERCTRL\n"
+         "\t13 = LIGHTCMD_GETDEVPARTNO\n"
+         "\t14 = LIGHTCMD_GETDEVREVNO\n"
+         "\t15 = LIGHTCMD_GETTIMINGGAIN\n"
+         "\t16 = LIGHTCMD_GETTIMINGINTEGRATION\n"
+         "\t17 = LIGHTCMD_GETINTSELECT\n"
+         "\t18 = LIGHTCMD_GETINTPERSIST\n"
+         "\t19 = LIGHTCMD_GETLOWTHRES\n"
+         "\t20 = LIGHTCMD_GETHIGHTHRES\n"
   );
 }
 
 static void getCmdResponse(RemoteCmdPacket *packet){
-  printf("Response received from server\n");
-
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
     case TEMPCMD_GETTEMP :
@@ -144,34 +145,34 @@ static void getCmdResponse(RemoteCmdPacket *packet){
       printf("LIGHTCMD_GETLUXDATA data received - {%f}\n", packet->data.status_float);
       break;
     case LIGHTCMD_GETPOWERCTRL :
-      printf("LIGHTCMD_GETPOWERCTRL data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETPOWERCTRL data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETDEVPARTNO:
-      printf("LIGHTCMD_GETDEVPARTNO data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETDEVPARTNO data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETDEVREVNO :
-      printf("LIGHTCMD_GETDEVREVNO data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETDEVREVNO data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETTIMINGGAIN :
-      printf("LIGHTCMD_GETTIMINGGAIN data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETTIMINGGAIN data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETTIMINGINTEGRATION :
-      printf("LIGHTCMD_GETTIMINGINTEGRATION data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETTIMINGINTEGRATION data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETINTSELECT :
-      printf("LIGHTCMD_GETINTSELECT data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETINTSELECT data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETINTPERSIST :
-      printf("LIGHTCMD_GETINTPERSIST data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETINTPERSIST data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETLOWTHRES :
-      printf("LIGHTCMD_GETLOWTHRES data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETLOWTHRES data received - {0x%x}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETHIGHTHRES :
-      printf("LIGHTCMD_GETHIGHTHRES data received - {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETHIGHTHRES data received - {0x%x}\n", packet->data.status_uint32);
       break;
     default:
-      printf("Returned response has unrecognized command. Data ignored.");
+      printf("Unrecognized command received. Request ignored.\n");
       break;
   }
 

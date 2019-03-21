@@ -20,10 +20,20 @@
 #include "cmn_timer.h"
 #include "packet.h"
 
+#define DEFAULT_POWER_STATE         (APDS9301_CTRL_POWERUP)
+#define DEFAULT_TIMING_GAIN         (APDS9301_TIMING_GAIN_LOW)
+#define DEFAULT_TIMING_INTEGRATION  (APDS9301_TIMING_INT_101)
+#define DEFAULT_INT_SELECT          (APDS9301_INT_SELECT_LEVEL_DISABLE)
+#define DEFAULT_INT_PERSIST         (APDS9301_INT_PERSIST_OUTSIDE_CYCLE)
+#define DEFAULT_LOW_INT_THRESHOLD   (0x0101)
+#define DEFAULT_HIGH_INT_THRESHOLD  (0x9999)
+
 extern int gExitSig;
 
 /* Prototypes for private/helper functions */
 void getLightSensorData(int sensorFd, LightDataStruct *lightData);
+void initLightSensor(int sensorFd);
+int8_t verifyLightSensorComm(int sensorFd);
 
 /* Define static and global variables */
 
@@ -76,6 +86,9 @@ void* lightSensorThreadHandler(void* threadInfo)
   LOG_INFO("Successfully created lightSensorThread.\n");
   LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
 
+  /* Set initial states for LightSensor */
+  initLightSensor(sensorFd);
+
   /* Setup timer to periodically sample from Light Sensor */
   while(gExitSig) {
     /* Capture light sensor data from device */
@@ -105,19 +118,17 @@ void* lightSensorThreadHandler(void* threadInfo)
 
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
-void getLightSensorData(int sensorFd, LightDataStruct *lightData) {
+/*---------------------------------------------------------------------------------*/
+void getLightSensorData(int sensorFd, LightDataStruct *lightData) 
+{
   // TODO - improve error handling
 
-  /* Verify able to communicate with device - check device ID */
-  apds9301_getDeviceId(sensorFd, &lightData->apds9301_devicePartNo, &lightData->apds9301_deviceRevNo);
-  if(lightData->apds9301_devicePartNo != APDS9301_PARTNO){
-    /* Unable to read device ID successfully - transmit error message to Logger */
-    // TODO
+  if(EXIT_FAILURE == verifyLightSensorComm(sensorFd))
     return;
-  }
 
-  /* Collect data from all available Light Sensor registers */
+  /* Collect data Light Sensor */
   apds9301_getLuxData(sensorFd, &lightData->apds9301_luxData);
+  apds9301_getDeviceId(sensorFd, &lightData->apds9301_devicePartNo, &lightData->apds9301_deviceRevNo);
   apds9301_getControl(sensorFd, &lightData->apds9301_powerControl);
   apds9301_getTimingGain(sensorFd, &lightData->apds9301_timingGain);
   apds9301_getTimingIntegration(sensorFd, &lightData->apds9301_timingIntegration);
@@ -126,3 +137,35 @@ void getLightSensorData(int sensorFd, LightDataStruct *lightData) {
   apds9301_getHighIntThreshold(sensorFd, &lightData->apds9301_intThresHigh);
 }
 
+/*---------------------------------------------------------------------------------*/
+void initLightSensor(int sensorFd)
+{
+  if(EXIT_FAILURE == verifyLightSensorComm(sensorFd))
+    return;
+
+  /* Initialize Light Sensor with default settings */
+  apds9301_setControl(sensorFd, DEFAULT_POWER_STATE);
+  apds9301_setTimingGain(sensorFd, DEFAULT_TIMING_GAIN);
+  apds9301_setTimingIntegration(sensorFd, DEFAULT_TIMING_INTEGRATION);
+  apds9301_setInterruptControl(sensorFd, DEFAULT_INT_SELECT, DEFAULT_INT_PERSIST);
+  apds9301_setLowIntThreshold(sensorFd, DEFAULT_LOW_INT_THRESHOLD);
+  apds9301_setHighIntThreshold(sensorFd, DEFAULT_HIGH_INT_THRESHOLD);
+  apds9301_clearInterrupt(sensorFd);
+}
+
+/*---------------------------------------------------------------------------------*/
+int8_t verifyLightSensorComm(int sensorFd) 
+{
+  uint8_t devicePartNo, deviceRevNo = 0;
+
+  /* Verify able to communicate with device - check able to read device Part Number */
+  apds9301_getDeviceId(sensorFd, &devicePartNo, &deviceRevNo);
+  if(devicePartNo != APDS9301_PARTNO)
+  {
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+
+/*---------------------------------------------------------------------------------*/
