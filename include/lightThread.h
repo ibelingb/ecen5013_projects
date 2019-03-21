@@ -28,7 +28,5 @@
 /*---------------------------------------------------------------------------------*/
 void* lightSensorThreadHandler(void* threadInfo);
 
-void getLightSensorData(LightDataStruct *lightSensorData);
-
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */
