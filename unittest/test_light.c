@@ -57,11 +57,17 @@ int main(void)
 	sleep(2);
 
   testFails += test_LuxDataRead();
+  sleep(1);
   testFails += test_ControlReadWrite();
+  sleep(1);
   testFails += test_TimingGainReadWrite();
+  sleep(1);
   testFails += test_TimingIntReadWrite();
+  sleep(1);
   testFails += test_InterruptControl();
+  sleep(1);
   testFails += test_DeviceIdRead();
+  sleep(1);
   testFails += test_InterruptThresholdReadWrite();
 
 	printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);

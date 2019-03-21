@@ -238,7 +238,7 @@ static void getCmdResponse(RemoteCmdPacket* packet){
       break;
     case LIGHTCMD_GETLUXDATA :
       packet->data.status_float = lightData.apds9301_luxData;
-      printf("LIGHTCMD_GETLUX cmd received | Transmitting data: {%f}\n", packet->data.status_float);
+      printf("LIGHTCMD_GETLUXDATA cmd received | Transmitting data: {%f}\n", packet->data.status_float);
       break;
     case LIGHTCMD_GETDEVPARTNO :
       packet->data.status_uint32 = lightData.apds9301_devicePartNo;
@@ -250,23 +250,23 @@ static void getCmdResponse(RemoteCmdPacket* packet){
       break;
     case LIGHTCMD_GETPOWERCTRL :
       packet->data.status_uint32 = lightData.apds9301_powerControl;
-      printf("LIGHTCMD_GETCTRL cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETPOWERCTRL cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETTIMINGGAIN :
       packet->data.status_uint32 = lightData.apds9301_timingGain;
-      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETTIMINGGAIN cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETTIMINGINTEGRATION :
       packet->data.status_uint32 = lightData.apds9301_timingIntegration;
-      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETTIMINGINTEGRATION cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETINTSELECT :
       packet->data.status_uint32 = lightData.apds9301_intSelect;
-      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETINTSELECT cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETINTPERSIST :
       packet->data.status_uint32 = lightData.apds9301_intPersist;
-      printf("LIGHTCMD_GETTIMING cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      printf("LIGHTCMD_GETINTPERSIST cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETLOWTHRES :
       packet->data.status_uint32 = lightData.apds9301_intThresLow;

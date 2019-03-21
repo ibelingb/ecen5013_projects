@@ -95,7 +95,7 @@ void appUsage(){
          "\t8 = TEMPCMD_GETSHUTDOWNMODE\n"
          "\t9 = TEMPCMD_GETALERT\n"
          "\t10 = TEMPCMD_GETCONVRATE\n"
-         "\t11 = LIGHTCMD_GETLUXLOW\n"
+         "\t11 = LIGHTCMD_GETLUXDATA\n"
          "\t12 = LIGHTCMD_GETLUXHIGH\n"
          "\t13 = LIGHTCMD_GETDEVID\n"
          "\t14 = LIGHTCMD_GETCTRL\n"
@@ -111,59 +111,64 @@ static void getCmdResponse(RemoteCmdPacket *packet){
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
     case TEMPCMD_GETTEMP :
-      printf("TEMPCMD_GETTEMP data received - {%.3f}\n", packet->data0.status_float);
+      printf("TEMPCMD_GETTEMP data received - {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETLOWTHRES :
-      printf("TEMPCMD_GETLOWTHRES data received - {%.3f}\n", packet->data0.status_float);
+      printf("TEMPCMD_GETLOWTHRES data received - {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETHIGHTHRES :
-      printf("TEMPCMD_GETHIGHTHRES data received - {%.3f}\n", packet->data0.status_float);
+      printf("TEMPCMD_GETHIGHTHRES data received - {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETCONFIG :
-      printf("TEMPCMD_GETCONFIG data received - {%.3f}\n", packet->data0.status_float);
+      printf("TEMPCMD_GETCONFIG data received - {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETRESOLUTION :
-      printf("TEMPCMD_GETRESOLUTION data received - {%.3f}\n", packet->data0.status_float);
+      printf("TEMPCMD_GETRESOLUTION data received - {%.3f}\n", packet->data.status_float);
       break;
     case TEMPCMD_GETFAULT :
-      printf("TEMPCMD_GETFAULT data received - {%d}\n", packet->data0.status_uint32);
+      printf("TEMPCMD_GETFAULT data received - {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETEXTMODE :
-      printf("TEMPCMD_GETEXTMODE data received - {%d}\n", packet->data0.status_uint32);
+      printf("TEMPCMD_GETEXTMODE data received - {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETSHUTDOWNMODE :
-      printf("TEMPCMD_GETSHUTDOWNMODE data received - {%d}\n", packet->data0.status_uint32);
+      printf("TEMPCMD_GETSHUTDOWNMODE data received - {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETALERT :
-      printf("TEMPCMD_GETALERT data received - {%d}\n", packet->data0.status_uint32);
+      printf("TEMPCMD_GETALERT data received - {%d}\n", packet->data.status_uint32);
       break;
     case TEMPCMD_GETCONVRATE :
-      printf("TEMPCMD_GETCONVRATE data received - {%d}\n", packet->data0.status_uint32);
+      printf("TEMPCMD_GETCONVRATE data received - {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETLUXLOW :
-      printf("LIGHTCMD_GETLUXLOW data received - [0]:{%d} | [1]:{%d}\n", 
-              packet->data0.status_uint32, packet->data1.status_uint32);
+    case LIGHTCMD_GETLUXDATA :
+      printf("LIGHTCMD_GETLUXDATA data received - {%f}\n", packet->data.status_float);
       break;
-    case LIGHTCMD_GETLUXHIGH :
-      printf("LIGHTCMD_GETLUXHIGH data received - [0]:{%d} | [1]:{%d}\n", 
-              packet->data0.status_uint32, packet->data1.status_uint32);
+    case LIGHTCMD_GETPOWERCTRL :
+      printf("LIGHTCMD_GETPOWERCTRL data received - {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETDEVID :
-      printf("LIGHTCMD_GETDEVID data received - {%d}\n", packet->data0.status_uint32);
+    case LIGHTCMD_GETDEVPARTNO:
+      printf("LIGHTCMD_GETDEVPARTNO data received - {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETCTRL :
-      printf("LIGHTCMD_GETCTRL data received - {%d}\n", packet->data0.status_uint32);
+    case LIGHTCMD_GETDEVREVNO :
+      printf("LIGHTCMD_GETDEVREVNO data received - {%d}\n", packet->data.status_uint32);
       break;
-    case LIGHTCMD_GETTIMING :
-      printf("LIGHTCMD_GETTIMING data received - {%d}\n", packet->data0.status_uint32);
+    case LIGHTCMD_GETTIMINGGAIN :
+      printf("LIGHTCMD_GETTIMINGGAIN data received - {%d}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETTIMINGINTEGRATION :
+      printf("LIGHTCMD_GETTIMINGINTEGRATION data received - {%d}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETINTSELECT :
+      printf("LIGHTCMD_GETINTSELECT data received - {%d}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETINTPERSIST :
+      printf("LIGHTCMD_GETINTPERSIST data received - {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETLOWTHRES :
-      printf("LIGHTCMD_GETLOWTHRES data received - [0]:{%d} | [1]:{%d}\n", 
-              packet->data0.status_uint32, packet->data1.status_uint32);
+      printf("LIGHTCMD_GETLOWTHRES data received - {%d}\n", packet->data.status_uint32);
       break;
     case LIGHTCMD_GETHIGHTHRES :
-      printf("LIGHTCMD_GETHIGHTHRES data received - [0]:{%d} | [1]:{%d}\n", 
-              packet->data0.status_uint32, packet->data1.status_uint32);
+      printf("LIGHTCMD_GETHIGHTHRES data received - {%d}\n", packet->data.status_uint32);
       break;
     default:
       printf("Returned response has unrecognized command. Data ignored.");
