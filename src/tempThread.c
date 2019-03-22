@@ -34,12 +34,14 @@
 #include "packet.h"
 
 #define TEMP_ERR_COUNT_LIMIT  (8)
+#define INIT_TEMP_AVG_COUNT   (8)
+#define INIT_THRESHOLD_PAD    (2)
 
 extern int gExitSig;
 
 /* private helper methods */
 uint8_t getData(int fd, TempDataStruct *pData);
-
+int8_t initSensor(int fd);
 
 /*---------------------------------------------------------------------------------*/
 void* tempSensorThreadHandler(void* threadInfo)
@@ -78,10 +80,9 @@ void* tempSensorThreadHandler(void* threadInfo)
     return NULL;
   }
   
-  
   /* initialize sensor */
-  //if(tmp102_initialize(fd) == EXIT_FAILURE)
-  //{ ERROR_PRINT("tmp102_initialize failed\n"); errCount++; }
+  if(initSensor(fd) == EXIT_FAILURE)
+  { ERROR_PRINT("temp initSensor failed\n"); errCount++; }
   
   /* report BIST status to main? */
 
@@ -144,6 +145,118 @@ void* tempSensorThreadHandler(void* threadInfo)
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
 
+int8_t initSensor(int fd)
+{
+   TempDataStruct tmp, initValue;
+   float tempAccum = 0;
+   uint8_t accumCount;
+
+   initValue.tmp102_shutdownMode  = TMP102_DEVICE_IN_NORMAL;
+   initValue.tmp102_extendedMode  = TMP102_ADDR_MODE_NORMAL;
+   initValue.tmp102_fault         = TMP102_REQ_FOUR_FAULT;
+   initValue.tmp102_convRate      = TMP102_CONV_RATE_4HZ;
+
+  /*** address mode ***/
+  /* set address mode to normal */
+	if(EXIT_FAILURE == tmp102_setExtendedMode(fd, initValue.tmp102_extendedMode))
+	{ ERROR_PRINT("init (address mode) failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &tmp.tmp102_extendedMode))
+	{ ERROR_PRINT("init (address mode) failed\n"); return EXIT_FAILURE; }
+
+	/* verify read back value match write value */
+	if(tmp.tmp102_extendedMode != initValue.tmp102_extendedMode)
+	{ ERROR_PRINT("init (address mode) failed\n"); return EXIT_FAILURE; }
+
+  /*** fault queue size ***/
+	/* set queue depth */
+	if(EXIT_FAILURE == tmp102_setFaultQueueSize(fd, initValue.tmp102_fault))
+	{ ERROR_PRINT("init (fault queue) failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &tmp.tmp102_fault))
+	{ ERROR_PRINT("init (fault queue) failed\n"); return EXIT_FAILURE; }
+
+	/* verify read back value match write value */
+	if(tmp.tmp102_fault != initValue.tmp102_fault)
+	{ ERROR_PRINT("init (fault queue) failed\n"); return EXIT_FAILURE; }
+
+  /*** conversion rate ***/
+  	/* write new value */
+	if(EXIT_FAILURE == tmp102_setConvRate(fd, initValue.tmp102_convRate))
+	{ ERROR_PRINT("init (conv rate) failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getConvRate(fd, &tmp.tmp102_convRate))
+	{ ERROR_PRINT("init (conv rate) failed\n"); return EXIT_FAILURE; }
+
+	/* verify read back value match write value */
+	if(tmp.tmp102_convRate != initValue.tmp102_convRate)
+	{ ERROR_PRINT("init (conv rate) failed\n"); return EXIT_FAILURE; }
+
+  /*** shutdown state ***/
+	/* take out of shutdown mode */
+	if(EXIT_FAILURE == tmp102_setShutdownState(fd, initValue.tmp102_shutdownMode))
+	{ ERROR_PRINT("init (shutdown state) failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &tmp.tmp102_shutdownMode))
+	{ ERROR_PRINT("init (shutdown state) failed\n"); return EXIT_FAILURE; }
+
+  /* verify it matches set value */
+  if(tmp.tmp102_shutdownMode != initValue.tmp102_shutdownMode)
+  { ERROR_PRINT("init (shutdown state) failed\n"); return EXIT_FAILURE; }
+
+  INFO_PRINT("temp sensor init delay...");
+  sleep(1);
+  INFO_PRINT("done\n");
+
+  /* find average temp */
+  for(accumCount = 0; accumCount < INIT_TEMP_AVG_COUNT; ++accumCount)
+  {
+    if(tmp102_getTempC(fd, &tmp.tmp102_temp) < 0)
+		{ ERROR_PRINT("tmp102_getTempC failed\n"); return EXIT_FAILURE; }
+    tempAccum += tmp.tmp102_temp;
+    INFO_PRINT("tempC: %f\n",tmp.tmp102_temp);
+  }
+
+  /* calc average and set init threshold values */
+  tempAccum /= accumCount;
+  INFO_PRINT("average tempC: %f\n", tempAccum);
+
+  initValue.tmp102_highThreshold = tempAccum + INIT_THRESHOLD_PAD;
+  initValue.tmp102_lowThreshold = tempAccum + (INIT_THRESHOLD_PAD / 2);
+
+  /*** set low threshold ***/
+  /* set value */
+  if(EXIT_FAILURE == tmp102_setLowThreshold(fd, initValue.tmp102_lowThreshold))
+	{ ERROR_PRINT("test_LowThreshold read failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &tmp.tmp102_lowThreshold))
+	{ ERROR_PRINT("test_LowThreshold write failed\n"); return EXIT_FAILURE; }
+
+  /* verify it matches set value */
+	if(tmp.tmp102_lowThreshold != initValue.tmp102_lowThreshold)
+	{ ERROR_PRINT("test_LowThreshold read doesn't match written\n"); return EXIT_FAILURE; }
+  
+  /*** set high threshold ***/
+  /* set value */
+	if(EXIT_FAILURE == tmp102_setHighThreshold(fd, initValue.tmp102_highThreshold))
+	{ ERROR_PRINT("test_HighThreshold read failed\n"); return EXIT_FAILURE; }
+
+	/* read it back */
+	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &tmp.tmp102_highThreshold))
+	{ ERROR_PRINT("test_HighThreshold write failed\n"); return EXIT_FAILURE; }
+ 
+  /* verify it matches set value */
+	if(tmp.tmp102_highThreshold != initValue.tmp102_highThreshold)
+	{ ERROR_PRINT("test_HighThreshold read doesn't match written\n"); return EXIT_FAILURE; }
+ 
+  return EXIT_SUCCESS;
+}
+
 uint8_t getData(int fd, TempDataStruct *pData)
 {
   uint8_t errCount = 0;
@@ -188,6 +301,7 @@ uint8_t getData(int fd, TempDataStruct *pData)
 	{ ERROR_PRINT("tmp102_getAlert read failed\n"); errCount++; }
 	else { MUTED_PRINT("got startAlert value: %d\n", tmp.tmp102_alert); }
 
+  *pData = tmp;
   return errCount;
 }
 /*---------------------------------------------------------------------------------*/

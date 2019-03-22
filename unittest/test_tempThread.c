@@ -116,9 +116,9 @@ int main(void)
     /* do stuff, wait for exit signal 
     (e.g. in this case, when count to expire) */
     uint8_t loopCount = 0;
-    while(loopCount++ < 50)
+    while(loopCount++ < 100)
     {
-        sleep(1);
+        usleep(5e-1*10e6);
     }
 
     /* trigger thread exit */

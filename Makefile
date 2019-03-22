@@ -72,7 +72,7 @@ build: $(TARGET)
 run: build
 ifeq ($(PLATFORM),BBG)
 	scp $(TARGET) root@10.0.0.87:/usr/bin/$(TARGET)
-	ssh -t root@10.0.0.87 "cd /usr/bin/ && gdbserver localhost:2345 main"
+	ssh -t root@10.0.0.87 "cd /usr/bin/ && gdbserver localhost:2345 test_tempThread"
 endif
 
 .PHONY: all
