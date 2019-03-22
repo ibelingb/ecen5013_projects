@@ -83,7 +83,7 @@ int8_t test_TempConv(void)
 	uint8_t ind;
 	float temp, start;
 	testCount++;
-	INFO_PRINT("start of test_TempConv, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_TempConv, test #%d\n",testCount);
 
 	for(ind = 0; ind < TEMP_SAMPLES; ++ind)
 	{
@@ -115,7 +115,7 @@ int8_t test_LowThreshold(void)
 {
 	float Tlow, start, CHANGE = 5.0f;
 	testCount++;
-	INFO_PRINT("start of test_LowThreshold, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_LowThreshold, test #%d\n",testCount);
 
 	/*read threshold value */
 	if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &Tlow))
@@ -148,7 +148,7 @@ int8_t test_HighThreshold(void)
 {
 	float Thigh, start, CHANGE = 5.0f;
 	testCount++;
-	INFO_PRINT("start of test_HighThreshold, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_HighThreshold, test #%d\n",testCount);
 
 	/*read threshold value */
 	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &Thigh))
@@ -180,7 +180,7 @@ int8_t test_FaultQueueSize(void)
 {
 	Tmp102_FaultCount_e startCount, tmpCount, newCount;
 	testCount++;
-	INFO_PRINT("start of test_FaultQueueSize, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_FaultQueueSize, test #%d\n",testCount);
 	
 	/*read value */
 	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &startCount))
@@ -224,7 +224,7 @@ int8_t test_ExtendedAddrMode(void)
 {
 	Tmp102_AddrMode_e startMode, tmpMode, newMode;
 	testCount++;
-	INFO_PRINT("start of test_ExtendedAddrMode, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_ExtendedAddrMode, test #%d\n",testCount);
 	
 	/*read value */
 	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &startMode))
@@ -269,7 +269,7 @@ int8_t test_Shutdown(void)
 {
 	Tmp102_Shutdown_e startState, tmpState, newState;
 	testCount++;
-	INFO_PRINT("start of test_Shutdown, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_Shutdown, test #%d\n",testCount);
 	
 	/*read value */
 	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &startState))
@@ -313,7 +313,7 @@ int8_t test_ConversionRate(void)
 {
 	Tmp102_ConvRate_e startRate, tmpRate, newRate;
 	testCount++;
-	INFO_PRINT("start of test_ConversionRate, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_ConversionRate, test #%d\n",testCount);
 	
 	/*read value */
 	if(EXIT_FAILURE == tmp102_getConvRate(fd, &startRate))
@@ -358,7 +358,7 @@ int8_t test_AlertPolarity(void)
 	Tmp102_Alert_e startAlert, newAlert;
 
 	testCount++;
-	INFO_PRINT("start of test_AlertPolarity, test #%d\n",testCount);
+	INFO_PRINT("\nstart of test_AlertPolarity, test #%d\n",testCount);
 	
 	/*read start polarity value */
 	if(EXIT_FAILURE == tmp102_getPolarity(fd, &startPol))

@@ -22,6 +22,7 @@
 #define ERROR_PRINT(...)	(printf(__VA_ARGS__))
 #define WARN_PRINT(...)		(printf(__VA_ARGS__))
 #define INFO_PRINT(...)		(printf(__VA_ARGS__))
+#define MUTED_PRINT(...)	
 #define DEBUG_PRINT(...)	(printf(__VA_ARGS__))
 
 #endif /* DEBUG_H_ */

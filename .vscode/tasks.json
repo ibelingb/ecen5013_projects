@@ -62,6 +62,26 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "HOST-BUILD-TEMPTHREAD",
+            "type": "shell",
+            "command": "make clean all TARGET=test_tempThread PLATFORM=HOST",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "BBG-BUILD-TEMPTHREAD",
+            "type": "shell",
+            "command": "make clean all TARGET=test_tempThread PLATFORM=BBG",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }

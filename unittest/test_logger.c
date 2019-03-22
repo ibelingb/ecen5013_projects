@@ -22,6 +22,7 @@
 #include <mqueue.h>
 #include <errno.h>
 #include <string.h>     // for strerror()
+#include <sys/syscall.h>
 
 #include "debug.h"
 #include "logger.h"

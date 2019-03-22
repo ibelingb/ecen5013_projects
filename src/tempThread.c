@@ -95,10 +95,10 @@ void* tempSensorThreadHandler(void* threadInfo)
   timer_interval.tv_sec = TEMP_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
 
-  while(gExitSig)
+  while(gExitSig) 
   {
     LOG_HEARTBEAT();
-    INFO_PRINT("temp alive\n");
+    MUTED_PRINT("temp alive\n");
 
     /* get data */
     pthread_mutex_lock(sensorInfo.i2cBusMutex);
@@ -124,6 +124,9 @@ void* tempSensorThreadHandler(void* threadInfo)
     }
 
     /* write to shared memory */
+    pthread_mutex_lock(sensorInfo.sharedMemMutex);
+    memcpy(sharedMemPtr+(sensorInfo.tempDataOffset), &data, sizeof(TempDataStruct));
+    pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
     /* send status to main */
       
@@ -144,46 +147,46 @@ void* tempSensorThreadHandler(void* threadInfo)
 uint8_t getData(int fd, TempDataStruct *pData)
 {
   uint8_t errCount = 0;
-
+  TempDataStruct tmp;
   /* get temp */
-  if(tmp102_getTempC(fd, &pData->tmp102_temp) < 0)
+  if(tmp102_getTempC(fd, &tmp.tmp102_temp) < 0)
   { ERROR_PRINT("tmp102_getTempC failed\n"); errCount++; }
-  else { INFO_PRINT("got temp value: %f degC\n", pData->tmp102_temp); }
+  else { INFO_PRINT("got temp value: %f degC\n", tmp.tmp102_temp); }
 
   /*read threshold value */
-  if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &pData->tmp102_lowThreshold))
+  if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &tmp.tmp102_lowThreshold))
   { ERROR_PRINT("tmp102_getLowThreshold write failed\n"); errCount++; }
-  else { INFO_PRINT("got Tlow value: %f\n", pData->tmp102_lowThreshold); }
+  else { MUTED_PRINT("got Tlow value: %f\n", tmp.tmp102_lowThreshold); }
 
   /*read threshold value */
-	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &pData->tmp102_highThreshold))
+	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &tmp.tmp102_highThreshold))
 	{ ERROR_PRINT("tmp102_getHighThreshold write failed\n"); errCount++; }
-	else { INFO_PRINT("got Thigh value: %f\n", pData->tmp102_highThreshold); }
+	else { MUTED_PRINT("got Thigh value: %f\n", tmp.tmp102_highThreshold); }
 
   /*read value */
-	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &pData->tmp102_fault))
+	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &tmp.tmp102_fault))
 	{ ERROR_PRINT("tmp102_getFaultQueueSize read failed\n"); errCount++; }
-	else { INFO_PRINT("got startCount value: %d\n", pData->tmp102_fault); }
+	else { MUTED_PRINT("got startCount value: %d\n", tmp.tmp102_fault); }
 
   /*read value */
-	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &pData->tmp102_extendedMode))
+	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &tmp.tmp102_extendedMode))
 	{ ERROR_PRINT("tmp102_getExtendedMode read failed\n"); errCount++; }
-	else { INFO_PRINT("got startMode value: %d\n", pData->tmp102_extendedMode); }
+	else { MUTED_PRINT("got startMode value: %d\n", tmp.tmp102_extendedMode); }
 
   /*read value */
-	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &pData->tmp102_shutdownMode))
+	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &tmp.tmp102_shutdownMode))
 	{ ERROR_PRINT("tmp102_getShutdownState read failed\n"); errCount++; }
-	else { INFO_PRINT("got startState value: %d\n", pData->tmp102_shutdownMode); }
+	else { MUTED_PRINT("got startState value: %d\n", tmp.tmp102_shutdownMode); }
 
   /*read value */
-	if(EXIT_FAILURE == tmp102_getConvRate(fd, &pData->tmp102_convRate))
+	if(EXIT_FAILURE == tmp102_getConvRate(fd, &tmp.tmp102_convRate))
 	{ ERROR_PRINT("tmp102_getConvRate read failed\n"); errCount++; }
-	else { INFO_PRINT("got startRate value: %d\n", pData->tmp102_convRate); }
+	else { MUTED_PRINT("got startRate value: %d\n", tmp.tmp102_convRate); }
 
   /*read start alert value */
-	if(EXIT_FAILURE == tmp102_getAlert(fd, &pData->tmp102_alert))
+	if(EXIT_FAILURE == tmp102_getAlert(fd, &tmp.tmp102_alert))
 	{ ERROR_PRINT("tmp102_getAlert read failed\n"); errCount++; }
-	else { INFO_PRINT("got startAlert value: %d\n", pData->tmp102_alert); }
+	else { MUTED_PRINT("got startAlert value: %d\n", tmp.tmp102_alert); }
 
   return errCount;
 }

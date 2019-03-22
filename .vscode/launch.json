@@ -124,6 +124,46 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "Host-gdb-TempThread",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_tempThread",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Remote-gdb-TempThread",
+            "type": "cppdbg",
+            "request": "launch",
+            "miDebuggerServerAddress": "10.0.0.87:2345",
+            "miDebuggerPath": "/home/shua/tools_workspace/dropb/buildroot/output/host/bin/arm-linux-gdb",
+            "program": "${workspaceFolder}/test_tempThread",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }
