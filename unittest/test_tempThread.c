@@ -127,7 +127,7 @@ int main(void)
     uint8_t loopCount = 0, exit = 1;
     while((loopCount++ < 100) && (exit))
     {
-        healthMonitor(&heartbeatMsgQueue, &exit);
+        monitorHealth(&heartbeatMsgQueue, &exit);
         sleep(1);
     }
 
