@@ -111,7 +111,7 @@ int main(int argc, char *argv[]){
   }
 
   /* Create MessageQueue to receive thread status from all children */
-  heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
+  heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
   if(heartbeatMsgQueue == -1)
   {
     printf("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n");

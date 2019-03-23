@@ -20,11 +20,13 @@
 #include <signal.h>
 
 #define TEMP_LOOP_TIME_SEC      (0)
-#define TEMP_LOOP_TIME_NSEC     (499e-3 * 1e9)
+#define TEMP_LOOP_TIME_NSEC     (500e-3 * 1e9)
 #define LIGHT_LOOP_TIME_SEC     (0)
-#define LIGHT_LOOP_TIME_NSEC    (499e-3 * 1e9)
-#define MAIN_LOOP_TIME_SEC      (1)
-#define MAIN_LOOP_TIME_NSEC     (0)
+#define LIGHT_LOOP_TIME_NSEC    (500e-3 * 1e9)
+#define REMOTE_LOOP_TIME_SEC    (0)
+#define REMOTE_LOOP_TIME_NSEC   (500e-3 * 1e9)
+#define MAIN_LOOP_TIME_SEC      (0)
+#define MAIN_LOOP_TIME_NSEC     (999e-3 * 1e9)
 #define LOG_LOOP_TIME_SEC       (0)
 #define LOG_LOOP_TIME_NSEC      (50e-3 * 1e9)
 
