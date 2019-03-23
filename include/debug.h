@@ -1,6 +1,6 @@
 /***********************************************************************************
- * @author Brian Ibeling and Josh Malburg
- * 
+ * @author Josh Malburg
+ * joshua.malburg@colorad.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
  * @date March 8, 2019
@@ -18,8 +18,11 @@
 #define DEBUG_H_
 
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 #define ERROR_PRINT(...)	(printf(__VA_ARGS__))
+#define ERRNO_PRINT(str)    (ERROR_PRINT("%s, error in: %s, err#%d (%s)\n", str, __func__, errno, strerror(errno)))
 #define WARN_PRINT(...)		(printf(__VA_ARGS__))
 #define INFO_PRINT(...)		(printf(__VA_ARGS__))
 #define MUTED_PRINT(...)	

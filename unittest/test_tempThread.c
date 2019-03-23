@@ -22,17 +22,18 @@
 #include <pthread.h>
 #include <mqueue.h>
 #include <errno.h>
-#include <string.h>     // for strerror()
+#include <string.h>         // for strerror()
 #include <sys/syscall.h>
-#include <fcntl.h>    //for O_RDWR
+#include <fcntl.h>          //for O_RDWR
 #include <sys/shm.h>
 #include <sys/mman.h>
 
 #include "debug.h"
 #include "tempThread.h"
 #include "lightThread.h"
+#include "healthMonitor.h"
 
-#define NUM_THREADS (1)
+#define NUM_THREADS                 (1)
 #define INC_HB_QUEUE
 
 /* global for causing threads to exit */
@@ -42,7 +43,8 @@ pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each s
 pthread_mutex_t gI2cBusMutex; 
 
 static void *remoteThread(void *pArg);
-int8_t checkStatusQueue(mqd_t * pQueue, TaskStatusPacket *pPacket);
+int8_t getQueueError(mqd_t * pQueue, TaskStatusPacket *pPacket);
+int8_t checkSystemHealth(mqd_t * pQueue, TaskStatusPacket *pPacket);
 
 int main(void)
 {
@@ -122,10 +124,10 @@ int main(void)
 
     /* do stuff, wait for exit signal 
     (e.g. in this case, when count to expire) */
-    uint8_t loopCount = 0;
-    while(loopCount++ < 100)
+    uint8_t loopCount = 0, exit = 1;
+    while((loopCount++ < 100) && (exit))
     {
-        checkStatusQueue(&heartbeatMsgQueue, &recvThreadStatus);
+        healthMonitor(&heartbeatMsgQueue, &exit);
         sleep(1);
     }
 
@@ -147,68 +149,6 @@ int main(void)
     close(sharedMemFd);
 
     INFO_PRINT("main exiting\n");
-    return EXIT_SUCCESS;
-}
-
-int8_t checkStatusQueue(mqd_t * pQueue, TaskStatusPacket *pPacket)
-{
-    int bytesRead;
-    static uint8_t threadMissingCount[NUM_THREADS];
-    uint8_t recvdFlag[NUM_THREADS];
-    uint8_t msgCount, ind;
-
-    if((pQueue == NULL) || (pPacket == NULL)) {
-        return EXIT_FAILURE;
-    }
-
-    /* initialize loop variables */
-    msgCount = 0;
-    for(ind = 0; ind < NUM_THREADS; ++ind) {
-        recvdFlag[ind] = 1;
-    }
-
-    /* read all messages from queue */
-    while(1) {
-        bytesRead = mq_receive(*pQueue, (char *)pPacket, sizeof(struct TaskStatusPacket), NULL);
-
-        /* check for read error */
-        if(bytesRead == -1) {
-            if(errno == EAGAIN) { 
-                ERROR_PRINT("mq_receive timeout: err#%d (%s)\n\r", errno, strerror(errno));
-                /* TODO - handle error */
-            }
-            else { 
-                ERROR_PRINT("mq_timedreceive failed, err#%d (%s)\n\r", errno, strerror(errno)); 
-                /* TODO - handle error */
-            }
-        }
-
-        /* ignore partial msgs */
-        if(bytesRead == sizeof(TaskStatusPacket)) {
-            /* clear recvFlag so missing count doesn't increment */	
-            recvdFlag[pPacket->processId] = 0;
-
-            /* if status not ok, handle */
-            if(pPacket->taskStatus != STATUS_OK) {
-                /* TODO - handle error */
-            }
-
-            /* if state not ok, handle */
-            if(pPacket->taskState != STATE_RUNNING) {
-                /* TODO - handle error */
-            }   
-        }
-
-        /* update missingCount */
-        for(ind = 0; ind < NUM_THREADS; ++ind) {
-            threadMissingCount[ind] += recvdFlag[ind];
-        }
-
-        /* prevent main from looping forever */
-        if(++msgCount > (NUM_THREADS * 2) + 1){
-            /* main not keeping up, set error */
-        }
-    }
     return EXIT_SUCCESS;
 }
 

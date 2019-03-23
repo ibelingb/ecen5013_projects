@@ -1,11 +1,11 @@
 #*****************************************************************************
-# @author Joshua Malburg (joma0364)
+# @author Joshua Malburg
 # joshua.malburg@colorado.edu
 # Advanced Embedded Software Development
 # ECEN5013-002 - Rick Heidebrecht
 # @date March 7, 2018
 #*****************************************************************************
-# @file temp.mk
+# @file test_temp.mk
 # @brief unit tests for temp sensor library
 #
 #*****************************************************************************

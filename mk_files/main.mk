@@ -1,6 +1,5 @@
 #*****************************************************************************
-# @author Brian Ibeling and Joshua Malburg (joma0364)
-# brian.ibeling@colorado.edu
+# @author Brian Ibeling
 # joshua.malburg@colorado.edu
 # Advanced Embedded Software Development
 # ECEN5013-002 - Rick Heidebrecht

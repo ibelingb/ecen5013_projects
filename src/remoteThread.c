@@ -1,4 +1,18 @@
-/* Remote Thread Library */
+/***********************************************************************************
+ * @author Brian Ibeling
+ * brian.ibeling@colorado.edu
+ * Advanced Embedded Software Development
+ * ECEN5013 - Rick Heidebrecht
+ * @date March 14, 2019
+ * arm-linux-gnueabi (Buildroot)
+ * gcc (Ubuntu)
+ ************************************************************************************
+ *
+ * @file lightSensor.c
+ * @brief Remote Thread Library
+ *
+ ************************************************************************************
+ */
 
 #include <stdint.h>
 #include <stddef.h>

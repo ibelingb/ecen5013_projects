@@ -1,4 +1,18 @@
-/* Header to capture all packets used between threads */
+/***********************************************************************************
+ * @author Brian Ibeling
+ * Brian.Ibeling@colorado.edu
+ * Advanced Embedded Software Development
+ * ECEN5013 - Rick Heidebrecht
+ * @date March 8, 2019
+ * arm-linux-gnueabi (Buildroot)
+ * gcc (Ubuntu)
+ ************************************************************************************
+ *
+ * @file packet.h
+ * @brief Header to capture all packets used between threads
+ *
+ ************************************************************************************
+ */
 
 #ifndef PACKET_H_
 #define PACKET_H_
@@ -23,28 +37,33 @@
 
 /* ------------------------------------------------------------- */
 /*** ENUM DEFINITIONS ***/
+
+
 typedef enum ProcessId_e
 {
   PID_LIGHT = 0,
   PID_TEMP,
   PID_REMOTE,
-  PID_LOGGING
+  PID_LOGGING,
+  PID_END
 } ProcessId_e;
 
+/* set by main, not self */
 typedef enum TaskState_e
 {
   STATE_IDLE = 0,
   STATE_RUNNING,
-  STATE_KILLED
-  // TODO
+  STATE_KILLED,
+  STATE_END
 } TaskState_e;
 
+/* set by self, reported to main */
 typedef enum TaskStatus_e
 {
   STATUS_OK = 0,
   STATUS_ERROR,
-  STATUS_TERMINATED
-  // TODO
+  STATUS_TERMINATED,
+  STATUS_END
 } TaskStatus_e;
 
 // TODO - Needed? Could just reuse ProcessId_e or have this separate enum
@@ -86,6 +105,41 @@ typedef enum {
     LIGHT_EVENT_END
 } LightEvent_e;
 
+typedef enum {
+  ERROR_CODE_NONE = 0,
+  ERROR_CODE_TIMEOUT,
+  ERROR_CODE_RECVD_NULL_PTR,
+  /* TODO - put other general errors here */
+
+  /* start of user unique errors, to be type casted */
+  ERROR_CODE_USER0 = 128,
+  ERROR_CODE_USER1 = 129,
+  ERROR_CODE_USER2 = 130,
+  ERROR_CODE_USER3 = 131,
+  ERROR_CODE_USER4 = 132,
+  ERROR_CODE_USER5 = 133,
+  ERROR_CODE_USER6 = 134,
+  ERROR_CODE_USER7 = 135,
+  ERROR_CODE_USER8 = 136,
+  ERROR_CODE_USER9 = 137,
+  ERROR_CODE_USER10 = 138,
+  ERROR_CODE_USER11 = 139,
+  ERROR_CODE_USER12 = 140,
+  ERROR_CODE_USER13 = 141,
+  ERROR_CODE_USER14 = 142,
+  ERROR_CODE_USER15 = 143,
+  ERROR_CODE_END = 255
+} ErrorCode_e;
+
+typedef enum {
+  MAIN_ACTION_NONE = 0,
+  MAIN_ACTION_NOTIFY_USER_ONLY,
+  MAIN_ACTION_RESTART_THREAD,
+  MAIN_ACTION_TERMINATE_THREAD,
+  MAIN_ACTION_TERMINATE_ALL,
+  MAIN_ACTION_END
+} MainAction_e;
+
 typedef enum LogLevel_e
 {
   LOGLVL_INFO = 0,
@@ -102,7 +156,7 @@ typedef struct TaskStatusPacket
   ProcessId_e processId;
   TaskState_e taskState;
   TaskStatus_e taskStatus;
-  uint32_t crc;
+  uint8_t errorCode;
 } TaskStatusPacket;
 
 typedef struct LogMsgPacket
@@ -130,7 +184,6 @@ typedef struct TempDataStruct
   Tmp102_Shutdown_e tmp102_shutdownMode;
   Tmp102_Alert_e tmp102_alert;
   Tmp102_ConvRate_e tmp102_convRate;
-  //TODO - add fields for converted values and 16-bit fields
 } TempDataStruct;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */

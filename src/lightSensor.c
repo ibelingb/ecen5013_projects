@@ -1,4 +1,18 @@
-/* APDS-9301 light sensor library */
+/***********************************************************************************
+ * @author Brian Ibeling
+ * brian.ibeling@colorado.edu
+ * Advanced Embedded Software Development
+ * ECEN5013 - Rick Heidebrecht
+ * @date March 14, 2019
+ * arm-linux-gnueabi (Buildroot)
+ * gcc (Ubuntu)
+ ************************************************************************************
+ *
+ * @file lightSensor.c
+ * @brief APDS-9301 light sensor library
+ *
+ ************************************************************************************
+ */
 
 #include <stdint.h>
 #include <stdlib.h>

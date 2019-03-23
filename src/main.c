@@ -1,7 +1,6 @@
 /***********************************************************************************
- * @author Brian Ibeling and Joshua Malburg (joma0364)
+ * @author Brian Ibeling
  * brian.ibeling@colorado.edu
- * joshua.malburg@colorado.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
  * @date March 8, 2019
@@ -39,8 +38,9 @@
 #include "debug.h"
 #include "logger.h"
 #include "cmn_timer.h"
+#include "platform.h"
 
-#define NUM_THREADS           (4)
+
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
 
 /* Define static and global variables */
