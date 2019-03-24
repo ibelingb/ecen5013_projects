@@ -32,18 +32,26 @@
 #include "tempSensor.h"
 #include "lu_iic.h"
 #include "packet.h"
+#include "platform.h"
 
 #define TEMP_ERR_COUNT_LIMIT  (8)
 #define INIT_TEMP_AVG_COUNT   (8)
 #define INIT_THRESHOLD_PAD    (2)
 
 extern int gExitSig;
+static uint8_t aliveFlag = 1;
 
 /* private helper methods */
 uint8_t getData(int fd, TempDataStruct *pData);
 int8_t initSensor(int fd);
 
 /*---------------------------------------------------------------------------------*/
+void tempSigHandler(int signo, siginfo_t *info, void *extra)
+{
+	INFO_PRINT("tempSigHandler, signum: %d",info->si_signo);
+    aliveFlag = 0;
+}
+
 void* tempSensorThreadHandler(void* threadInfo)
 {
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
@@ -58,8 +66,21 @@ void* tempSensorThreadHandler(void* threadInfo)
   TempDataStruct data;
   uint8_t errCount = 0;
   uint8_t overTempState = 0;
+  uint8_t ind;
+	sigset_t mask;
 
   LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STARTED);
+
+  /* block SIGRTs signals */
+	sigemptyset(&mask);
+
+    for(ind = 0; ind < NUM_THREADS; ++ind)
+    {
+        if(ind != (uint8_t)PID_TEMP)
+            sigaddset(&mask, SIGRTMIN + ind);
+    }
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);
+
 
   /* init handle for i2c bus */
 	int fd = initIic("/dev/i2c-2");

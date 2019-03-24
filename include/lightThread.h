@@ -27,6 +27,8 @@
 
 /*---------------------------------------------------------------------------------*/
 void* lightSensorThreadHandler(void* threadInfo);
+void lightSigHandler(int signo, siginfo_t *info, void *extra);
+
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */

@@ -62,6 +62,7 @@ typedef struct RemoteCmdPacket
 
 /*---------------------------------------------------------------------------------*/
 void* remoteThreadHandler(void* threadInfo);
+void remoteSigHandler(int signo, siginfo_t *info, void *extra);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* REMOTE_THREAD_H_ */

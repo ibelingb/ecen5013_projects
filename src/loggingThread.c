@@ -30,8 +30,17 @@
 #include "logger.h"
 #include "packet.h"
 #include "cmn_timer.h"
+#include "platform.h"
+
+static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
+void loggingSigHandler(int signo, siginfo_t *info, void *extra)
+{
+	INFO_PRINT("loggingSigHandler, signum: %d",info->si_signo);
+    aliveFlag = 0;
+}
+
 void* logThreadHandler(void* threadInfo)
 {
     int logFd;  /* log file descriptor */
@@ -41,6 +50,8 @@ void* logThreadHandler(void* threadInfo)
     sigset_t set;
     int signum = SIGALRM;
     struct timespec timer_interval;
+        uint8_t ind;
+	sigset_t mask;
 
     /* instantiate temp msg variable for dequeuing */
     logItem_t logItem;
@@ -54,8 +65,18 @@ void* logThreadHandler(void* threadInfo)
     uint8_t exitFlag = 1;
 
     /* add start msg to log msg queue */
-    LOG_LOG_EVENT(LOG_EVENT_STARTED);
+    LOG_TEMP_SENSOR_EVENT(LOG_EVENT_STARTED);
     INFO_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
+
+    /* block SIGRTs signals */
+	sigemptyset(&mask);
+
+    for(ind = 0; ind < NUM_THREADS; ++ind)
+    {
+        if(ind != (uint8_t)PID_LOGGING)
+            sigaddset(&mask, SIGRTMIN + ind);
+    }
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
     /* try to open logfile */
     logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_TRUNC, 0644);

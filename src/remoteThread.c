@@ -25,10 +25,13 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 #include "remoteThread.h"
 #include "packet.h"
 #include "logger.h"
+#include "debug.h"
+#include "platform.h"
 
 #define MAX_CLIENTS (5)
 
@@ -41,8 +44,15 @@ static SensorThreadInfo sensorInfo;
 static bool threadAlive;
 static LightDataStruct lightData; /* Used to read data from Shared Memory */
 static TempDataStruct tempData;  /* Used to read data from Shared Memory */
+static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
+void remoteSigHandler(int signo, siginfo_t *info, void *extra)
+{
+	INFO_PRINT("remoteSigHandler, signum: %d",info->si_signo);
+  aliveFlag = 0;
+}
+
 void* remoteThreadHandler(void* threadInfo)
 {
   sensorInfo = *(SensorThreadInfo *)threadInfo;
@@ -57,12 +67,20 @@ void* remoteThreadHandler(void* threadInfo)
   unsigned int cliLen;
   threadAlive = true;
   ssize_t clientResponse = 1; /* Used to determine if client has disconnected from server */
+  uint8_t ind;
+	sigset_t mask;
 
-  /* Log Remote Thread Started */
-  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+  LOG_TEMP_SENSOR_EVENT(REMOTE_EVENT_STARTED);
 
-  /* Register Signal Handler */
-  // TODO
+  /* block SIGRTs signals */
+	sigemptyset(&mask);
+
+    for(ind = 0; ind < NUM_THREADS; ++ind)
+    {
+        if(ind != (uint8_t)PID_REMOTE)
+            sigaddset(&mask, SIGRTMIN + ind);
+    }
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
   /* Open FDs for Main and Logging Message queues */
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);

@@ -33,6 +33,7 @@
 #include "debug.h"
 #include "cmn_timer.h"
 #include "packet.h"
+#include "platform.h"
 
 #define DEFAULT_POWER_STATE         (APDS9301_CTRL_POWERUP)
 #define DEFAULT_TIMING_GAIN         (APDS9301_TIMING_GAIN_LOW)
@@ -50,8 +51,15 @@ void initLightSensor(int sensorFd);
 int8_t verifyLightSensorComm(int sensorFd);
 
 /* Define static and global variables */
+static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
+void lightSigHandler(int signo, siginfo_t *info, void *extra)
+{
+	INFO_PRINT("lightSigHandler, signum: %d",info->si_signo);
+    aliveFlag = 0;
+}
+
 void* lightSensorThreadHandler(void* threadInfo)
 {
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
@@ -66,8 +74,17 @@ void* lightSensorThreadHandler(void* threadInfo)
   struct timespec timer_interval;
   int signum = SIGALRM;
 
-  /* Register Signal Handler */
-  // TODO?
+  /* block SIGRTs signals */
+  uint8_t ind;
+	sigset_t mask;
+	sigemptyset(&mask);
+
+    for(ind = 0; ind < NUM_THREADS; ++ind)
+    {
+        if(ind != (uint8_t)PID_LIGHT)
+            sigaddset(&mask, SIGRTMIN + ind);
+    }
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));

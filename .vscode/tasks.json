@@ -82,6 +82,26 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "HOST-BUILD-HEALTHMONITOR",
+            "type": "shell",
+            "command": "make clean all TARGET=test_healthMonitor PLATFORM=HOST",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "BBG-BUILD-HEALTHMONITOR",
+            "type": "shell",
+            "command": "make clean all TARGET=test_healthMonitor PLATFORM=BBG",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }

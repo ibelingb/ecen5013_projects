@@ -43,6 +43,9 @@
 
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
 
+/* private functions */
+void set_sig_handlers(void);
+
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
 pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
@@ -77,8 +80,8 @@ int main(int argc, char *argv[]){
   /* Check inputs */
   // TODO
 
-  /* Register Signal Handler */
-  // TODO
+  /* set signal handlers and actions */
+	set_sig_handlers();
 
   /* Initialize created structs and packets to be 0-filled */
   memset(&recvThreadStatus, 0, sizeof(struct TaskStatusPacket));
@@ -245,3 +248,34 @@ int main(int argc, char *argv[]){
   close(sharedMemFd);
 }
 
+/**
+ * @brief set signal handlers and action
+ * 
+ */
+void set_sig_handlers(void)
+{
+    struct sigaction action;
+
+    action.sa_flags = SA_SIGINFO;
+    
+    action.sa_sigaction = lightSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_LIGHT, &action, NULL) == -1) {
+        perror("sigusr: sigaction");
+        _exit(1);
+    }
+    action.sa_sigaction = tempSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_TEMP, &action, NULL) == -1) {
+        perror("sigusr: sigaction");
+        _exit(1);
+    }
+    action.sa_sigaction = remoteSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE, &action, NULL) == -1) {
+        perror("sigusr: sigaction");
+        _exit(1);
+    }
+    action.sa_sigaction = loggingSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_LOGGING, &action, NULL) == -1) {
+        perror("sigusr: sigaction");
+        _exit(1);
+    }
+}
