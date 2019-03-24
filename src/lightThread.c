@@ -56,8 +56,14 @@ static uint8_t aliveFlag = 1;
 /*---------------------------------------------------------------------------------*/
 void lightSigHandler(int signo, siginfo_t *info, void *extra)
 {
-	INFO_PRINT("lightSigHandler, signum: %d",info->si_signo);
+	INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
     aliveFlag = 0;
+}
+
+void lightGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
 }
 
 void* lightSensorThreadHandler(void* threadInfo)

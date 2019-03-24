@@ -48,8 +48,14 @@ int8_t initSensor(int fd);
 /*---------------------------------------------------------------------------------*/
 void tempSigHandler(int signo, siginfo_t *info, void *extra)
 {
-	INFO_PRINT("tempSigHandler, signum: %d",info->si_signo);
+	INFO_PRINT("tempSigHandler, signum: %d\n",info->si_signo);
     aliveFlag = 0;
+}
+
+void tempGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
 }
 
 void* tempSensorThreadHandler(void* threadInfo)

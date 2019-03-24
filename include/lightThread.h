@@ -28,6 +28,7 @@
 /*---------------------------------------------------------------------------------*/
 void* lightSensorThreadHandler(void* threadInfo);
 void lightSigHandler(int signo, siginfo_t *info, void *extra);
+void lightGetAliveFlag(uint8_t *pAlive);
 
 
 /*---------------------------------------------------------------------------------*/

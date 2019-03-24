@@ -49,8 +49,14 @@ static uint8_t aliveFlag = 1;
 /*---------------------------------------------------------------------------------*/
 void remoteSigHandler(int signo, siginfo_t *info, void *extra)
 {
-	INFO_PRINT("remoteSigHandler, signum: %d",info->si_signo);
+	INFO_PRINT("remoteSigHandler, signum: %d\n",info->si_signo);
   aliveFlag = 0;
+}
+
+void remoteGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
 }
 
 void* remoteThreadHandler(void* threadInfo)

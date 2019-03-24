@@ -32,7 +32,7 @@ typedef enum {
 /*---------------------------------------------------------------------------------*/
 void* tempSensorThreadHandler(void* threadInfo);
 void tempSigHandler(int signo, siginfo_t *info, void *extra);
-
+void tempGetAliveFlag(uint8_t *pAlive);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* TEMP_THREAD_H_ */

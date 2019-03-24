@@ -33,6 +33,7 @@ extern int gExitLog;
 /*---------------------------------------------------------------------------------*/
 void* logThreadHandler(void* threadInfo);
 void loggingSigHandler(int signo, siginfo_t *info, void *extra);
+void logGetAliveFlag(uint8_t *pAlive);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LOGGING_THREAD_H_ */
