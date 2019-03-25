@@ -81,7 +81,7 @@ void* logThreadHandler(void* threadInfo)
     hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
     if(hbMsgQueue == -1) {
         printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+        LOG_TEMP_SENSOR_EVENT(LOG_EVENT_OPEN_ERROR);
         return NULL;
     }
 
@@ -130,6 +130,10 @@ void* logThreadHandler(void* threadInfo)
         /* wait on signal timer */
         sigwait(&set, &signum);
 
+        /* TODO - derive method to set status sent to main */
+        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+        MUTED_PRINT("logging is alive\n");
+
         /* if signaled to exit, shove log exit command
          * (2nd highest priority) in buffer and set exit flag */
         if(aliveFlag == 0)
@@ -157,8 +161,6 @@ void* logThreadHandler(void* threadInfo)
                 ERROR_PRINT("log_dequeue_item error\n");
             }
         }
-        /* TODO - derive method to set status sent to main */
-        SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE0);
     }
 
     /* clean up */

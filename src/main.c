@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";
   char *sensorSharedMemoryName = "/sensor_sm";
-  char *logFile = "scripts/log.bin";
+  char *logFile = "/usr/bin/log.bin";
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
   LogMsgPacket logPacket;

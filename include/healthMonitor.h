@@ -94,7 +94,7 @@ __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPac
         printf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n", pStatus->errorCode, 
         getPidString(pStatus->processId), pStatus->timestamp);
     #else
-        printf(" ");
+        ;
     #endif
     else if (pStatus->errorCode == ERROR_CODE_TIMEOUT)
         printf("recvd TIMEOUT error(%d) from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);

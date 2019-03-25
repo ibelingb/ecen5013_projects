@@ -205,6 +205,7 @@ void* remoteThreadHandler(void* threadInfo)
     }
     /* TODO - derive method to set status sent to main */
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+    INFO_PRINT("remote is alive\n");
   }
 
   /* Setup timer to periodically send heartbeat to parent thread */
