@@ -88,6 +88,8 @@ __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPac
     else if((pStatus->errorCode >= ERROR_CODE_USER_NONE0) && (pStatus->errorCode <= ERROR_CODE_USER_NONE7))
         printf("recvd error(%d) w/ CoA = NONE from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
     #endif
+    else if (pStatus->errorCode == ERROR_CODE_TIMEOUT)
+        printf("recvd TIMEOUT error(%d) from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
     else
         printf("recvd error(%d) w/ CoA = OTHER from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
 

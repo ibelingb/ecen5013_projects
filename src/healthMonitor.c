@@ -124,8 +124,11 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
                 ERROR_PRINT("Stopped processing status msgs, some how health monitor got behind\n");
                 break;
             }
-            if(*pExit == 0)
+            if(*pExit == 0) {
+                INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
                 return EXIT_SUCCESS;
+            }
+                
         }
     } while (status.processId != PID_END);
 
@@ -143,6 +146,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
             processAction(status.processId, action, pExit);
         }
     }
+    MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);
     return EXIT_SUCCESS;
 }
 /**
@@ -299,6 +303,7 @@ MainAction_e lightErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* just notify */
+        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_NOTIFY0:
         case ERROR_CODE_USER_NOTIFY1:
         case ERROR_CODE_USER_NOTIFY2:
@@ -323,7 +328,6 @@ MainAction_e lightErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* kill all */
-        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_TERMALL0:
         case ERROR_CODE_USER_TERMALL1:
         case ERROR_CODE_USER_TERMALL2:
@@ -362,6 +366,7 @@ MainAction_e tempErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* just notify */
+        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_NOTIFY0:
         case ERROR_CODE_USER_NOTIFY1:
         case ERROR_CODE_USER_NOTIFY2:
@@ -386,7 +391,6 @@ MainAction_e tempErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* kill all */
-        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_TERMALL0:
         case ERROR_CODE_USER_TERMALL1:
         case ERROR_CODE_USER_TERMALL2:
@@ -425,6 +429,7 @@ MainAction_e remoteErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* just notify */
+        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_NOTIFY0:
         case ERROR_CODE_USER_NOTIFY1:
         case ERROR_CODE_USER_NOTIFY2:
@@ -449,7 +454,6 @@ MainAction_e remoteErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* kill all */
-        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_TERMALL0:
         case ERROR_CODE_USER_TERMALL1:
         case ERROR_CODE_USER_TERMALL2:

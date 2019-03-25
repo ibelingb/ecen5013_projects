@@ -37,6 +37,7 @@
 #define HEALTH_MONITOR_DELAY    (CHILD_THREAD_DELAY * 2)
 #define THREAD_COUNT            (4)
 #define CHILD_THREAD_DELAY      (50e-3 *1e6)
+#define TEST_MULTITHREAD
 
 /* globals */
 uint8_t gExitSig = 1;       /* set by health monitor */
@@ -61,6 +62,11 @@ int8_t test_termThreadCoA(void);
 int8_t test_termAllCoA(void);
 int8_t test_timeout(void);
 
+/**
+ * @brief create all resources (threads, IPC, etc) and run test cases
+ * 
+ * @return int 
+ */
 int main(void)
 {
     pthread_t pThread[5];
@@ -84,7 +90,7 @@ int main(void)
     { ERRNO_PRINT("main() couldn't delete log queue path"); return EXIT_FAILURE; }
 
     /* Create MessageQueue to receive thread status from all children */
-    heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
+    heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
     if(heartbeatMsgQueue == -1)
     { ERROR_PRINT("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n"); return EXIT_FAILURE; }
 
@@ -104,14 +110,13 @@ int main(void)
     /* test cases */
     testFails += test_noneCoA();
     testFails += test_notifyCoA();
-    testFails += test_termThreadCoA();
-    testFails += test_termAllCoA();
+    //testFails += test_termThreadCoA();
+    //testFails += test_termAllCoA();
     testFails += test_timeout();
 
     printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);
 
-    //gExitReal = 0;
-    while(1);
+    gExitReal = 0;
 
     /* clean up */
     pthread_join(pThread[0], NULL);
@@ -127,6 +132,11 @@ int main(void)
     return EXIT_SUCCESS;
 }
 
+/**
+ * @brief verify all errors with CoA of NONE are reported by all thread types
+ * 
+ * @return int8_t test results
+ */
 int8_t test_noneCoA(void)
 {
     uint8_t ind, indj;
@@ -142,6 +152,11 @@ int8_t test_noneCoA(void)
     }
     return EXIT_SUCCESS;
 }
+/**
+ * @brief verify all errors with CoA of NOTIFY are reported by all thread types
+ * 
+ * @return int8_t test results
+ */
 int8_t test_notifyCoA(void)
 {
     uint8_t ind, indj;
@@ -156,6 +171,11 @@ int8_t test_notifyCoA(void)
     }
     return EXIT_SUCCESS;
 }
+/**
+ * @brief verify all errors with CoA of THERMTHREAD are reported by all thread types
+ * 
+ * @return int8_t test results
+ */
 int8_t test_termThreadCoA(void)
 {
     uint8_t ind, indj;
@@ -170,6 +190,11 @@ int8_t test_termThreadCoA(void)
     }
     return EXIT_SUCCESS;
 }
+/**
+ * @brief verify all errors with CoA of TERMALL are reported by all thread types
+ * 
+ * @return int8_t test results
+ */
 int8_t test_termAllCoA(void)
 {
     uint8_t ind, indj;
@@ -184,18 +209,28 @@ int8_t test_termAllCoA(void)
     }
     return EXIT_SUCCESS;
 }
+/**
+ * @brief verify health monitor detects a dead thread
+ * 
+ * @return int8_t 
+ */
 int8_t test_timeout(void)
 {
     uint8_t ind;
     testCount++;
     for(ind = 0; ind < PID_END; ++ind)
     {
-        SEND_STATUS_MSG(heartbeatMsgQueue, (ProcessId_e)ind, STATUS_ERROR, ERROR_CODE_TIMEOUT);
-        usleep(CHILD_THREAD_DELAY / 4);
+        //SEND_STATUS_MSG(heartbeatMsgQueue, (ProcessId_e)ind, STATUS_ERROR, ERROR_CODE_TIMEOUT);
+        sleep(2);
     }
     return EXIT_SUCCESS;
 }
-
+/**
+ * @brief call the health monitor
+ * 
+ * @param threadInfo not used
+ * @return void* not used
+ */
 static void *healthMonitorThread(void *threadInfo)
 {
     uint8_t ind;
@@ -211,6 +246,7 @@ static void *healthMonitorThread(void *threadInfo)
 
     while(gExitReal) 
     {
+        INFO_PRINT("health monitor thread alive\n");
         monitorHealth(&heartbeatMsgQueue, &gExitSig);
         usleep(HEALTH_MONITOR_DELAY);
     }
@@ -239,7 +275,7 @@ void *DUMMY_lightThread(void *pArg)
 
     while(gExitReal) 
     {
-        printf("light thread alive: %d\n", aliveFlags[0]);
+        printf("light thread alive\n");
         sleep(1);
     }
     return NULL;
@@ -263,7 +299,7 @@ void *DUMMY_tempThread(void *pArg)
 
     while(gExitReal) 
     {
-        printf("temp thread alive: %d\n", aliveFlags[1]);
+        printf("temp thread alive\n");
         sleep(1);
     }
     return NULL;
@@ -287,7 +323,7 @@ void *DUMMY_remoteThread(void *pArg)
 
     while(gExitReal) 
     {
-        printf("remote thread alive: %d\n", aliveFlags[2]);
+        printf("remote thread alive\n");
         sleep(1);
     }
     return NULL;
@@ -311,7 +347,7 @@ void *DUMMY_loggingThread(void *pArg)
 
     while(gExitReal) 
     {
-        printf("logging thread alive: %d\n", aliveFlags[3]);
+        printf("logging thread alive\n");
         sleep(1);
     }
     return NULL;
