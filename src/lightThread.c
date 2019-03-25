@@ -34,6 +34,7 @@
 #include "cmn_timer.h"
 #include "packet.h"
 #include "platform.h"
+#include "healthMonitor.h"
 
 #define DEFAULT_POWER_STATE         (APDS9301_CTRL_POWERUP)
 #define DEFAULT_TIMING_GAIN         (APDS9301_TIMING_GAIN_LOW)
@@ -42,8 +43,6 @@
 #define DEFAULT_INT_PERSIST         (APDS9301_INT_PERSIST_OUTSIDE_CYCLE)
 #define DEFAULT_LOW_INT_THRESHOLD   (0x0101)
 #define DEFAULT_HIGH_INT_THRESHOLD  (0x9999)
-
-extern int gExitSig;
 
 /* Prototypes for private/helper functions */
 void getLightSensorData(int sensorFd, LightDataStruct *lightData);
@@ -73,6 +72,7 @@ void* lightSensorThreadHandler(void* threadInfo)
   int sensorFd;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
+  mqd_t hbMsgQueue;  /* main status MessageQueue */
 
   /* timer variables */
   timer_t timerid;
@@ -113,6 +113,13 @@ void* lightSensorThreadHandler(void* threadInfo)
     return NULL;
   }
 
+  hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
+  if(hbMsgQueue == -1) {
+    printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
+    return NULL;
+  }
+
   /* Initialize I2C bus and set static mutex variable */
   sensorFd = initIic("/dev/i2c-2");
   if(sensorFd < 0) {
@@ -127,7 +134,7 @@ void* lightSensorThreadHandler(void* threadInfo)
   initLightSensor(sensorFd);
 
   /* Setup timer to periodically sample from Light Sensor */
-  while(gExitSig) {
+  while(aliveFlag) {
     /* Capture light sensor data from device */
     pthread_mutex_lock(sensorInfo.i2cBusMutex);
     getLightSensorData(sensorFd, &lightSensorData);
@@ -138,8 +145,8 @@ void* lightSensorThreadHandler(void* threadInfo)
     memcpy(sharedMemPtr+(sensorInfo.lightDataOffset), &lightSensorData, sizeof(LightDataStruct));
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
-    /* Transmit heartbeat message to parent process */
-    LOG_HEARTBEAT();
+    /* TODO - derive method to set status sent to main */
+    SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_ERROR, ERROR_CODE_USER_NONE0);
 
     /* Wait on signal timer */
     sigwait(&set, &signum);

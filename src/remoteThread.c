@@ -32,6 +32,7 @@
 #include "logger.h"
 #include "debug.h"
 #include "platform.h"
+#include "healthMonitor.h"
 
 #define MAX_CLIENTS (5)
 
@@ -41,7 +42,6 @@ static void getCmdResponse(RemoteCmdPacket* packet);
 
 /* Define static and global variables */
 static SensorThreadInfo sensorInfo;
-static bool threadAlive;
 static LightDataStruct lightData; /* Used to read data from Shared Memory */
 static TempDataStruct tempData;  /* Used to read data from Shared Memory */
 static uint8_t aliveFlag = 1;
@@ -71,7 +71,6 @@ void* remoteThreadHandler(void* threadInfo)
   int sockfdServer, sockfdClient;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen;
-  threadAlive = true;
   ssize_t clientResponse = 1; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
@@ -160,7 +159,7 @@ void* remoteThreadHandler(void* threadInfo)
   printf("Connected remoteThread to external Client on port %d.\n", PORT);
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
-  while(threadAlive) {
+  while(aliveFlag) {
     /* Determine if client has disconnected from server */
     if(clientResponse == 0){
       sockfdClient = accept(sockfdServer, (struct sockaddr*)&cliAddr, &cliLen);
@@ -204,6 +203,8 @@ void* remoteThreadHandler(void* threadInfo)
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
       continue;
     }
+    /* TODO - derive method to set status sent to main */
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
   }
 
   /* Setup timer to periodically send heartbeat to parent thread */

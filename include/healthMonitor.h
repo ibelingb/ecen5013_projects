@@ -19,11 +19,12 @@
 
 #include <mqueue.h>
 #include <stdint.h>
+#include <syscall.h>
 
 #include "packet.h"
 #include "logger_helper.h"
 
-#define PRINT_NONE_ALSO             // for testing
+//#define PRINT_NONE_ALSO             // for testing
 //#define PRINT_ALL_STATUS_FIELDS     // for testing
 
 /**
@@ -77,21 +78,28 @@ __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procI
 __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPacket *pStatus)
 {
     if((pStatus->errorCode >= ERROR_CODE_USER_NOTIFY0) && (pStatus->errorCode <= ERROR_CODE_USER_NOTIFY7))
-        printf("recvd error(%d) w/ CoA = NOTIFY from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
+        printf("recvd error(%d) w/ CoA = NOTIFY from %s at %d usec\n", pStatus->errorCode, 
+        getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_TERMTHREAD0) && (pStatus->errorCode <= ERROR_CODE_USER_TERMTHREAD7))
-        printf("recvd error(%d) w/ CoA = TERMTHREAD from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
+        printf("recvd error(%d) w/ CoA = TERMTHREAD from %s at %d usec\n", pStatus->errorCode, 
+        getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_TERMALL0) && (pStatus->errorCode <= ERROR_CODE_USER_TERMALL7))
-        printf("recvd error(%d) w/ CoA = TERMALL from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
+        printf("recvd error(%d) w/ CoA = TERMALL from %s at %d usec\n", pStatus->errorCode, 
+        getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_RESTARTTHREAD0) && (pStatus->errorCode <= ERROR_CODE_USER_RESTARTTHREAD7))
-        printf("recvd error(%d) w/ CoA = RESTARTTHREAD from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
-    #ifdef PRINT_NONE_ALSO
+        printf("recvd error(%d) w/ CoA = RESTARTTHREAD from %s at %d usec\n", pStatus->errorCode, 
+        getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_NONE0) && (pStatus->errorCode <= ERROR_CODE_USER_NONE7))
-        printf("recvd error(%d) w/ CoA = NONE from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
+    #ifdef PRINT_NONE_ALSO
+        printf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n", pStatus->errorCode, 
+        getPidString(pStatus->processId), pStatus->timestamp);
+    #else
+        printf(" ");
     #endif
     else if (pStatus->errorCode == ERROR_CODE_TIMEOUT)
-        printf("recvd TIMEOUT error(%d) from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
+        printf("recvd TIMEOUT error(%d) from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
     else
-        printf("recvd error(%d) w/ CoA = OTHER from %s\n", pStatus->errorCode, getPidString(pStatus->processId));
+        printf("recvd error(%d) w/ CoA = OTHER from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
 
 }
 

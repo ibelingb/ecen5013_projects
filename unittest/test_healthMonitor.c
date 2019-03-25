@@ -44,7 +44,6 @@ uint8_t gExitSig = 1;       /* set by health monitor */
 int gExitLog = 1;
 uint8_t gExitReal = 1;      /* used by main to stop thread, test only */
 mqd_t heartbeatMsgQueue;
-uint8_t aliveFlags[4] = {1, 1, 1, 1};
 
 static void *healthMonitorThread(void *pArg);
 #ifdef TEST_MULTITHREAD
@@ -110,8 +109,8 @@ int main(void)
     /* test cases */
     testFails += test_noneCoA();
     testFails += test_notifyCoA();
-    //testFails += test_termThreadCoA();
-    //testFails += test_termAllCoA();
+    testFails += test_termThreadCoA();
+    testFails += test_termAllCoA();
     testFails += test_timeout();
 
     printf("\n\nTEST RESULTS, %d of %d failed tests\n", testFails, testCount);

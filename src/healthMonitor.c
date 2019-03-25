@@ -142,6 +142,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
             threadMissingCount[ind] = THREAD_MISSING_COUNT;
             status.processId = ind;
             status.errorCode = (uint8_t)ERROR_CODE_TIMEOUT;
+            status.timestamp = log_get_time();
             action = callArbitor(&status);
             processAction(status.processId, action, pExit);
         }
@@ -492,6 +493,7 @@ MainAction_e loggingErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* just notify */
+        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_NOTIFY0:
         case ERROR_CODE_USER_NOTIFY1:
         case ERROR_CODE_USER_NOTIFY2:
@@ -516,7 +518,6 @@ MainAction_e loggingErrorArbitor(TaskStatusPacket *pStatus)
             break;
 
         /* kill all */
-        case ERROR_CODE_TIMEOUT:
         case ERROR_CODE_USER_TERMALL0:
         case ERROR_CODE_USER_TERMALL1:
         case ERROR_CODE_USER_TERMALL2:

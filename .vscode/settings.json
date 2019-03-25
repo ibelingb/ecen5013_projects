@@ -26,6 +26,7 @@
         "fcntl.h": "c",
         "remotethread.h": "c",
         "healthmonitor.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "platform.h": "c"
     }
 }

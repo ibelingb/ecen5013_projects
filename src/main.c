@@ -39,6 +39,7 @@
 #include "logger.h"
 #include "cmn_timer.h"
 #include "platform.h"
+#include "healthMonitor.h"
 
 
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
@@ -51,16 +52,11 @@ pthread_t gThreads[NUM_THREADS];
 pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
 pthread_mutex_t gI2cBusMutex; 
 
-/* temp globals for causing threads to exit */
-int gExitSig = 1;
-int gExitLog = 1;
-
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";
   char *sensorSharedMemoryName = "/sensor_sm";
   char *logFile = "scripts/log.bin";
-  TaskStatusPacket recvThreadStatus;
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
   LogMsgPacket logPacket;
@@ -70,6 +66,7 @@ int main(int argc, char *argv[]){
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
   char ind;
+  uint8_t gExit = 1;
 
   /* timer variables */
   static timer_t timerid;
@@ -77,26 +74,20 @@ int main(int argc, char *argv[]){
   int signum = SIGALRM;
   struct timespec timer_interval;
 
-  /* Check inputs */
-  // TODO
-
   /* set signal handlers and actions */
 	set_sig_handlers();
 
   /* Initialize created structs and packets to be 0-filled */
-  memset(&recvThreadStatus, 0, sizeof(struct TaskStatusPacket));
   memset(&sensorThreadInfo, 0, sizeof(struct SensorThreadInfo));
   memset(&logThreadInfo,    0, sizeof(struct LogThreadInfo));
   memset(&logPacket,        0, sizeof(struct LogMsgPacket));
   memset(&mqAttr,           0, sizeof(struct mq_attr));
 
-  /* Ensure MQs and Shared Memory properly cleaned up before starting */
+  /* Ensure log MQ properly cleaned up before starting */
   mq_unlink(logMsgQueueName);
-  mq_unlink(heartbeatMsgQueueName);
-  shm_unlink(sensorSharedMemoryName);
 
   if(remove(logMsgQueueName) == -1 && errno != ENOENT)
-	  ERROR_PRINT("ERROR: main() couldn't delete log queue path, err#%d (%s)\n\r", errno, strerror(errno));
+	  ERRNO_PRINT("main() couldn't delete log queue path");
 
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
@@ -109,15 +100,7 @@ int main(int argc, char *argv[]){
   logMsgQueue = mq_open(logMsgQueueName, O_CREAT, 0666, &mqAttr);
   if(logMsgQueue == -1)
   {
-    printf("ERROR: main() failed to create MessageQueue for Logger - exiting.\n");
-    return EXIT_FAILURE;
-  }
-
-  /* Create MessageQueue to receive thread status from all children */
-  heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
-  if(heartbeatMsgQueue == -1)
-  {
-    printf("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n");
+    ERROR_PRINT("ERROR: main() failed to create MessageQueue for Logger - exiting.\n");
     return EXIT_FAILURE;
   }
 
@@ -142,28 +125,51 @@ int main(int argc, char *argv[]){
   /* create logger thread */
   if(pthread_create(&gThreads[0], NULL, logThreadHandler, (void*)&logThreadInfo) != 0)
   {
-    printf("ERROR: Failed to create Logging Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create Logging Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
 
   /*** initialize rest of IPC resources ***/
+  /* Define MQ attributes */
+  mqAttr.mq_flags   = 0;
+  mqAttr.mq_maxmsg  = STATUS_MSG_QUEUE_DEPTH;
+  mqAttr.mq_msgsize = STATUS_MSG_QUEUE_MSG_SIZE;
+  mqAttr.mq_curmsgs = 0;
+
+  /* Ensure MQs and Shared Memory properly cleaned up before starting */
+  mq_unlink(heartbeatMsgQueueName);
+  shm_unlink(sensorSharedMemoryName);
+
+  if(remove(heartbeatMsgQueueName) == -1 && errno != ENOENT)
+  { ERRNO_PRINT("main() couldn't delete log queue path"); return EXIT_FAILURE; }
+
+  /* Create MessageQueue to receive thread status from all children */
+  heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
+  if(heartbeatMsgQueue == -1)
+  {
+    ERROR_PRINT("ERROR: main() failed to create MessageQueue for Main TaskStatus reception - exiting.\n");
+    return EXIT_FAILURE;
+  }
+
   /* Create Shared Memory for data sharing between SensorThreads and RemoteThread */
   sharedMemFd = shm_open(sensorSharedMemoryName, O_CREAT | O_RDWR, 0666);
   if(sharedMemFd == -1)
   {
-    printf("ERROR: main() failed to create shared memory for sensor and remote threads - exiting.\n");
+    ERROR_PRINT("ERROR: main() failed to create shared memory for sensor and remote threads - exiting.\n");
     return EXIT_FAILURE;
   }
+
   /* Configure size of SensorSharedMemory */
   if(ftruncate(sharedMemFd, sharedMemSize) == -1)
   {
-    printf("ERROR: main() failed to configure size of shared memory - exiting.\n");
+    ERROR_PRINT("ERROR: main() failed to configure size of shared memory - exiting.\n");
     return EXIT_FAILURE;
   }
+
   /* MemoryMap shared memory */
   if(*(int*)mmap(0, sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0) == -1)
   {
-    printf("ERROR: main() failed to complete memory mapping for shared memory - exiting.\n");
+    ERROR_PRINT("ERROR: main() failed to complete memory mapping for shared memory - exiting.\n");
     return EXIT_FAILURE;
   }
 
@@ -182,19 +188,19 @@ int main(int argc, char *argv[]){
   /* Create other threads */
   if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
   {
-    printf("ERROR: Failed to create Remote Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create Remote Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
   
   if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
   {
-    printf("ERROR: Failed to create TempSensor Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create TempSensor Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
   /*
   if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
   {
-    printf("ERROR: Failed to create LightSensor Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create LightSensor Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
   */
@@ -209,27 +215,25 @@ int main(int argc, char *argv[]){
   setupTimer(&set, &timerid, signum, &timer_interval);
 
   /* Log main thread started succesfully */
-  printf("The Main() thread has successfully started with all child threads created.\n");
+  ERROR_PRINT("The Main() thread has successfully started with all child threads created.\n");
 
   /* system is now fully functional */
   LOG_SYSTEM_INITIALIZED();
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
-
-  ind = 0;
-  while(ind++ < 8)
+  while(gExit) 
   {
-    LOG_HEARTBEAT();
-
     /* wait on signal timer */
     sigwait(&set, &signum);
+
+    LOG_HEARTBEAT();
+    monitorHealth(&heartbeatMsgQueue, &gExit);
   }
   LOG_SYSTEM_HALTED();
 
   /* wait to kill log so exit msgs get logged */
   usleep(MAIN_LOG_EXIT_DELAY);
-  gExitLog = 0;
 
   /* join to clean up children */
   for(ind = 0; ind < NUM_THREADS; ++ind)
@@ -246,36 +250,4 @@ int main(int argc, char *argv[]){
   pthread_mutex_destroy(&gSharedMemMutex);
   pthread_mutex_destroy(&gI2cBusMutex);
   close(sharedMemFd);
-}
-
-/**
- * @brief set signal handlers and action
- * 
- */
-void set_sig_handlers(void)
-{
-    struct sigaction action;
-
-    action.sa_flags = SA_SIGINFO;
-    
-    action.sa_sigaction = lightSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_LIGHT, &action, NULL) == -1) {
-        perror("sigusr: sigaction");
-        _exit(1);
-    }
-    action.sa_sigaction = tempSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_TEMP, &action, NULL) == -1) {
-        perror("sigusr: sigaction");
-        _exit(1);
-    }
-    action.sa_sigaction = remoteSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE, &action, NULL) == -1) {
-        perror("sigusr: sigaction");
-        _exit(1);
-    }
-    action.sa_sigaction = loggingSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_LOGGING, &action, NULL) == -1) {
-        perror("sigusr: sigaction");
-        _exit(1);
-    }
 }

@@ -31,7 +31,6 @@
 
 uint8_t firstCall = 1;
 
-
 uint32_t log_get_time(void)
 {
 #ifdef __linux__

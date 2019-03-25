@@ -33,12 +33,12 @@
 #include "lu_iic.h"
 #include "packet.h"
 #include "platform.h"
+#include "healthMonitor.h"
 
 #define TEMP_ERR_COUNT_LIMIT  (8)
 #define INIT_TEMP_AVG_COUNT   (8)
 #define INIT_THRESHOLD_PAD    (2)
 
-extern int gExitSig;
 static uint8_t aliveFlag = 1;
 
 /* private helper methods */
@@ -63,6 +63,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
+  mqd_t hbMsgQueue;  /* main status MessageQueue */
 
   /* timer variables */
   timer_t timerid;
@@ -106,12 +107,18 @@ void* tempSensorThreadHandler(void* threadInfo)
     printf("ERROR: lightSensorThread Failed to complete memory mapping of shared memory - exiting\n");
     return NULL;
   }
+
+  /* main status msg queue */
+  hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
+  if(hbMsgQueue == -1) {
+    printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+    return NULL;
+  }
   
   /* initialize sensor */
   if(initSensor(fd) == EXIT_FAILURE)
   { ERROR_PRINT("temp initSensor failed\n"); errCount++; }
-  
-  /* report BIST status to main? */
 
   /** set up timer **/
   /* Clear memory objects */
@@ -123,7 +130,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   timer_interval.tv_sec = TEMP_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
 
-  while(gExitSig) 
+  while(aliveFlag) 
   {
     LOG_HEARTBEAT();
     MUTED_PRINT("temp alive\n");
@@ -156,7 +163,8 @@ void* tempSensorThreadHandler(void* threadInfo)
     memcpy(sharedMemPtr+(sensorInfo.tempDataOffset), &data, sizeof(TempDataStruct));
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
-    /* send status to main */
+    /* TODO - derive method to set status sent to main */
+    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE0);
       
     /* wait on signal timer */
     sigwait(&set, &signum);
@@ -235,9 +243,9 @@ int8_t initSensor(int fd)
   if(tmp.tmp102_shutdownMode != initValue.tmp102_shutdownMode)
   { ERROR_PRINT("init (shutdown state) failed\n"); return EXIT_FAILURE; }
 
-  INFO_PRINT("temp sensor init delay...");
+  MUTED_PRINT("temp sensor init delay...");
   sleep(1);
-  INFO_PRINT("done\n");
+  MUTED_PRINT("done\n");
 
   /* find average temp */
   for(accumCount = 0; accumCount < INIT_TEMP_AVG_COUNT; ++accumCount)
@@ -245,12 +253,12 @@ int8_t initSensor(int fd)
     if(tmp102_getTempC(fd, &tmp.tmp102_temp) < 0)
 		{ ERROR_PRINT("tmp102_getTempC failed\n"); return EXIT_FAILURE; }
     tempAccum += tmp.tmp102_temp;
-    INFO_PRINT("tempC: %f\n",tmp.tmp102_temp);
+    MUTED_PRINT("tempC: %f\n",tmp.tmp102_temp);
   }
 
   /* calc average and set init threshold values */
   tempAccum /= accumCount;
-  INFO_PRINT("average tempC: %f\n", tempAccum);
+  MUTED_PRINT("average tempC: %f\n", tempAccum);
 
   initValue.tmp102_highThreshold = tempAccum + INIT_THRESHOLD_PAD;
   initValue.tmp102_lowThreshold = tempAccum + (INIT_THRESHOLD_PAD / 2);
@@ -291,7 +299,7 @@ uint8_t getData(int fd, TempDataStruct *pData)
   /* get temp */
   if(tmp102_getTempC(fd, &tmp.tmp102_temp) < 0)
   { ERROR_PRINT("tmp102_getTempC failed\n"); errCount++; }
-  else { INFO_PRINT("got temp value: %f degC\n", tmp.tmp102_temp); }
+  else { MUTED_PRINT("got temp value: %f degC\n", tmp.tmp102_temp); }
 
   /*read threshold value */
   if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &tmp.tmp102_lowThreshold))

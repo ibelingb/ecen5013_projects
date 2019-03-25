@@ -21,6 +21,11 @@
 
 #include <stdint.h>
 
+/**
+ * @brief return microseconds since first call
+ * 
+ * @return uint32_t 
+ */
 uint32_t log_get_time(void);
 void log_set_checksum(logItem_t *pLogItem);
 uint32_t log_strlen(uint8_t *pStr);

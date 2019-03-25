@@ -31,6 +31,7 @@
 #include "packet.h"
 #include "cmn_timer.h"
 #include "platform.h"
+#include "healthMonitor.h"
 
 static uint8_t aliveFlag = 1;
 
@@ -49,7 +50,9 @@ void logGetAliveFlag(uint8_t *pAlive)
 
 void* logThreadHandler(void* threadInfo)
 {
-    int logFd;  /* log file descriptor */
+    SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
+    int logFd;          /* log file descriptor */
+    mqd_t hbMsgQueue;   /* main status MessageQueue */
 
     /* timer variables */
     static timer_t timerid;
@@ -72,11 +75,18 @@ void* logThreadHandler(void* threadInfo)
 
     /* add start msg to log msg queue */
     LOG_TEMP_SENSOR_EVENT(LOG_EVENT_STARTED);
-    INFO_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
+    MUTED_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
+
+    /* main status msg queue */
+    hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
+    if(hbMsgQueue == -1) {
+        printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+        LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+        return NULL;
+    }
 
     /* block SIGRTs signals */
 	sigemptyset(&mask);
-
     for(ind = 0; ind < NUM_THREADS; ++ind)
     {
         if(ind != (uint8_t)PID_LOGGING)
@@ -122,7 +132,7 @@ void* logThreadHandler(void* threadInfo)
 
         /* if signaled to exit, shove log exit command
          * (2nd highest priority) in buffer and set exit flag */
-        if(gExitLog == 0)
+        if(aliveFlag == 0)
         {
             LOG_LOG_EVENT(LOG_EVENT_EXITING);
             INFO_PRINT("logger exit triggered\n");
@@ -147,7 +157,8 @@ void* logThreadHandler(void* threadInfo)
                 ERROR_PRINT("log_dequeue_item error\n");
             }
         }
-        /* TODO - send status to main status msg queue */
+        /* TODO - derive method to set status sent to main */
+        SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE0);
     }
 
     /* clean up */
