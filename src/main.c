@@ -197,13 +197,13 @@ int main(int argc, char *argv[]){
     ERROR_PRINT("ERROR: Failed to create TempSensor Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
-  /*
+  
   if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
   {
     ERROR_PRINT("ERROR: Failed to create LightSensor Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
-  */
+  
   LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
 
   /* Clear memory objects */
