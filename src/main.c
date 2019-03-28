@@ -40,12 +40,18 @@
 #include "cmn_timer.h"
 #include "platform.h"
 #include "healthMonitor.h"
+#ifdef FOUND_GPIO_LIB
+#include "gpio.h"
+#endif
 
 
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
+#define USR_LED_53            (53)
 
 /* private functions */
 void set_sig_handlers(void);
+void initLedGpio(void);
+void ctrlLed(uint8_t newError);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
@@ -66,7 +72,7 @@ int main(int argc, char *argv[]){
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
   char ind;
-  uint8_t gExit = 1;
+  uint8_t gExit = 1, newError;
 
   /* timer variables */
   static timer_t timerid;
@@ -228,7 +234,8 @@ int main(int argc, char *argv[]){
     sigwait(&set, &signum);
 
     LOG_HEARTBEAT();
-    monitorHealth(&heartbeatMsgQueue, &gExit);
+    newError = 0;
+    monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
   }
   LOG_SYSTEM_HALTED();
 
@@ -250,4 +257,50 @@ int main(int argc, char *argv[]){
   pthread_mutex_destroy(&gSharedMemMutex);
   pthread_mutex_destroy(&gI2cBusMutex);
   close(sharedMemFd);
+}
+
+void initLedGpio(void)
+{
+  #ifdef FOUND_GPIO_LIB
+    gpio_export(USR_LED_53);
+    gpio_set_dir(USR_LED_53, OUT);
+  #endif
+  return;
+}
+
+void ctrlLed(uint8_t newError)
+{
+  static uint8_t state = 0;
+  static uint8_t bulb = 0;
+  static uint8_t blinkCount = 0;
+
+  switch (state) {
+    case 0: /* off state (0) */
+      if(newError) {
+        blinkCount = 8;
+        bulb = 0;
+        state = 1;
+      }
+    break;
+    case 1: /* blink state (1) */
+      bulb = (bulb == 0);
+      #ifdef FOUND_GPIO_LIB
+        gpio_set_value(USR_LED_53, bulb);
+      #endif
+      --blinkCount;
+      if(blinkCount == 0) {
+        state = 2;
+      }
+    break;
+    case 2: /* on state (2) */
+      if(newError) {
+        blinkCount = 8;
+        bulb = 0;
+        state = 1;
+      }
+      #ifdef FOUND_GPIO_LIB
+        gpio_set_value(USR_LED_53, 1);
+      #endif
+    break;
+  }
 }

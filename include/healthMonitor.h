@@ -34,7 +34,7 @@
  * @param pExit indication to main that its time to terminate loop
  * @return int8_t status of call
  */
-int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit);
+int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError);
 
 /**
  * @brief register signal handlers used by health monitor to terminate threads 

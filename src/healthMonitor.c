@@ -72,13 +72,15 @@ void set_sig_handlers(void)
     }
 }
 
-int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
+int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
 {
     TaskStatusPacket status;
     MainAction_e action;
     static uint8_t threadMissingCount[NUM_THREADS + 1];     /* 1 is to provide slot for PID_END enum value */
     uint8_t missingFlag[NUM_THREADS + 1];                   /* 1 is to provide slot for PID_END enum value */
-    uint8_t ind, msgCount;
+    uint8_t ind, msgCount, prevErrorCount;
+    static uint8_t errorCount = 0;
+    prevErrorCount = errorCount;
 
     if((pQueue == NULL) || (pExit == NULL)) {
         return EXIT_FAILURE;
@@ -117,6 +119,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
                 {
                     action = callArbitor(&status);
                     processAction(status.processId, action, pExit);
+                    ++errorCount;
                 }
             }
             if(msgCount > STATUS_MSG_PROCESS_LIMIT)
@@ -126,6 +129,9 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
             }
             if(*pExit == 0) {
                 INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
+                if(prevErrorCount != errorCount) {
+                    *newError = 1;
+                }
                 return EXIT_SUCCESS;
             }
                 
@@ -148,6 +154,9 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit)
         }
     }
     MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);
+    if(prevErrorCount != errorCount) {
+        *newError = 1;
+    }
     return EXIT_SUCCESS;
 }
 /**
