@@ -11,6 +11,9 @@
  * @file remoteThread.h
  * @brief Remote Socket handling thread
  *
+ * Resources Used:
+ *  - https://jameshfisher.com/2017/04/05/set_socket_nonblocking/
+ *
  ************************************************************************************
  */
 
@@ -18,6 +21,7 @@
 #define REMOTE_THREAD_H_
 
 #include <stdint.h>
+#include <signal.h>
 
 #define PORT (5001)
 #define REMOTE_MSG_PAYLOAD_SIZE (256) // Bytes

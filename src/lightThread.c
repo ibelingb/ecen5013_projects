@@ -120,7 +120,7 @@ void* lightSensorThreadHandler(void* threadInfo)
   LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
 
   /* Set initial states for LightSensor */
-  initLightSensor(sensorFd);
+  //initLightSensor(sensorFd);
 
   /* Setup timer to periodically sample from Light Sensor */
   while(aliveFlag) {
