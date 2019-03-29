@@ -143,7 +143,7 @@ void* remoteThreadHandler(void* threadInfo)
   fcntl(sockfdServer, F_SETFL, socketFlags | O_NONBLOCK);
   /* Update Socket Client connections to be non-blocking */
   struct timeval timeout;
-  timeout.tv_usec = LIGHT_LOOP_TIME_USEC;
+  timeout.tv_usec = REMOTE_CLIENT_TIMEOUT_USEC;
   timeout.tv_sec = LIGHT_LOOP_TIME_SEC;
 
   /* Set properties and bind socket */
@@ -168,15 +168,16 @@ void* remoteThreadHandler(void* threadInfo)
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
 
   while(aliveFlag) {
+    /* TODO - derive method to set status sent to main */
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+    sigwait(&set, &signum);
+
     /* Accept Client Connection */
     if(clientResponse == 0){
       sockfdClient = accept(sockfdServer, (struct sockaddr*)&cliAddr, &cliLen);
       if(sockfdClient == -1){
-  
         /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
-          SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
-          sigwait(&set, &signum);
           continue;
         }
 
@@ -197,11 +198,8 @@ void* remoteThreadHandler(void* threadInfo)
     /* Check for incoming commands from remote clients on socket port */
     clientResponse = recv(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
     if (clientResponse == -1) { 
-
       /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
-        SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
-        sigwait(&set, &signum);
         continue;
       }
 
@@ -231,9 +229,6 @@ void* remoteThreadHandler(void* threadInfo)
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
       continue;
     }
-
-    /* TODO - derive method to set status sent to main */
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
   }
 
   /* Thread Cleanup */

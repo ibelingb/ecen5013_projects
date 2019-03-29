@@ -103,7 +103,7 @@ int8_t apds9301_getLuxData(uint8_t file, float *luxData)
   /* See Note 8 on Page 3 of APDS9301 datasheet for below calculation */
   luxRatio = (float)data1/data0;
   if((luxRatio > 0) && (luxRatio <= 0.50)){
-    sensorLux = ((0.0304 * data0) - (0.062 * data0));// * pow((data1/data0), 1.4)));
+    sensorLux = ((0.0304 * data0) - (0.062 * data0) * pow((data1/data0), 1.4));
   } else if((luxRatio > 0.50) && (luxRatio <= 0.61)) {
     sensorLux = ((0.0224 * data0) - (0.031 * data1));
   } else if((luxRatio > 0.61) && (luxRatio <= 0.80)) {
