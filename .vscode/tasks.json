@@ -12,6 +12,16 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "build-bbg-led",
+            "type": "shell",
+            "command": "make clean all TARGET=test_led PLATFORM=BBG",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }

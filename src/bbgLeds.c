@@ -11,6 +11,9 @@
  * @file bbgLeds.c
  * @brief Interface for on-board BBG LEDs
  *
+ * references: 
+ * https://www.teachmemicro.com/beaglebone-black-blink-led-using-c/
+ * https://vadl.github.io/beagleboneblack/2016/07/29/setting-up-bbb-gpio
  ************************************************************************************
  */
 
@@ -102,7 +105,6 @@ int led_set_value(uint8_t value)
   fwrite (value == 0 ? str1 : str2, 1, 
   sizeof(str2), IO_value);
   fclose (IO_value);
-  usleep (1000000);
 
   return 0;
 }
