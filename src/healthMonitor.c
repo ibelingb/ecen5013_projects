@@ -131,6 +131,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
                 INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
                 if(prevErrorCount != errorCount) {
                     *newError = 1;
+                    prevErrorCount = errorCount;
                 }
                 return EXIT_SUCCESS;
             }
@@ -156,6 +157,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);
     if(prevErrorCount != errorCount) {
         *newError = 1;
+        prevErrorCount = errorCount;
     }
     return EXIT_SUCCESS;
 }

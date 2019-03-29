@@ -63,7 +63,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
-  mqd_t hbMsgQueue;  /* main status MessageQueue */
+  mqd_t hbMsgQueue = -1;  /* main status MessageQueue */
 
   /* timer variables */
   timer_t timerid;
@@ -88,37 +88,44 @@ void* tempSensorThreadHandler(void* threadInfo)
     }
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
-
   /* init handle for i2c bus */
 	int fd = initIic("/dev/i2c-2");
-	if(fd < 0)
-	  ERROR_PRINT("ERROR: tempSensorThreadHandler() couldn't init i2c handle, err#%d (%s)\n\r", errno, strerror(errno));
+	if(fd < 0) {
+    ERRNO_PRINT("empSensorThreadHandler() couldn't init i2c handle");
+    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+  }
+	  
   
   /* Setup Shared memory for thread */
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
-    printf("ERROR: lightSensorThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    ERROR_PRINT("ERROR: lightSensorThread Failed to Open heartbeat MessageQueue - exiting.\n");
     return NULL;
   }
 
   /* Memory map the shared memory */
   sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
   if(*(int *)sharedMemPtr == -1) {
-    printf("ERROR: lightSensorThread Failed to complete memory mapping of shared memory - exiting\n");
+    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    ERROR_PRINT("ERROR: lightSensorThread Failed to complete memory mapping of shared memory - exiting\n");
     return NULL;
   }
 
   /* main status msg queue */
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
   if(hbMsgQueue == -1) {
-    printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    ERROR_PRINT("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
     return NULL;
   }
   
   /* initialize sensor */
-  if(initSensor(fd) == EXIT_FAILURE)
-  { ERROR_PRINT("temp initSensor failed\n"); errCount++; }
+  if(initSensor(fd) == EXIT_FAILURE) { 
+    ERROR_PRINT("temp initSensor failed\n"); 
+    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    errCount++; 
+  }
 
   /** set up timer **/
   /* Clear memory objects */
@@ -142,6 +149,7 @@ void* tempSensorThreadHandler(void* threadInfo)
     if(errCount > TEMP_ERR_COUNT_LIMIT)
     {
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
       errCount = 0;
     }
 
@@ -150,11 +158,13 @@ void* tempSensorThreadHandler(void* threadInfo)
     {
       overTempState = 1;
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
+      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
     }
     if((overTempState == 1) && (data.tmp102_alert == TMP102_ALERT_OFF))
     {
       overTempState = 0;
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
+      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
     }
 
     /* write to shared memory */
@@ -163,7 +173,7 @@ void* tempSensorThreadHandler(void* threadInfo)
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
     /* TODO - derive method to set status sent to main */
-    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_OK, ERROR_CODE_USER_NONE0);
       
     /* wait on signal timer */
     sigwait(&set, &signum);

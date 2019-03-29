@@ -52,7 +52,7 @@ void* logThreadHandler(void* threadInfo)
 {
     SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
     int logFd;          /* log file descriptor */
-    mqd_t hbMsgQueue;   /* main status MessageQueue */
+    mqd_t hbMsgQueue = -1;   /* main status MessageQueue */
 
     /* timer variables */
     static timer_t timerid;
@@ -99,6 +99,7 @@ void* logThreadHandler(void* threadInfo)
     if(logFd < 0)
     {
         ERROR_PRINT("failed to open log file, err#%d (%s)\n\r", errno, strerror(errno));
+        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
 
         /* add log event msg to queue; probably only
          * useful if log thread is restarted and sucesfully 
@@ -131,7 +132,7 @@ void* logThreadHandler(void* threadInfo)
         sigwait(&set, &signum);
 
         /* TODO - derive method to set status sent to main */
-        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_OK, ERROR_CODE_USER_NONE0);
         MUTED_PRINT("logging is alive\n");
 
         /* if signaled to exit, shove log exit command
@@ -146,8 +147,8 @@ void* logThreadHandler(void* threadInfo)
         /* dequeue a msg */
         if(LOG_DEQUEUE_ITEM(&logItem) != LOG_STATUS_OK)
         {
-            /* TODO - set error in status to main */
             ERROR_PRINT("log_dequeue_item error\n");
+            SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
         }
         else
         {
@@ -157,8 +158,8 @@ void* logThreadHandler(void* threadInfo)
             /* if read from queue successful, right to file */
             if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
             {
-                /* TODO - set error in status to main */
                 ERROR_PRINT("log_dequeue_item error\n");
+                SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
             }
         }
     }
@@ -169,9 +170,5 @@ void* logThreadHandler(void* threadInfo)
     INFO_PRINT("logger thread exiting\n");
     return NULL;
 }
-
 /*---------------------------------------------------------------------------------*/
-/* HELPER METHODS */
 
-
-/*---------------------------------------------------------------------------------*/

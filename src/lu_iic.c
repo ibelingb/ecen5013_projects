@@ -28,6 +28,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "debug.h"
+
 
 int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t *pReg_value, uint8_t regSize, uint8_t regEndianness)
 {
@@ -39,7 +41,7 @@ int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t *pReg_va
 
     if((pReg_value == NULL) || (regSize > sizeof(uint32_t)))
     {
-        printf("getIicRegister - input error\n");
+        ERROR_PRINT("getIicRegister - input error\n");
         return EXIT_FAILURE;
     }  
 
@@ -63,7 +65,7 @@ int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t *pReg_va
     packets.nmsgs     = 2;
     if(ioctl(file, I2C_RDWR, &packets) < 0)
     {
-        printf("getIicRegister - IIC read failed, errno (%d): %s\n\r", errno, strerror(errno));
+        ERROR_PRINT("getIicRegister - IIC read failed, errno (%d): %s\n\r", errno, strerror(errno));
         return EXIT_FAILURE;
     }
     for(regValue = 0, ind = 0; ind < regSize; ++ind)
@@ -121,7 +123,7 @@ int8_t setIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t reg_valu
     packets.nmsgs = 1;
     if(ioctl(file, I2C_RDWR, &packets) < 0)
     {
-		printf("setIicRegister - IIC write failed, errno (%d): %s\n\r", errno, strerror(errno));
+		ERROR_PRINT("setIicRegister - IIC write failed, errno (%d): %s\n\r", errno, strerror(errno));
 		return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
@@ -133,7 +135,7 @@ int initIic(char *filename)
 
 	iic_fd = open(filename, O_RDWR | O_SYNC);
     if (iic_fd < 0) {
-    	printf("failed to open IIC device, errno (%d): %s\n\r", errno, strerror(errno));
+    	ERROR_PRINT("failed to open IIC device, errno (%d): %s\n\r", errno, strerror(errno));
 		return -1;
     }
     return iic_fd;
