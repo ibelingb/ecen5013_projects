@@ -457,3 +457,4 @@ int8_t apds9301_writeWord(uint8_t file, uint16_t word, uint8_t REG)
 
   return EXIT_SUCCESS;
 }
+

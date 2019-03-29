@@ -24,6 +24,7 @@
 #include <stdbool.h>
 
 #define APDS9301_PARTNO (0x05)
+#define LIGHT_DARK_THRESHOLD (600) /* Lux sensor value to transition between Light and Dark states */
 
 /*---------------------------------------------------------------------------------*/
 /* */
@@ -72,155 +73,166 @@ typedef enum
   APDS9301_INT_PERSIST_OUTSIDE_15P,  /* 15 integration time periods out of range */
 } Apds9301_IntPersist_e;
 
+typedef enum
+{
+  LUX_STATE_LIGHT = 0,
+  LUX_STATE_DARK
+} LightState_e;
+
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief 
+ * @brief Get Lux data from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param luxData
+ * @param file - File handle for I2C bus.
+ * @param luxData - Pointer to return converted Lux data calculated from APDS9301 Sensor
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getLuxData(uint8_t file, float *luxData);
 
 /**
- * @brief TODO
+ * @brief Get Config register data from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param config
+ * @param file - File handle for I2C bus.
+ * @param config - Pointer to return Power bits from Control Register.
  *
- * @return 
+ * @return - Success or Failure status of get method
  */ // TODO: Update name to be apds9301_getPowerState
 int8_t apds9301_getControl(uint8_t file, Apds9301_PowerCtrl_e *control);
 
 /**
- * @brief TODO
+ * @brief Get Timing register Integration data from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param integration
+ * @param file - File handle for I2C bus.
+ * @param integration - Pointer to return Intergration bits from Timing register.
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getTimingIntegration(uint8_t file, Apds9301_TimingInt_e *integration);
 
 /**
- * @brief TODO
+ * @brief Get Timing register Gain data from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param gain 
+ * @param file - File handle for I2C bus.
+ * @param gain - Pointer to return Gain bits from Timing register.
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getTimingGain(uint8_t file, Apds9301_TimingGain_e *gain);
 
 /**
- * @brief TODO
+ * @brief Get Device register Part and Rev numbers from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param deviceId
+ * @param file - File handle for I2C bus.
+ * @param partNo - Pointer to return Part Number of APDS9301 from Device ID register
+ * @param revNo - Pointer to return Revision Number of APDS9301 from Device ID register
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getDeviceId(uint8_t file, uint8_t *partNo, uint8_t *revNo);
 
 
 /**
- * @brief 
+ * @brief Get Device Low Interrupt Threshold from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param intThreshold
+ * @param file - File handle for I2C bus.
+ * @param intThreshold - Pointer to return 16-bit Low Interrupt Threshold value set.
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getLowIntThreshold(uint8_t file, uint16_t *intThreshold);
 
 /**
- * @brief 
+ * @brief Get Device High Interrupt Threshold from connected APDS9301 device via I2C bus.
  *
- * @param file
- * @param intThreshold
+ * @param file - File handle for I2C bus.
+ * @param intThreshold - Pointer to return 16-bit High Interrupt Threshold value set.
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getHighIntThreshold(uint8_t file, uint16_t *intThreshold);
 
 /**
- * @brief 
+ * @brief Get Device Interrupt Control Select and Persist register data from connected APDS9301 
+ *        device via I2C bus.
  *
- * @param file
- * @param intSelect
- * @param persist
+ * @param file - File handle for I2C bus.
+ * @param intSelect - Pointer to return Interrupt Level Select bits for enable/disable setting.
+ * @param persist - Pointer to return Interrupt Persist bits set for number of integration cycles
+                    outside of threshold window to trigger interrupt.
  *
- * @return 
+ * @return - Success or Failure status of get method
  */
 int8_t apds9301_getInterruptControl(uint8_t file, Apds9301_IntSelect_e *intSelect, Apds9301_IntPersist_e *persist);
 /*---------------------------------------------------------------------------------*/
 
 /**
- * @brief TODO
+ * @brief - Sets Power bits of Control Register to power on/off device.
  *
- * @param file
- * @param control
+ * @param file - File handle for I2C bus.
+ * @param control - Power state value to set to Control Register.
  *
- * @return 
+ * @return - Success or Failure status of set method
  */ // TODO: Update name to be apds9301_setPowerState
 int8_t apds9301_setControl(uint8_t file, Apds9301_PowerCtrl_e control);
 
 /**
- * @brief 
+ * @brief - Set Integration Gain on APDS9301 device to be high (x16) or low (x1).
  *
- * @param file
- * @param gain
+ * @param file - File handle for I2C bus.
+ * @param gain - Timing Gain value to set to Timing Register.
  *
- * @return 
+ * @return - Success or Failure status of set method
  */
 int8_t apds9301_setTimingGain(uint8_t file, Apds9301_TimingGain_e gain);
 
 /**
- * @brief 
+ * @brief - Set Integration Timing on APDS9301 device.
  *
- * @param file
- * @param integration
+ * @param file - File handle for I2C bus.
+ * @param integration - Timing Integration value to set to Timing Register.
  *
- * @return 
+ * @return - Success or Failure status of set method
  */
 int8_t apds9301_setTimingIntegration(uint8_t file, Apds9301_TimingInt_e integration);
 
 /**
- * @brief * * @param file
- * @param intSelect
- * @param persist
+ * @brief - Set Interrupt controls for Select bits and Persist bits.
  *
- * @return 
+ * @param file - File handle for I2C bus.
+ * @param intSelect - Interrupt Select value to set to Interrupt Control register.
+ * @param persist - Interrupt Persist value to set to Interrupt Control register.
+ *
+ * @return - Success or Failure status of set method
  */
 int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect, Apds9301_IntPersist_e persist);
 
 /**
- * @brief 
+ * @brief - Clears interrupt on APDS9301 by writing to CLEAR bit of Command register.
  *
- * @param file
+ * @param file - File handle for I2C bus.
  *
- * @return 
+ * @return - Success or Failure status of set method
  */
 int8_t apds9301_clearInterrupt(uint8_t file);
 
 /**
- * @brief 
+ * @brief - Set Low Interrupt threshold value to trigger interrupt from Lux data value.
  *
- * @param file
- * @param intThreshold
+ * @param file - File handle for I2C bus.
+ * @param intThreshold - High interrupt threshold value to set.
  *
- * @return 
+ * @return - Success or Failure status of set method
  */
 int8_t apds9301_setLowIntThreshold(uint8_t file, uint16_t intThreshold);
 
 /**
- * @brief 
+ * @brief - Set High Interrupt threshold value to trigger interrupt from Lux data value.
  *
- * @param file
- * @param intThreshold
+ * @param file - File handle for I2C bus.
+ * @param intThreshold - High interrupt threshold value to set.
  *
- * @return 
+ * @return - Success or Failure status of set method
  */
 int8_t apds9301_setHighIntThreshold(uint8_t file, uint16_t intThreshold);
 

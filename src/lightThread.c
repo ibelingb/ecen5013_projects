@@ -53,22 +53,11 @@ int8_t verifyLightSensorComm(int sensorFd);
 static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
-void lightSigHandler(int signo, siginfo_t *info, void *extra)
-{
-	INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
-    aliveFlag = 0;
-}
-
-void lightGetAliveFlag(uint8_t *pAlive)
-{
-  if(pAlive != NULL)
-    *pAlive = aliveFlag;
-}
-
 void* lightSensorThreadHandler(void* threadInfo)
 {
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
   LightDataStruct lightSensorData = {0};
+  LightState_e lightState = LUX_STATE_DARK;
   int sensorFd;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
@@ -145,6 +134,23 @@ void* lightSensorThreadHandler(void* threadInfo)
     memcpy(sharedMemPtr+(sensorInfo.lightDataOffset), &lightSensorData, sizeof(LightDataStruct));
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
+    /* Set LightState Enum based on Lux data returned */
+    if(lightSensorData.apds9301_luxData > LIGHT_DARK_THRESHOLD) {
+      /* Check for dark->light transition; log event */
+      if(lightState == LUX_STATE_DARK) {
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
+      }
+
+      lightState = LUX_STATE_LIGHT;
+    } else {
+      /* Check for light->dark transition; log event */
+      if(lightState == LUX_STATE_LIGHT) {
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
+      }
+
+      lightState = LUX_STATE_DARK;
+    }
+
     /* TODO - derive method to set status sent to main */
     SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_ERROR, ERROR_CODE_USER_NONE0);
 
@@ -179,6 +185,7 @@ void getLightSensorData(int sensorFd, LightDataStruct *lightData)
   apds9301_getInterruptControl(sensorFd, &lightData->apds9301_intSelect, &lightData->apds9301_intPersist);
   apds9301_getLowIntThreshold(sensorFd, &lightData->apds9301_intThresLow);
   apds9301_getHighIntThreshold(sensorFd, &lightData->apds9301_intThresHigh);
+
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -213,3 +220,16 @@ int8_t verifyLightSensorComm(int sensorFd)
 }
 
 /*---------------------------------------------------------------------------------*/
+void lightSigHandler(int signo, siginfo_t *info, void *extra)
+{
+	INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
+    aliveFlag = 0;
+}
+
+/*---------------------------------------------------------------------------------*/
+void lightGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
+}
+
