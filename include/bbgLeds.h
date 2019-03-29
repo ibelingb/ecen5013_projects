@@ -26,7 +26,8 @@
 #define LED4 (0x03)
 
 /*---------------------------------------------------------------------------------*/
-int8_t setStatusLed(int led, uint8_t state);
+int8_t setStatusLed(uint8_t newError);
+int8_t initLed(void);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* BBG_LEDS_H_ */

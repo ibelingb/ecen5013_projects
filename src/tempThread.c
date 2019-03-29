@@ -132,7 +132,6 @@ void* tempSensorThreadHandler(void* threadInfo)
 
   while(aliveFlag) 
   {
-    LOG_HEARTBEAT();
     MUTED_PRINT("temp alive\n");
 
     /* get data */

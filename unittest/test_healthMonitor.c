@@ -232,7 +232,7 @@ int8_t test_timeout(void)
  */
 static void *healthMonitorThread(void *threadInfo)
 {
-    uint8_t ind;
+    uint8_t ind, newError;
 
     /* block SIGRTs signals */
 	sigset_t mask;
@@ -246,7 +246,7 @@ static void *healthMonitorThread(void *threadInfo)
     while(gExitReal) 
     {
         INFO_PRINT("health monitor thread alive\n");
-        monitorHealth(&heartbeatMsgQueue, &gExitSig);
+        monitorHealth(&heartbeatMsgQueue, &gExitSig, &newError);
         usleep(HEALTH_MONITOR_DELAY);
     }
 

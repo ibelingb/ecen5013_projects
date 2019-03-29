@@ -40,9 +40,7 @@
 #include "cmn_timer.h"
 #include "platform.h"
 #include "healthMonitor.h"
-#ifdef FOUND_GPIO_LIB
-#include "gpio.h"
-#endif
+#define FOUND_GPIO_LIB
 
 
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
@@ -50,8 +48,6 @@
 
 /* private functions */
 void set_sig_handlers(void);
-void initLedGpio(void);
-void ctrlLed(uint8_t newError);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
@@ -226,6 +222,9 @@ int main(int argc, char *argv[]){
   /* system is now fully functional */
   LOG_SYSTEM_INITIALIZED();
 
+  /* initialize status LED */
+  initLed();
+
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
   while(gExit) 
@@ -236,6 +235,7 @@ int main(int argc, char *argv[]){
     LOG_HEARTBEAT();
     newError = 0;
     monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
+    setStatusLed(newError);
   }
   LOG_SYSTEM_HALTED();
 
@@ -257,50 +257,4 @@ int main(int argc, char *argv[]){
   pthread_mutex_destroy(&gSharedMemMutex);
   pthread_mutex_destroy(&gI2cBusMutex);
   close(sharedMemFd);
-}
-
-void initLedGpio(void)
-{
-  #ifdef FOUND_GPIO_LIB
-    gpio_export(USR_LED_53);
-    gpio_set_dir(USR_LED_53, OUT);
-  #endif
-  return;
-}
-
-void ctrlLed(uint8_t newError)
-{
-  static uint8_t state = 0;
-  static uint8_t bulb = 0;
-  static uint8_t blinkCount = 0;
-
-  switch (state) {
-    case 0: /* off state (0) */
-      if(newError) {
-        blinkCount = 8;
-        bulb = 0;
-        state = 1;
-      }
-    break;
-    case 1: /* blink state (1) */
-      bulb = (bulb == 0);
-      #ifdef FOUND_GPIO_LIB
-        gpio_set_value(USR_LED_53, bulb);
-      #endif
-      --blinkCount;
-      if(blinkCount == 0) {
-        state = 2;
-      }
-    break;
-    case 2: /* on state (2) */
-      if(newError) {
-        blinkCount = 8;
-        bulb = 0;
-        state = 1;
-      }
-      #ifdef FOUND_GPIO_LIB
-        gpio_set_value(USR_LED_53, 1);
-      #endif
-    break;
-  }
 }

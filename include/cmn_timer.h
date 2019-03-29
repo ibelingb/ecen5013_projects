@@ -23,13 +23,13 @@
 #define TEMP_LOOP_TIME_NSEC     (499e-3 * 1e9)
 #define LIGHT_LOOP_TIME_SEC     (TEMP_LOOP_TIME_SEC)
 #define LIGHT_LOOP_TIME_NSEC    (TEMP_LOOP_TIME_NSEC)
-#define LIGHT_LOOP_TIME_USEC    (TEMP_LOOP_TIME_NSEC/1000)
+#define LIGHT_LOOP_TIME_USEC    (TEMP_LOOP_TIME_NSEC)
 #define REMOTE_LOOP_TIME_SEC    (TEMP_LOOP_TIME_SEC)
 #define REMOTE_LOOP_TIME_NSEC   (TEMP_LOOP_TIME_NSEC)
 #define MAIN_LOOP_TIME_SEC      (TEMP_LOOP_TIME_SEC * 2)
 #define MAIN_LOOP_TIME_NSEC     (TEMP_LOOP_TIME_NSEC * 2)
 #define LOG_LOOP_TIME_SEC       (0)
-#define LOG_LOOP_TIME_NSEC      (50e-3 * 1e9)
+#define LOG_LOOP_TIME_NSEC      (5e-3 * 1e9)
 
 int8_t setupTimer(sigset_t *pSet, timer_t *pTimer, int signum, const struct timespec *pRate);
 
