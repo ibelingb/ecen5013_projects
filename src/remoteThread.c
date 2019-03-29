@@ -178,6 +178,7 @@ void* remoteThreadHandler(void* threadInfo)
       if(sockfdClient == -1){
         /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
+          printf("Client connect timeout\n");
           continue;
         }
 
@@ -200,6 +201,7 @@ void* remoteThreadHandler(void* threadInfo)
     if (clientResponse == -1) { 
       /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
+        printf("Client Cmd timeout\n");
         continue;
       }
 
