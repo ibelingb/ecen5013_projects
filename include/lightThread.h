@@ -24,10 +24,31 @@
 #include "packet.h"
 
 /*---------------------------------------------------------------------------------*/
-void* lightSensorThreadHandler(void* threadInfo);
-void lightSigHandler(int signo, siginfo_t *info, void *extra);
-void lightGetAliveFlag(uint8_t *pAlive);
 
+/**
+ * @brief 
+ *
+ * @param threadInfo
+ *
+ * @return 
+ */
+void* lightSensorThreadHandler(void* threadInfo);
+
+/**
+ * @brief 
+ *
+ * @param signo
+ * @param info
+ * @param extra
+ */
+void lightSigHandler(int signo, siginfo_t *info, void *extra);
+
+/**
+ * @brief 
+ *
+ * @param pAlive
+ */
+void lightGetAliveFlag(uint8_t *pAlive);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */

@@ -41,8 +41,8 @@
 #define DEFAULT_TIMING_INTEGRATION  (APDS9301_TIMING_INT_101)
 #define DEFAULT_INT_SELECT          (APDS9301_INT_SELECT_LEVEL_DISABLE)
 #define DEFAULT_INT_PERSIST         (APDS9301_INT_PERSIST_OUTSIDE_CYCLE)
-#define DEFAULT_LOW_INT_THRESHOLD   (0x0101)
-#define DEFAULT_HIGH_INT_THRESHOLD  (0x9999)
+#define DEFAULT_LOW_INT_THRESHOLD   (100)
+#define DEFAULT_HIGH_INT_THRESHOLD  (9000)
 
 /* Prototypes for private/helper functions */
 void getLightSensorData(int sensorFd, LightDataStruct *lightData);
@@ -120,7 +120,7 @@ void* lightSensorThreadHandler(void* threadInfo)
   LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
 
   /* Set initial states for LightSensor */
-  //initLightSensor(sensorFd);
+  initLightSensor(sensorFd);
 
   /* Setup timer to periodically sample from Light Sensor */
   while(aliveFlag) {
@@ -139,6 +139,7 @@ void* lightSensorThreadHandler(void* threadInfo)
       /* Check for dark->light transition; log event */
       if(lightState == LUX_STATE_DARK) {
         LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
+        printf("Light Sensor - Dark->Light Transition detected\n");
       }
 
       lightState = LUX_STATE_LIGHT;
@@ -146,6 +147,7 @@ void* lightSensorThreadHandler(void* threadInfo)
       /* Check for light->dark transition; log event */
       if(lightState == LUX_STATE_LIGHT) {
         LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
+        printf("Light Sensor - Light->Dark Transition detected\n");
       }
 
       lightState = LUX_STATE_DARK;

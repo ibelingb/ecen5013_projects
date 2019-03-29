@@ -24,7 +24,6 @@
 #include <signal.h>
 
 #define PORT (5001)
-#define REMOTE_MSG_PAYLOAD_SIZE (256) // Bytes
 
 typedef union StatusData {
   uint32_t status_uint32;
@@ -65,8 +64,30 @@ typedef struct RemoteCmdPacket
 } RemoteCmdPacket;
 
 /*---------------------------------------------------------------------------------*/
+
+/**
+ * @brief 
+ *
+ * @param threadInfo
+ *
+ * @return 
+ */
 void* remoteThreadHandler(void* threadInfo);
+
+/**
+ * @brief 
+ *
+ * @param signo
+ * @param info
+ * @param extra
+ */
 void remoteSigHandler(int signo, siginfo_t *info, void *extra);
+
+/**
+ * @brief 
+ *
+ * @param pAlive
+ */
 void remoteGetAliveFlag(uint8_t *pAlive);
 
 /*---------------------------------------------------------------------------------*/
