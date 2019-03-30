@@ -23,9 +23,9 @@
 
 #define ERROR_PRINT(...)	(printf(__VA_ARGS__))
 #define ERRNO_PRINT(str)    (ERROR_PRINT("%s, error in: %s, err#%d (%s)\n", str, __func__, errno, strerror(errno)))
-#define WARN_PRINT(...)		(printf(__VA_ARGS__))
-#define INFO_PRINT(...)		(printf(__VA_ARGS__))
+#define WARN_PRINT(...)		//(printf(__VA_ARGS__))
+#define INFO_PRINT(...)		//(printf(__VA_ARGS__))
 #define MUTED_PRINT(...)	
-#define DEBUG_PRINT(...)	(printf(__VA_ARGS__))
+#define DEBUG_PRINT(...)	//(printf(__VA_ARGS__))
 
 #endif /* DEBUG_H_ */

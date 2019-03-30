@@ -30,6 +30,7 @@
 #include "lightThread.h"
 #include "remoteThread.h"
 #include "healthMonitor.h"
+#include "logger.h"
 
 #define THREAD_MISSING_COUNT        (3)
 #define STATUS_MSG_PROCESS_LIMIT    (NUM_THREADS * 20 + 1)   /* 2 is because main is 1/2 as fast as other loops */
@@ -163,6 +164,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
             status.timestamp = log_get_time();
             action = callArbitor(&status);
             processAction(status.processId, action, pExit);
+            LOG_MAIN_EVENT((MainEvent_e)(MAIN_EVENT_LIGHT_THREAD_UNRESPONSIVE + ind));
         }
     }
     MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);
