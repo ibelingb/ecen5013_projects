@@ -79,6 +79,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     static uint8_t threadMissingCount[NUM_THREADS + 1];     /* 1 is to provide slot for PID_END enum value */
     uint8_t missingFlag[NUM_THREADS + 1];                   /* 1 is to provide slot for PID_END enum value */
     uint8_t ind, msgCount, prevErrorCount;
+    struct mq_attr Attr;
     static uint8_t errorCount = 0;
     prevErrorCount = errorCount;
 
@@ -90,6 +91,16 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     for(ind = 0; ind < NUM_THREADS; ++ind) {
         /* TODO - get thread status */
     }
+
+    /* check queue length diagonistics */
+	mq_getattr(*pQueue, &Attr);
+	MUTED_PRINT("hBQueue count:%ld\n", Attr.mq_curmsgs);
+	if(Attr.mq_curmsgs > ((STATUS_MSG_QUEUE_DEPTH * 3) / 4)) {
+		if(Attr.mq_curmsgs >= STATUS_MSG_QUEUE_DEPTH - 1) {
+			ERROR_PRINT("hBQueue full\n");
+		}
+		WARN_PRINT("hBQueue have 3/4 full \n");
+	}
 
     /* set missing flags before looping on status queue;
      * there should be at least one message from each thread.

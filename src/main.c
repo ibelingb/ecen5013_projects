@@ -217,7 +217,7 @@ int main(int argc, char *argv[]){
   setupTimer(&set, &timerid, signum, &timer_interval);
 
   /* Log main thread started succesfully */
-  ERROR_PRINT("The Main() thread has successfully started with all child threads created.\n");
+  MUTED_PRINT("The Main() thread has successfully started with all child threads created.\n");
 
   /* system is now fully functional */
   LOG_SYSTEM_INITIALIZED();

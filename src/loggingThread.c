@@ -51,15 +51,20 @@ void logGetAliveFlag(uint8_t *pAlive)
 void* logThreadHandler(void* threadInfo)
 {
     SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
-    int logFd;          /* log file descriptor */
-    mqd_t hbMsgQueue = -1;   /* main status MessageQueue */
+    int logFd;                                          /* log file descriptor */
+    mqd_t hbMsgQueue = -1;                              /* main status MessageQueue */
+    struct timespec currentTime, lastStatusMsgTime;     /* to calc delta time */
+    float deltaTime;                                    /* delta time since last sent status msg */
+
+    /* how often other thread sends msg */
+    const float otherThreadTime = TEMP_LOOP_TIME_SEC + (TEMP_LOOP_TIME_NSEC * 1e-9);
 
     /* timer variables */
     static timer_t timerid;
     sigset_t set;
     int signum = SIGALRM;
     struct timespec timer_interval;
-        uint8_t ind;
+    uint8_t ind, statusMsgCount;
 	sigset_t mask;
 
     /* instantiate temp msg variable for dequeuing */
@@ -130,9 +135,7 @@ void* logThreadHandler(void* threadInfo)
     {
         /* wait on signal timer */
         sigwait(&set, &signum);
-
-        /* TODO - derive method to set status sent to main */
-        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_OK, ERROR_CODE_USER_NONE0);
+        statusMsgCount = 0;
         MUTED_PRINT("logging is alive\n");
 
         /* if signaled to exit, shove log exit command
@@ -143,12 +146,13 @@ void* logThreadHandler(void* threadInfo)
             INFO_PRINT("logger exit triggered\n");
             exitFlag = 0;
         }
-        
+
         /* dequeue a msg */
         if(LOG_DEQUEUE_ITEM(&logItem) != LOG_STATUS_OK)
         {
             ERROR_PRINT("log_dequeue_item error\n");
             SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+            ++statusMsgCount;
         }
         else
         {
@@ -160,7 +164,18 @@ void* logThreadHandler(void* threadInfo)
             {
                 ERROR_PRINT("log_dequeue_item error\n");
                 SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+                ++statusMsgCount;
             }
+        }
+        clock_gettime(CLOCK_REALTIME, &currentTime);
+        deltaTime = (currentTime.tv_sec - lastStatusMsgTime.tv_sec) + ((currentTime.tv_nsec - lastStatusMsgTime.tv_nsec) * 1e-9);
+
+        /* only send OK status at rate of other threads 
+         * and if we didn't send error status yet */
+        if((deltaTime > otherThreadTime) && (statusMsgCount == 0)) {
+            SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_OK, ERROR_CODE_USER_NONE0);
+            ++statusMsgCount;
+            clock_gettime(CLOCK_REALTIME, &lastStatusMsgTime);
         }
     }
 

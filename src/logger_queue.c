@@ -99,12 +99,23 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 	LogMsgPacket newItem;
 	struct timespec rxTimeout;
 	size_t bytesRead;
+	struct mq_attr Attr;
 
 	if(logQueue < 0)
 	{
         ERROR_PRINT("log msg queue not initialized\n");
         return LOG_STATUS_NOTOK;
     }
+
+	/* check queue length diagonistics */
+	mq_getattr(logQueue, &Attr);
+	MUTED_PRINT("logMsgQueue count:%ld\n", Attr.mq_curmsgs);
+	if(Attr.mq_curmsgs > ((MSG_QUEUE_DEPTH * 3) / 4)) {
+		if(Attr.mq_curmsgs >= MSG_QUEUE_DEPTH - 1) {
+			ERROR_PRINT("logQueue full\n");
+		}
+		WARN_PRINT("logQueue have 3/4 full \n");
+	}
 
 	clock_gettime(CLOCK_REALTIME, &rxTimeout);
 	rxTimeout.tv_sec += 2;

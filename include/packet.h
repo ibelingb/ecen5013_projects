@@ -25,7 +25,13 @@
 #include "platform.h"
 
 #define STATUS_MSG_QUEUE_MSG_SIZE   (sizeof(TaskStatusPacket)) // bytes
-#define STATUS_MSG_QUEUE_DEPTH      (NUM_THREADS * 2 + 1) // total messages
+
+/* since main runs at half speed of other threads, 
+ * each time main awakes there should be two msgs per thread under
+ * normal circumstances, but to make run for miscellaneous error status
+ * msgs, going to double length; monitor will print diagnostic 
+ * messages if queue is 75% or full */
+#define STATUS_MSG_QUEUE_DEPTH      ((NUM_THREADS * 2) * (100 / 50)) // total messages
 
 #define MSG_QUEUE_MSG_SIZE        (sizeof(LogMsgPacket)) // bytes
 #define MSG_QUEUE_DEPTH           (20) // total messages
