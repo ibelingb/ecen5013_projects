@@ -71,15 +71,15 @@ void* lightSensorThreadHandler(void* threadInfo)
 
   /* block SIGRTs signals */
   uint8_t ind;
-	sigset_t mask;
-	sigemptyset(&mask);
+  sigset_t mask;
+  sigemptyset(&mask);
 
-    for(ind = 0; ind < NUM_THREADS; ++ind)
-    {
-        if(ind != (uint8_t)PID_LIGHT)
-            sigaddset(&mask, SIGRTMIN + ind);
-    }
-    pthread_sigmask(SIG_BLOCK, &mask, NULL);
+  for(ind = 0; ind < NUM_THREADS; ++ind)
+  {
+    if(ind != (uint8_t)PID_LIGHT)
+      sigaddset(&mask, SIGRTMIN + ind);
+  }
+  pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));
@@ -163,6 +163,8 @@ void* lightSensorThreadHandler(void* threadInfo)
   /* Thread Cleanup */
   LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
   INFO_PRINT("Light thread exiting\n");
+  timer_delete(timerid);
+  mq_close(hbMsgQueue);
   close(sharedMemFd);
 
   return NULL;
@@ -224,8 +226,8 @@ int8_t verifyLightSensorComm(int sensorFd)
 /*---------------------------------------------------------------------------------*/
 void lightSigHandler(int signo, siginfo_t *info, void *extra)
 {
-	INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
-    aliveFlag = 0;
+  INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
+  aliveFlag = 0;
 }
 
 /*---------------------------------------------------------------------------------*/
