@@ -91,8 +91,9 @@ void* tempSensorThreadHandler(void* threadInfo)
   /* init handle for i2c bus */
 	int fd = initIic("/dev/i2c-2");
 	if(fd < 0) {
-    ERRNO_PRINT("empSensorThreadHandler() couldn't init i2c handle");
+    ERRNO_PRINT("tempSensorThreadHandler() couldn't init i2c handle");
     SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_I2C_ERROR);
   }
 	  
   
@@ -100,7 +101,8 @@ void* tempSensorThreadHandler(void* threadInfo)
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
     SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-    ERROR_PRINT("ERROR: lightSensorThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    ERROR_PRINT("ERROR: tempSensorThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SHMEM_ERROR);
     return NULL;
   }
 
@@ -108,15 +110,16 @@ void* tempSensorThreadHandler(void* threadInfo)
   sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
   if(*(int *)sharedMemPtr == -1) {
     SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-    ERROR_PRINT("ERROR: lightSensorThread Failed to complete memory mapping of shared memory - exiting\n");
+    ERROR_PRINT("ERROR: tempSensorThread Failed to complete memory mapping of shared memory - exiting\n");
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SHMEM_ERROR);
     return NULL;
   }
 
   /* main status msg queue */
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
   if(hbMsgQueue == -1) {
-    ERROR_PRINT("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+    ERROR_PRINT("ERROR: tempThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STATUS_QUEUE_ERROR);
     return NULL;
   }
   
@@ -124,6 +127,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   if(initSensor(fd) == EXIT_FAILURE) { 
     ERROR_PRINT("temp initSensor failed\n"); 
     SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_INIT_ERROR);
     errCount++; 
   }
 
@@ -148,7 +152,7 @@ void* tempSensorThreadHandler(void* threadInfo)
 
     if(errCount > TEMP_ERR_COUNT_LIMIT)
     {
-      LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+      LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_READ_ERROR);
       SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
       errCount = 0;
     }
@@ -158,13 +162,16 @@ void* tempSensorThreadHandler(void* threadInfo)
     {
       overTempState = 1;
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
-      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+      printf("Temp Sensor - Normal->Over-temp Transition detected\n");
+
     }
     if((overTempState == 1) && (data.tmp102_alert == TMP102_ALERT_OFF))
     {
       overTempState = 0;
-      LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
-      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+      LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
+      SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE1);
+      printf("Temp Sensor - Over-temp->Normal Transition detected\n");
     }
 
     /* write to shared memory */

@@ -149,9 +149,14 @@ class TempEvent_e(IntEnum):
     STARTED = 0
     OVERTEMP = 1
     OVERTEMP_RELEQUISHED = 2
-    ERROR = 3
-    EXITING = 4
-    END = 5
+    SENSOR_INIT_ERROR = 3
+    SENSOR_READ_ERROR = 4
+    STATUS_QUEUE_ERROR = 5
+    LOG_QUEUE_ERROR = 6
+    SHMEM_ERROR = 7
+    I2C_ERROR = 8
+    EXITING = 9
+    END = 10
 
 
 def clear_log_item(my_log_item):
