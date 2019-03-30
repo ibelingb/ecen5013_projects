@@ -37,15 +37,16 @@
 int gExitSig = 1;
 int gExitLog = 1;
 
-static void *tempThread(void *pArg);
-static void *lightThread(void *pArg);
-static void *remoteThread(void *pArg);
+static void *DUMMY_tempThread(void *pArg);
+static void *DUMMY_lightThread(void *pArg);
+static void *DUMMY_remoteThread(void *pArg);
 
 int main(void)
 {
     pthread_t pThread[NUM_THREADS];
-    mqd_t logQueue;
-    char *logMsgQueueName = "/mq";
+    mqd_t logQueue, heartbeatMsgQueue;
+    char *heartbeatMsgQueueName = "/heartbeat_mq";
+    char *logMsgQueueName        = "/logging_mq";
     char *logFile = "/usr/bin/log.bin";
     LogThreadInfo logThreadInfo;
     struct mq_attr mqAttr;
@@ -58,18 +59,33 @@ int main(void)
 
     /* set thread arg struct */
     strcpy(logThreadInfo.logMsgQueueName, logMsgQueueName);
+    strcpy(logThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
     strcpy(logThreadInfo.logFileName, logFile);
 
     /* Ensure MQs and Shared Memory properly cleaned up before starting */
     mq_unlink(logMsgQueueName);
 
     if(remove(logMsgQueueName) == -1 && errno != ENOENT)
-	    ERROR_PRINT("couldn't delete path, err#%d (%s)\n\r", errno, strerror(errno));
+	    ERRNO_PRINT("couldn't delete path");
 
     logQueue = mq_open(logMsgQueueName, O_CREAT, 0666, &mqAttr);
     if(logQueue < 0)
     {
-        ERROR_PRINT("failed to open log msg queue, err#%d (%s)\n\r", errno, strerror(errno));
+        ERRNO_PRINT("failed to open log msg queue");
+        return EXIT_FAILURE;
+    }
+
+    /* Ensure MQs and Shared Memory properly cleaned up before starting */
+    mq_unlink(heartbeatMsgQueueName);
+
+    if(remove(heartbeatMsgQueueName) == -1 && errno != ENOENT)
+    { ERRNO_PRINT("couldn't delete log queue path"); return EXIT_FAILURE; }
+
+    /* Create MessageQueue to receive thread status from all children */
+    heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
+    if(heartbeatMsgQueue == -1)
+    {
+        ERROR_PRINT("ERROR: failed to create MessageQueue for Main TaskStatus reception - exiting.\n");
         return EXIT_FAILURE;
     }
 
@@ -91,13 +107,16 @@ int main(void)
     INFO_PRINT("main tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     /* create other threads */
-    pthread_create(&pThread[0], NULL, lightThread, NULL);
-    pthread_create(&pThread[1], NULL, tempThread, NULL);
-    pthread_create(&pThread[2], NULL, remoteThread, NULL);
+    pthread_create(&pThread[0], NULL, DUMMY_lightThread, NULL);
+    pthread_create(&pThread[1], NULL, DUMMY_tempThread, NULL);
+    pthread_create(&pThread[2], NULL, DUMMY_remoteThread, NULL);
     
     /* events logged by main */
     LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
-    LOG_MAIN_EVENT(MAIN_EVENT_THREAD_UNRESPONSIVE);
+    LOG_MAIN_EVENT(MAIN_EVENT_LIGHT_THREAD_UNRESPONSIVE);
+    LOG_MAIN_EVENT(MAIN_EVENT_TEMP_THREAD_UNRESPONSIVE);
+    LOG_MAIN_EVENT(MAIN_EVENT_REMOTE_THREAD_UNRESPONSIVE);
+    LOG_MAIN_EVENT(MAIN_EVENT_LOGGING_THREAD_UNRESPONSIVE);
     LOG_MAIN_EVENT(MAIN_EVENT_RESTART_THREAD);
     LOG_MAIN_EVENT(MAIN_EVENT_LOG_QUEUE_FULL);
     LOG_MAIN_EVENT(MAIN_EVENT_ISSUING_EXIT_CMD);
@@ -130,15 +149,18 @@ int main(void)
 
     mq_close(logQueue);
 
-    INFO_PRINT("main exiting\n");
+    printf("main exiting\n");
     return EXIT_SUCCESS;
 }
-static void *lightThread(void *log)
+static void *DUMMY_lightThread(void *log)
 {
     /* send log msgs */
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
+    usleep(10000);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
+    usleep(10000);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
+    usleep(10000);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
     INFO_PRINT("light tid: %d\n",(pid_t)syscall(SYS_gettid));
 
@@ -148,17 +170,28 @@ static void *lightThread(void *log)
     }
 
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
-    INFO_PRINT("light thread exiting\n");
+    printf("light thread exiting\n");
     return NULL;
 }
 
-static void *tempThread(void *log)
+static void *DUMMY_tempThread(void *log)
 {
     /* send log msgs */
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STARTED);
+    usleep(10000);
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
+    usleep(10000);
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
-    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_ERROR);
+    usleep(10000);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_INIT_ERROR);
+    usleep(10000);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_READ_ERROR);
+    usleep(10000);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STATUS_QUEUE_ERROR);
+    usleep(10000);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SHMEM_ERROR);
+    usleep(10000);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_I2C_ERROR);
     INFO_PRINT("temp tid: %d\n",(pid_t)syscall(SYS_gettid));
     
     while(gExitSig)
@@ -167,19 +200,25 @@ static void *tempThread(void *log)
     }
 
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
-    INFO_PRINT("temp thread exiting\n");
+    printf("temp thread exiting\n");
     return NULL;
 }
 
-static void *remoteThread(void *log)
+static void *DUMMY_remoteThread(void *log)
 {
     /* send log msgs */
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+    usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+    usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
+    usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
+    usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
+    usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
     INFO_PRINT("remote tid: %d\n",(pid_t)syscall(SYS_gettid));
 
@@ -189,7 +228,7 @@ static void *remoteThread(void *log)
     }
 
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
-    INFO_PRINT("remote thread exiting\n");
+    printf("remote thread exiting\n");
     return NULL;
 }
 

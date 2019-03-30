@@ -80,14 +80,14 @@ void* logThreadHandler(void* threadInfo)
     uint8_t exitFlag = 1;
 
     /* add start msg to log msg queue */
-    LOG_TEMP_SENSOR_EVENT(LOG_EVENT_STARTED);
+    LOG_LOG_EVENT(LOG_EVENT_STARTED);
     MUTED_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     /* main status msg queue */
     hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
     if(hbMsgQueue == -1) {
-        printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-        LOG_TEMP_SENSOR_EVENT(LOG_EVENT_SHMEM_ERROR);
+        printf("ERROR: loggingThread Failed to Open heartbeat MessageQueue - exiting.\n");
+        LOG_LOG_EVENT(LOG_EVENT_SHMEM_ERROR);
         return NULL;
     }
 
@@ -104,7 +104,7 @@ void* logThreadHandler(void* threadInfo)
     logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_TRUNC, 0644);
     if(logFd < 0)
     {
-        ERROR_PRINT("failed to open log file, err#%d (%s)\n\r", errno, strerror(errno));
+        ERRNO_PRINT("loggingThread failed to open log file");
         SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
 
         /* add log event msg to queue; probably only

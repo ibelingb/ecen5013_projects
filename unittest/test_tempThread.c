@@ -33,7 +33,7 @@
 #include "lightThread.h"
 #include "healthMonitor.h"
 
-#define NUM_THREADS                 (1)
+#define NUM_TEST_THREADS                 (2)
 #define INC_HB_QUEUE
 
 /* global for causing threads to exit */
@@ -48,7 +48,7 @@ int8_t checkSystemHealth(mqd_t * pQueue, TaskStatusPacket *pPacket);
 
 int main(void)
 {
-    pthread_t pThread[NUM_THREADS];
+    pthread_t pThread[NUM_TEST_THREADS];
     char *heartbeatMsgQueueName = "/heartbeat_mq";
     char *logMsgQueueName        = "/logging_mq";
     char *sensorSharedMemoryName = "/sensor_sm";
@@ -124,17 +124,17 @@ int main(void)
 
     /* do stuff, wait for exit signal 
     (e.g. in this case, when count to expire) */
-    uint8_t loopCount = 0, exit = 1;
+    uint8_t loopCount = 0, exit = 1, newError = 0;
     while((loopCount++ < 100) && (exit))
     {
-        monitorHealth(&heartbeatMsgQueue, &exit);
+        monitorHealth(&heartbeatMsgQueue, &exit, &newError);
         sleep(1);
     }
 
     /* trigger thread exit */
     gExitSig = 0;
 
-    for(uint8_t ind; ind < NUM_THREADS; ++ind)
+    for(uint8_t ind; ind < NUM_TEST_THREADS; ++ind)
         pthread_join(pThread[ind], NULL);
 
     /* clean up */

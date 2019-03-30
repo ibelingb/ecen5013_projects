@@ -16,4 +16,14 @@ SRCS += unittest/test_tempThread.c \
         src/lu_iic.c \
         src/tempThread.c \
         src/cmn_timer.c \
+        src/logger_queue.c \
+        src/logger_helper.c \
+        src/memory.c \
+        src/conversion.c \
+        src/remoteThread.c \
+        src/tempThread.c \
+        src/lightThread.c \
+        src/tempSensor.c \
+        src/lightSensor.c \
+        src/loggingThread.c \
         src/healthMonitor.c

@@ -102,7 +102,7 @@ int8_t test_TempConv(void)
 	temp = TMP_DEGC_TO_DEGK(temp);
 	temp = TMP_DEGK_TO_DEGF(temp);
 	temp = TMP_DEGF_TO_DEGC(temp);
-	INFO_PRINT("%f DegC-->DegF-->DegK-->DegC-->DegK-->DegF--> %f DegC\n", start, temp);
+	printf("%f DegC-->DegF-->DegK-->DegC-->DegK-->DegF--> %f DegC\n", start, temp);
 	
 	return EXIT_SUCCESS;
 }

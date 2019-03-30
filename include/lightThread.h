@@ -20,6 +20,7 @@
 #define LIGHT_THREAD_H_
 
 #include <stdint.h>
+#include <signal.h>
 #include "lightSensor.h"
 #include "packet.h"
 

@@ -18,6 +18,7 @@
 #define LOGGING_THREAD_H_
 
 #include <stdint.h>
+#include <signal.h>
 
 typedef enum {
     LOG_EVENT_STARTED = 0,

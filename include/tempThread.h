@@ -18,6 +18,7 @@
 #define TEMP_THREAD_H_
 
 #include <stdint.h>
+#include <signal.h>
 #include "tempSensor.h"
 
 typedef enum {
