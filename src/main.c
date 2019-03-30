@@ -255,6 +255,10 @@ int main(int argc, char *argv[]){
   /* wait to kill log so exit msgs get logged */
   usleep(MAIN_LOG_EXIT_DELAY);
 
+  /* Kill logger; delay to allow Log Exiting to be written to log */
+  pthread_kill(gThreads[0], SIGRTMIN + (uint8_t)PID_LOGGING);
+  usleep(MAIN_LOG_EXIT_DELAY);
+
   /* join to clean up children */
   for(ind = 0; ind < NUM_THREADS; ++ind)
     pthread_join(gThreads[(uint8_t)ind], NULL);
@@ -274,10 +278,10 @@ int main(int argc, char *argv[]){
 
 void mainCleanup(int sig){
   /* Send signal to all children threads to terminate */
-  pthread_kill(gThreads[0], SIGRTMIN + (uint8_t)PID_LOGGING);
   pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE);
   pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);
   pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_LIGHT);
+  sleep(3);
 
   /* Trigger while-loop in main to exit; cleanup allocated resources */
   gExit = 0;
