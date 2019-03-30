@@ -72,6 +72,7 @@ void* remoteThreadHandler(void* threadInfo)
   int sockfdServer, sockfdClient, socketFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
+  size_t cmdPacketSize = sizeof(struct RemoteCmdPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
@@ -197,7 +198,7 @@ void* remoteThreadHandler(void* threadInfo)
     }
 
     /* Check for incoming commands from remote clients on socket port */
-    clientResponse = recv(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0);
+    clientResponse = recv(sockfdClient, &cmdPacket, cmdPacketSize, 0);
     if (clientResponse == -1) { 
       /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
@@ -213,6 +214,14 @@ void* remoteThreadHandler(void* threadInfo)
       /* Handle disconnect from client socket */
       printf("WARNING: remoteThread connection lost with client on port %d.\n", PORT);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
+      continue;
+    }
+
+    // TODO: Add check for recv if it doesn't match the number of expected bytes for a packet
+    /* Verify bytes received is the expected size for a cmdPacket */
+    if(clientResponse != cmdPacketSize){
+      printf("ERROR: remoteThread received cmd of invalid length from remote client.\nExpected {%d} | Received {%d}", cmdPacketSize, clientResponse);
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
       continue;
     }
 
@@ -234,7 +243,9 @@ void* remoteThreadHandler(void* threadInfo)
   }
 
   /* Thread Cleanup */
+  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
   printf("remoteThread Cleanup\n");
+  timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
   close(sharedMemFd);

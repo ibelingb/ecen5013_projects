@@ -166,6 +166,7 @@ void* logThreadHandler(void* threadInfo)
 
     /* clean up */
     timer_delete(timerid);
+    mq_close(hbMsgQueue);
     close(logFd);
     INFO_PRINT("logger thread exiting\n");
     return NULL;
