@@ -118,7 +118,7 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 	}
 
 	clock_gettime(CLOCK_REALTIME, &rxTimeout);
-	rxTimeout.tv_sec += 2;
+	rxTimeout.tv_sec += 1;
 
 	/* read oldest highest priority queue */
 	bytesRead = mq_timedreceive(logQueue, (char *)&newItem, sizeof(LogMsgPacket), NULL, &rxTimeout);
@@ -126,7 +126,7 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
     {
         if((errno == EINTR) || (errno == ETIMEDOUT))
 		{
-			WARN_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
+			MUTED_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
 			return LOG_STATUS_OK;
 		}
 		ERROR_PRINT("mq_timedreceive failed, err#%d (%s)\n\r", errno, strerror(errno));

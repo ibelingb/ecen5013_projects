@@ -70,6 +70,12 @@ int main(int argc, char *argv[]){
   char ind;
   uint8_t gExit = 1, newError;
 
+  /* parse cmdline args */
+  if(argc >= 2) {
+    logFile = argv[1];
+  }
+  printf("logfile: %s\n", logFile);
+
   /* timer variables */
   static timer_t timerid;
   sigset_t set;
@@ -232,7 +238,7 @@ int main(int argc, char *argv[]){
     /* wait on signal timer */
     sigwait(&set, &signum);
 
-    LOG_HEARTBEAT();
+    //LOG_HEARTBEAT();
     newError = 0;
     monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
     setStatusLed(newError);

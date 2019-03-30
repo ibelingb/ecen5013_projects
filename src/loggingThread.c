@@ -68,12 +68,13 @@ void* logThreadHandler(void* threadInfo)
 	sigset_t mask;
 
     /* instantiate temp msg variable for dequeuing */
-    logItem_t logItem;
+    logItem_t logItem, prevLogItem;
     uint8_t filename[64];
     uint8_t payload[128];
     logItem.pFilename = filename;
     logItem.pPayload = payload;
     logItem.logMsgId = LOG_MSG_INFO;
+    prevLogItem = logItem;
 
     /* used to stop dequeue/write loop */
     uint8_t exitFlag = 1;
@@ -154,7 +155,8 @@ void* logThreadHandler(void* threadInfo)
             SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
             ++statusMsgCount;
         }
-        else
+        else if ((prevLogItem.logMsgId != logItem.logMsgId) || (prevLogItem.time != logItem.time)
+     || (prevLogItem.checksum != logItem.checksum))
         {
             if(logItem.logMsgId == LOG_MSG_CORE_DUMP)
                 INFO_PRINT("core dump not implemented\n");
@@ -166,6 +168,7 @@ void* logThreadHandler(void* threadInfo)
                 SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
                 ++statusMsgCount;
             }
+            prevLogItem = logItem;
         }
         clock_gettime(CLOCK_REALTIME, &currentTime);
         deltaTime = (currentTime.tv_sec - lastStatusMsgTime.tv_sec) + ((currentTime.tv_nsec - lastStatusMsgTime.tv_nsec) * 1e-9);
