@@ -107,12 +107,13 @@ class LogItem:
     checksum = 0
 
 class LogEvent_e(IntEnum):
-    STARTED = 0
-    FILE_OPEN = 1
-    WRITE_ERROR = 2
-    OPEN_ERROR = 3
-    EXITING = 4
-    END = 5
+    LOG_EVENT_STARTED = 0
+    LOG_EVENT_FILE_OPEN = 1
+    LOG_EVENT_WRITE_LOGFILE_ERROR = 2
+    LOG_EVENT_SHMEM_ERROR = 3
+    LOG_EVENT_OPEN_LOGFILE_ERROR  = 4
+    LOG_EVENT_EXITING = 5
+    LOG_EVENT_END = 6
 
 
 class MainEvent_e(IntEnum):

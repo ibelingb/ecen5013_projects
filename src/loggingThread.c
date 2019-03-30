@@ -87,7 +87,7 @@ void* logThreadHandler(void* threadInfo)
     hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
     if(hbMsgQueue == -1) {
         printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-        LOG_TEMP_SENSOR_EVENT(LOG_EVENT_OPEN_ERROR);
+        LOG_TEMP_SENSOR_EVENT(LOG_EVENT_SHMEM_ERROR);
         return NULL;
     }
 
@@ -110,18 +110,11 @@ void* logThreadHandler(void* threadInfo)
         /* add log event msg to queue; probably only
          * useful if log thread is restarted and sucesfully 
          * opens file and starts reading from queue */
-        LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
+        LOG_LOG_EVENT(LOG_EVENT_OPEN_LOGFILE_ERROR);
         return NULL;
     }
     /* add log event msg to queue */
     LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
-
-        
-    /* send all log msgs for testing log parser, etc */
-    #if (DEBUG_TEST_ALL_MSG_TYPES != 0)
-        LOG_LOG_EVENT(LOG_EVENT_WRITE_ERROR);
-        LOG_LOG_EVENT(LOG_EVENT_OPEN_ERROR);
-    #endif
 
     /* Clear memory objects */
     memset(&set, 0, sizeof(sigset_t));
@@ -166,6 +159,7 @@ void* logThreadHandler(void* threadInfo)
             {
                 ERROR_PRINT("log_dequeue_item error\n");
                 SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+                LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
                 ++statusMsgCount;
             }
             prevLogItem = logItem;
