@@ -14,4 +14,3 @@
 SRCS += unittest/test_light.c \
         src/lightSensor.c \
         src/lu_iic.c
-PLATFORM = BBG

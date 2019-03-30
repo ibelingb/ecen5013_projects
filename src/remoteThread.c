@@ -179,7 +179,7 @@ void* remoteThreadHandler(void* threadInfo)
       if(sockfdClient == -1){
         /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
-          printf("Client connect timeout\n");
+          //printf("Client connect timeout\n");
           continue;
         }
 
@@ -189,7 +189,7 @@ void* remoteThreadHandler(void* threadInfo)
         continue;
       } else if(sockfdClient > 0) {
         /* Log RemoteThread successfully Connected to client */
-        printf("Connected remoteThread to external Client on port %d.\n", PORT);
+        //printf("Connected remoteThread to external Client on port %d.\n", PORT);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
         /* Update Socket Client connections to be non-blocking */
@@ -202,7 +202,7 @@ void* remoteThreadHandler(void* threadInfo)
     if (clientResponse == -1) { 
       /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
-        printf("Client Cmd timeout\n");
+        //printf("Client Cmd timeout\n");
         continue;
       }
 
@@ -244,7 +244,7 @@ void* remoteThreadHandler(void* threadInfo)
 
   /* Thread Cleanup */
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
-  printf("remoteThread Cleanup\n");
+  printf("Remote thread exiting\n");
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);

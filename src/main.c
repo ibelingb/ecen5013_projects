@@ -48,11 +48,14 @@
 
 /* private functions */
 void set_sig_handlers(void);
+void mainCleanup(int sig);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
 pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
 pthread_mutex_t gI2cBusMutex; 
+
+static uint8_t gExit = 1;
 
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
@@ -68,7 +71,7 @@ int main(int argc, char *argv[]){
   int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
   int sharedMemFd = 0;
   char ind;
-  uint8_t gExit = 1, newError;
+  uint8_t newError;
 
   /* parse cmdline args */
   if(argc >= 2) {
@@ -84,6 +87,10 @@ int main(int argc, char *argv[]){
 
   /* set signal handlers and actions */
 	set_sig_handlers();
+  struct sigaction sigAction;
+  sigAction.sa_handler = mainCleanup;
+  sigAction.sa_flags = 0;
+  sigaction(SIGINT, &sigAction, NULL);
 
   /* Initialize created structs and packets to be 0-filled */
   memset(&sensorThreadInfo, 0, sizeof(struct SensorThreadInfo));
@@ -263,4 +270,15 @@ int main(int argc, char *argv[]){
   pthread_mutex_destroy(&gSharedMemMutex);
   pthread_mutex_destroy(&gI2cBusMutex);
   close(sharedMemFd);
+}
+
+void mainCleanup(int sig){
+  /* Send signal to all children threads to terminate */
+  pthread_kill(gThreads[0], SIGRTMIN + (uint8_t)PID_LOGGING);
+  pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE);
+  pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);
+  pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_LIGHT);
+
+  /* Trigger while-loop in main to exit; cleanup allocated resources */
+  gExit = 0;
 }

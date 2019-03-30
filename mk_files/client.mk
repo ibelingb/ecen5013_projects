@@ -12,3 +12,4 @@
 
 # source files
 SRCS += src/remoteClient.c
+PLATFORM=LINUX

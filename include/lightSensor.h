@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #define APDS9301_PARTNO (0x05)
 #define LIGHT_DARK_THRESHOLD (150) /* Lux sensor value to transition between Light and Dark states */
