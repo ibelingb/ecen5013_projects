@@ -122,6 +122,8 @@ void* lightSensorThreadHandler(void* threadInfo)
   /* Set initial states for LightSensor */
   initLightSensor(sensorFd);
 
+  MUTED_PRINT("lightThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_LIGHT);
+
   /* Setup timer to periodically sample from Light Sensor */
   while(aliveFlag) {
     /* Capture light sensor data from device */
@@ -162,7 +164,7 @@ void* lightSensorThreadHandler(void* threadInfo)
 
   /* Thread Cleanup */
   LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
-  INFO_PRINT("Light thread exiting\n");
+  ERROR_PRINT("Light thread exiting\n");
   timer_delete(timerid);
   mq_close(hbMsgQueue);
   close(sharedMemFd);

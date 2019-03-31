@@ -79,9 +79,10 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     MainAction_e action;
     static uint8_t threadMissingCount[NUM_THREADS + 1];     /* 1 is to provide slot for PID_END enum value */
     uint8_t missingFlag[NUM_THREADS + 1];                   /* 1 is to provide slot for PID_END enum value */
-    uint8_t ind, msgCount, prevErrorCount;
+    uint8_t ind, msgCount;
     struct mq_attr Attr;
     static uint8_t errorCount = 0;
+    static uint8_t prevErrorCount;
     prevErrorCount = errorCount;
 
     if((pQueue == NULL) || (pExit == NULL)) {
@@ -143,7 +144,6 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
                 INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
                 if(prevErrorCount != errorCount) {
                     *newError = 1;
-                    prevErrorCount = errorCount;
                 }
                 return EXIT_SUCCESS;
             }
@@ -170,7 +170,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);
     if(prevErrorCount != errorCount) {
         *newError = 1;
-        prevErrorCount = errorCount;
+        MUTED_PRINT("prevErrorCount: %d, errorCount: %d\n", prevErrorCount, errorCount);
     }
     return EXIT_SUCCESS;
 }

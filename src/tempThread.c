@@ -130,6 +130,7 @@ void* tempSensorThreadHandler(void* threadInfo)
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_INIT_ERROR);
     errCount++; 
   }
+  MUTED_PRINT("tempThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_TEMP);
 
   /** set up timer **/
   /* Clear memory objects */
@@ -143,8 +144,6 @@ void* tempSensorThreadHandler(void* threadInfo)
 
   while(aliveFlag) 
   {
-    MUTED_PRINT("temp alive\n");
-
     /* get data */
     pthread_mutex_lock(sensorInfo.i2cBusMutex);
     errCount += getData(fd, &data);
@@ -187,7 +186,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   }
 
   LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_EXITING);
-  INFO_PRINT("temp thread exiting\n");
+  ERROR_PRINT("temp thread exiting\n");
   timer_delete(timerid);
   close(sharedMemFd);
   return NULL;

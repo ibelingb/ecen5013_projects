@@ -124,6 +124,8 @@ void* logThreadHandler(void* threadInfo)
     timer_interval.tv_sec = LOG_LOOP_TIME_SEC;
     setupTimer(&set, &timerid, signum, &timer_interval);
 
+    MUTED_PRINT("loggingThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_LOGGING);
+
     /* keep dequeuing and writing msgs until self decides to exit */
     while(exitFlag)
     {
@@ -180,7 +182,7 @@ void* logThreadHandler(void* threadInfo)
     timer_delete(timerid);
     mq_close(hbMsgQueue);
     close(logFd);
-    INFO_PRINT("logger thread exiting\n");
+    ERROR_PRINT("logger thread exiting\n");
     return NULL;
 }
 /*---------------------------------------------------------------------------------*/

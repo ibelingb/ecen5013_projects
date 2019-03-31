@@ -190,13 +190,17 @@ uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd)
 	if(pData == NULL)
 		return LOG_STATUS_NOTOK;
 
-	write(fileFd, pData, len);
+	if(write(fileFd, pData, len) < len) {
+		return LOG_STATUS_NOTOK;
+	}
 	return LOG_STATUS_OK;
 }
 
 uint8_t log_byte(uint8_t value, int fileFd)
 {
-	write(fileFd, &value, 1);
+	if(write(fileFd, &value, 1) < 1) {
+		return LOG_STATUS_NOTOK;
+	}
 	return LOG_STATUS_OK;
 }
 
@@ -206,9 +210,13 @@ uint8_t log_string(uint8_t *pStr, int fileFd)
 
 	while(*pChar != '\0')
 	{
-		write(fileFd, pChar++, 1);
+		if(write(fileFd, pChar++, 1) < 1) {
+			return LOG_STATUS_NOTOK;
+		}
 	}
-	write(fileFd, pChar, 1);
+	if(write(fileFd, pChar, 1) < 1) {
+		return LOG_STATUS_NOTOK;
+	}
 
 	return LOG_STATUS_OK;
 }
@@ -226,7 +234,9 @@ uint8_t log_integer(int32_t num, int fileFd)
 	uint8_t *pChar = &numStr[0];
 	for(;ind < len; ++ind)
 	{
-		write(fileFd, pChar++, 1);
+		if(write(fileFd, pChar++, 1) < 1) {
+			return LOG_STATUS_NOTOK;
+		}
 	}
 	return LOG_STATUS_OK;
 }

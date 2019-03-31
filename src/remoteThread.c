@@ -167,10 +167,11 @@ void* remoteThreadHandler(void* threadInfo)
   /* Log RemoteThread successfully created */
   printf("Created remoteThread to listen on port %d.\n", PORT);
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+  MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE);
 
   while(aliveFlag) {
     /* TODO - derive method to set status sent to main */
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
     /* Accept Client Connection */
@@ -242,7 +243,7 @@ void* remoteThreadHandler(void* threadInfo)
 
   /* Thread Cleanup */
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
-  printf("Remote thread exiting\n");
+  ERROR_PRINT("Remote thread exiting\n");
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);

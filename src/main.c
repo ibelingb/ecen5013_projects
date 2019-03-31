@@ -229,14 +229,12 @@ int main(int argc, char *argv[]){
   timer_interval.tv_sec = MAIN_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
 
-  /* Log main thread started succesfully */
-  MUTED_PRINT("The Main() thread has successfully started with all child threads created.\n");
+  /* initialize status LED */
+  initLed();
 
   /* system is now fully functional */
   LOG_SYSTEM_INITIALIZED();
-
-  /* initialize status LED */
-  initLed();
+  MUTED_PRINT("main started successfully, pid: %d\n",(pid_t)syscall(SYS_gettid));
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
@@ -248,6 +246,7 @@ int main(int argc, char *argv[]){
     //LOG_HEARTBEAT();
     newError = 0;
     monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
+    MUTED_PRINT("newError: %d\n", newError);
     setStatusLed(newError);
   }
   LOG_SYSTEM_HALTED();
