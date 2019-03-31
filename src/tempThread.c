@@ -35,7 +35,7 @@
 #include "platform.h"
 #include "healthMonitor.h"
 
-#define TEMP_ERR_COUNT_LIMIT  (8)
+#define TEMP_ERR_COUNT_LIMIT  (1)
 #define INIT_TEMP_AVG_COUNT   (8)
 #define INIT_THRESHOLD_PAD    (2)
 
@@ -63,6 +63,7 @@ void* tempSensorThreadHandler(void* threadInfo)
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
+  uint8_t statusMsgCount;
   mqd_t hbMsgQueue = -1;  /* main status MessageQueue */
 
   /* timer variables */
@@ -144,6 +145,8 @@ void* tempSensorThreadHandler(void* threadInfo)
 
   while(aliveFlag) 
   {
+    statusMsgCount = 0;
+
     /* get data */
     pthread_mutex_lock(sensorInfo.i2cBusMutex);
     errCount += getData(fd, &data);
@@ -154,6 +157,7 @@ void* tempSensorThreadHandler(void* threadInfo)
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_READ_ERROR);
       SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
       errCount = 0;
+      ++statusMsgCount;
     }
 
     /* send log msg on alert edge */
@@ -162,6 +166,7 @@ void* tempSensorThreadHandler(void* threadInfo)
       overTempState = 1;
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP);
       SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+      ++statusMsgCount;
       printf("Temp Sensor - Normal->Over-temp Transition detected\n");
 
     }
@@ -170,6 +175,7 @@ void* tempSensorThreadHandler(void* threadInfo)
       overTempState = 0;
       LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_OVERTEMP_RELEQUISHED);
       SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NONE1);
+      ++statusMsgCount;
       printf("Temp Sensor - Over-temp->Normal Transition detected\n");
     }
 
@@ -178,8 +184,12 @@ void* tempSensorThreadHandler(void* threadInfo)
     memcpy(sharedMemPtr+(sensorInfo.tempDataOffset), &data, sizeof(TempDataStruct));
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
-    /* TODO - derive method to set status sent to main */
-    SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_OK, ERROR_CODE_USER_NONE0);
+    /* only send OK status at rate of other threads 
+    * and if we didn't send error status yet */
+    if(statusMsgCount == 0) {
+        SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_OK, ERROR_CODE_USER_NONE0);
+        ++statusMsgCount;
+    }
       
     /* wait on signal timer */
     sigwait(&set, &signum);
@@ -313,42 +323,42 @@ uint8_t getData(int fd, TempDataStruct *pData)
   TempDataStruct tmp;
   /* get temp */
   if(tmp102_getTempC(fd, &tmp.tmp102_temp) < 0)
-  { ERROR_PRINT("tmp102_getTempC failed\n"); errCount++; }
+  { MUTED_PRINT("tmp102_getTempC failed\n"); errCount++; }
   else { MUTED_PRINT("got temp value: %f degC\n", tmp.tmp102_temp); }
 
   /*read threshold value */
   if(EXIT_FAILURE == tmp102_getLowThreshold(fd, &tmp.tmp102_lowThreshold))
-  { ERROR_PRINT("tmp102_getLowThreshold write failed\n"); errCount++; }
+  { MUTED_PRINT("tmp102_getLowThreshold write failed\n"); errCount++; }
   else { MUTED_PRINT("got Tlow value: %f\n", tmp.tmp102_lowThreshold); }
 
   /*read threshold value */
 	if(EXIT_FAILURE == tmp102_getHighThreshold(fd, &tmp.tmp102_highThreshold))
-	{ ERROR_PRINT("tmp102_getHighThreshold write failed\n"); errCount++; }
+	{ MUTED_PRINT("tmp102_getHighThreshold write failed\n"); errCount++; }
 	else { MUTED_PRINT("got Thigh value: %f\n", tmp.tmp102_highThreshold); }
 
   /*read value */
 	if(EXIT_FAILURE == tmp102_getFaultQueueSize(fd, &tmp.tmp102_fault))
-	{ ERROR_PRINT("tmp102_getFaultQueueSize read failed\n"); errCount++; }
+	{ MUTED_PRINT("tmp102_getFaultQueueSize read failed\n"); errCount++; }
 	else { MUTED_PRINT("got startCount value: %d\n", tmp.tmp102_fault); }
 
   /*read value */
 	if(EXIT_FAILURE == tmp102_getExtendedMode(fd, &tmp.tmp102_extendedMode))
-	{ ERROR_PRINT("tmp102_getExtendedMode read failed\n"); errCount++; }
+	{ MUTED_PRINT("tmp102_getExtendedMode read failed\n"); errCount++; }
 	else { MUTED_PRINT("got startMode value: %d\n", tmp.tmp102_extendedMode); }
 
   /*read value */
 	if(EXIT_FAILURE == tmp102_getShutdownState(fd, &tmp.tmp102_shutdownMode))
-	{ ERROR_PRINT("tmp102_getShutdownState read failed\n"); errCount++; }
+	{ MUTED_PRINT("tmp102_getShutdownState read failed\n"); errCount++; }
 	else { MUTED_PRINT("got startState value: %d\n", tmp.tmp102_shutdownMode); }
 
   /*read value */
 	if(EXIT_FAILURE == tmp102_getConvRate(fd, &tmp.tmp102_convRate))
-	{ ERROR_PRINT("tmp102_getConvRate read failed\n"); errCount++; }
+	{ MUTED_PRINT("tmp102_getConvRate read failed\n"); errCount++; }
 	else { MUTED_PRINT("got startRate value: %d\n", tmp.tmp102_convRate); }
 
   /*read start alert value */
 	if(EXIT_FAILURE == tmp102_getAlert(fd, &tmp.tmp102_alert))
-	{ ERROR_PRINT("tmp102_getAlert read failed\n"); errCount++; }
+	{ MUTED_PRINT("tmp102_getAlert read failed\n"); errCount++; }
 	else { MUTED_PRINT("got startAlert value: %d\n", tmp.tmp102_alert); }
 
   *pData = tmp;

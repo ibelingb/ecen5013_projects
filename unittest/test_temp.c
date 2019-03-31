@@ -363,12 +363,12 @@ int8_t test_AlertPolarity(void)
 	/*read start polarity value */
 	if(EXIT_FAILURE == tmp102_getPolarity(fd, &startPol))
 	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
-	else { INFO_PRINT("got startPol value: %d\n", startPol); }
+	else { ERROR_PRINT("got startPol value: %d\n", startPol); }
 
 	/*read start alert value */
 	if(EXIT_FAILURE == tmp102_getAlert(fd, &startAlert))
 	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
-	else { INFO_PRINT("got startAlert value: %d\n", startAlert); }
+	else { ERROR_PRINT("got startAlert value: %d\n", startAlert); }
 
 	/* set new value */
 	newPol = !startPol;
@@ -380,12 +380,12 @@ int8_t test_AlertPolarity(void)
 	/* read it back */
 	if(EXIT_FAILURE == tmp102_getPolarity(fd, &tmpPol))
 	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
-	else { INFO_PRINT("got tmpPol value: %d\n", tmpPol); }
+	else { ERROR_PRINT("got tmpPol value: %d\n", tmpPol); }
 
 	/*read start alert value */
 	if(EXIT_FAILURE == tmp102_getAlert(fd, &newAlert))
 	{ ERROR_PRINT("test_AlertPolarity read failed\n"); return EXIT_FAILURE; }
-	else { INFO_PRINT("got newAlert value: %d\n", newAlert); }
+	else { ERROR_PRINT("got newAlert value: %d\n", newAlert); }
 
 	/* verify read back value match write value */
 	if(newPol != tmpPol)
