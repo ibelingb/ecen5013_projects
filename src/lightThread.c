@@ -127,12 +127,15 @@ void* lightSensorThreadHandler(void* threadInfo)
   /* Set initial states for LightSensor */
   if(initLightSensor(sensorFd) == EXIT_FAILURE) {
     SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_BIST_COMPLETE);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_INIT_ERROR);
     ERROR_PRINT("lightThread initialization failed.\n");
+  } else {
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_BIST_COMPLETE);
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_INIT_SUCCESS);
   }
 
   /* Log SensorThread successfully created */
-  LOG_INFO("Successfully created lightSensorThread.\n");
   MUTED_PRINT("lightThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_LIGHT);
 
   /* Setup timer to periodically sample from Light Sensor */

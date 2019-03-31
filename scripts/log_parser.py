@@ -73,9 +73,10 @@ class logMsg_e(IntEnum):
     LIGHT_SENSOR_EVENT = 23
     TEMP_SENSOR_EVENT = 24
     REMOTE_HANDLING_EVENT = 25
-    LOG_EVENT = 26
-    MAIN_EVENT = 27
-    END = 28
+    REMOTE_CMD_EVENT = 26
+    LOG_EVENT = 27
+    MAIN_EVENT = 28
+    END = 29
 
 
 class funcType_e(IntEnum):
@@ -137,6 +138,28 @@ class RemoteEvent_e(IntEnum):
     EXITING = 6
     END = 7
 
+class RemoteCmd_e(IntEnum):
+    TEMPCMD_GETTEMP = 1
+    TEMPCMD_GETLOWTHRES = 2
+    TEMPCMD_GETHIGHTHRES = 3
+    TEMPCMD_GETCONFIG = 4
+    TEMPCMD_GETRESOLUTION = 5
+    TEMPCMD_GETFAULT = 6
+    TEMPCMD_GETEXTMODE = 7
+    TEMPCMD_GETSHUTDOWNMODE = 8
+    TEMPCMD_GETALERT = 9
+    TEMPCMD_GETCONVRATE = 10
+    LIGHTCMD_GETLUXDATA = 11
+    LIGHTCMD_GETPOWERCTRL = 12
+    LIGHTCMD_GETDEVPARTNO = 13
+    LIGHTCMD_GETDEVREVNO = 14
+    LIGHTCMD_GETTIMINGGAIN = 15
+    LIGHTCMD_GETTIMINGINTEGRATION = 16
+    LIGHTCMD_GETINTSELECT = 17
+    LIGHTCMD_GETINTPERSIST = 18
+    LIGHTCMD_GETLOWTHRES = 19
+    LIGHTCMD_GETHIGHTHRES = 20
+
 class LightEvent_e(IntEnum):
     STARTED = 0
     DAY = 1
@@ -147,8 +170,10 @@ class LightEvent_e(IntEnum):
     LOG_QUEUE_ERROR = 6
     SHMEM_ERROR = 7
     I2C_ERROR = 8
-    EXITING = 9
-    END = 10
+    SENSOR_BIST_COMPLETE = 9
+    SENSOR_INIT_SUCCESS = 10
+    EXITING = 11
+    END = 12
 
 class TempEvent_e(IntEnum):
     STARTED = 0
@@ -160,8 +185,10 @@ class TempEvent_e(IntEnum):
     LOG_QUEUE_ERROR = 6
     SHMEM_ERROR = 7
     I2C_ERROR = 8
-    EXITING = 9
-    END = 10
+    SENSOR_BIST_COMPLETE = 9
+    SENSOR_INIT_SUCCESS = 10
+    EXITING = 11
+    END = 12
 
 
 def clear_log_item(my_log_item):
@@ -226,6 +253,8 @@ def print_message(item):
             print(TempEvent_e(int(item.payload, 16)).name, end="")
         elif item.eventId == logMsg_e.REMOTE_HANDLING_EVENT:
             print(RemoteEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.REMOTE_CMD_EVENT:
+            print(RemoteCmd_e(int(item.payload, 16)).name, end="")
         elif item.eventId == logMsg_e.LOG_EVENT:
             print(LogEvent_e(int(item.payload, 16)).name, end="")
         elif item.eventId == logMsg_e.MAIN_EVENT:

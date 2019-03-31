@@ -61,6 +61,7 @@
 #define LOG_TEMP_SENSOR_EVENT(event_e)
 #define LOG_LIGHT_SENSOR_EVENT(event_e)	
 #define LOG_REMOTE_HANDLING_EVENT(event_e)	
+#define LOG_REMOTE_CMD_EVENT(event_e)	
 #define LOG_LOG_EVENT(event_e)				
 #define LOG_MAIN_EVENT(event_e)	
 
@@ -427,11 +428,12 @@
 	LOG_ITEM(&logItem);\
 })
 
-#define LOG_TEMP_SENSOR_EVENT(event_e)		(LOG_THREAD_EVENT(event_e, LOG_MSG_TEMP_SENSOR_EVENT))
-#define LOG_LIGHT_SENSOR_EVENT(event_e)		(LOG_THREAD_EVENT(event_e, LOG_MSG_LIGHT_SENSOR_EVENT))
+#define LOG_TEMP_SENSOR_EVENT(event_e)		  (LOG_THREAD_EVENT(event_e, LOG_MSG_TEMP_SENSOR_EVENT))
+#define LOG_LIGHT_SENSOR_EVENT(event_e)		  (LOG_THREAD_EVENT(event_e, LOG_MSG_LIGHT_SENSOR_EVENT))
 #define LOG_REMOTE_HANDLING_EVENT(event_e)	(LOG_THREAD_EVENT(event_e, LOG_MSG_REMOTE_HANDLING_EVENT))
-#define LOG_LOG_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_LOG_EVENT))
-#define LOG_MAIN_EVENT(event_e)				(LOG_THREAD_EVENT(event_e, LOG_MSG_MAIN_EVENT))
+#define LOG_REMOTE_CMD_EVENT(event_e)	      (LOG_THREAD_EVENT(event_e, LOG_MSG_REMOTE_CMD_EVENT))
+#define LOG_LOG_EVENT(event_e)				      (LOG_THREAD_EVENT(event_e, LOG_MSG_LOG_EVENT))
+#define LOG_MAIN_EVENT(event_e)				      (LOG_THREAD_EVENT(event_e, LOG_MSG_MAIN_EVENT))
 
 #endif  /* DEBUG */
 #endif	/* LOGGER_H */

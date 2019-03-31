@@ -244,7 +244,8 @@ void* remoteThreadHandler(void* threadInfo)
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
 static void getCmdResponse(RemoteCmdPacket* packet){
-  bool validCmdRecv = true;
+  /* Log cmd received */
+  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
 
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
@@ -331,12 +332,11 @@ static void getCmdResponse(RemoteCmdPacket* packet){
     default:
       ERROR_PRINT("cmd received with value {%d} not recognized - cmd ignored\n", packet->cmd);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
-      validCmdRecv = false;
-      break;
+      return;
   }
 
-  if(validCmdRecv)
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
+  /* Log which command was received */
+  LOG_REMOTE_CMD_EVENT(packet->cmd);
 
   return;
 }

@@ -127,9 +127,14 @@ void* tempSensorThreadHandler(void* threadInfo)
   if(initSensor(fd) == EXIT_FAILURE) { 
     ERROR_PRINT("temp initSensor failed\n"); 
     SEND_STATUS_MSG(hbMsgQueue, PID_TEMP, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_BIST_COMPLETE);
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_INIT_ERROR);
     errCount++; 
+  } else {
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_BIST_COMPLETE);
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_SENSOR_INIT_SUCCESS);
   }
+
   MUTED_PRINT("tempThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_TEMP);
 
   /** set up timer **/

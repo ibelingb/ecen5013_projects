@@ -41,8 +41,7 @@ typedef enum {
   REMOTE_EVENT_END
 } RemoteEvent_e;
 
-typedef enum RemoteCmd_e
-{
+typedef enum {
   TEMPCMD_GETTEMP = 1,
   TEMPCMD_GETLOWTHRES,
   TEMPCMD_GETHIGHTHRES,
