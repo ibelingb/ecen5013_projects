@@ -73,14 +73,6 @@ typedef enum TaskStatus_e
   STATUS_END
 } TaskStatus_e;
 
-// TODO - Needed? Could just reuse ProcessId_e or have this separate enum
-typedef enum Task_e
-{
-  TASK_LIGHT = 0,
-  TASK_TEMP,
-} Task_e;
-
-// TODO - move to header
 typedef enum {
     MAIN_EVENT_STARTED_THREADS = 0,
     MAIN_EVENT_LIGHT_THREAD_UNRESPONSIVE,
@@ -92,18 +84,6 @@ typedef enum {
     MAIN_EVENT_ISSUING_EXIT_CMD,
     MAIN_EVENT_END
 } MainEvent_e;
-
-// TODO - move to header
-typedef enum {
-    REMOTE_EVENT_STARTED = 0,
-    REMOTE_EVENT_CNCT_ACCEPTED,
-    REMOTE_EVENT_CNCT_LOST,
-    REMOTE_EVENT_CMD_RECV,
-    REMOTE_EVENT_INVALID_RECV,
-    REMOTE_EVENT_ERROR,
-    REMOTE_EVENT_EXITING,
-    REMOTE_EVENT_END
-} RemoteEvent_e;
 
 typedef enum {
   ERROR_CODE_NONE = 0,

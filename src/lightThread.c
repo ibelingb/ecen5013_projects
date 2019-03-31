@@ -57,7 +57,7 @@ void* lightSensorThreadHandler(void* threadInfo)
 {
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
   LightDataStruct lightSensorData = {0};
-  LightState_e lightState = LUX_STATE_DARK;
+  LightState_e lightState = LUX_STATE_LIGHT;
   int sensorFd;
   void* sharedMemPtr = NULL;
   int sharedMemFd;

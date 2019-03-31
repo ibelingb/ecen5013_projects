@@ -30,6 +30,17 @@ typedef union StatusData {
   float status_float;
 } StatusData;
 
+typedef enum {
+  REMOTE_EVENT_STARTED = 0,
+  REMOTE_EVENT_CNCT_ACCEPTED,
+  REMOTE_EVENT_CNCT_LOST,
+  REMOTE_EVENT_CMD_RECV,
+  REMOTE_EVENT_INVALID_RECV,
+  REMOTE_EVENT_ERROR,
+  REMOTE_EVENT_EXITING,
+  REMOTE_EVENT_END
+} RemoteEvent_e;
+
 typedef enum RemoteCmd_e
 {
   TEMPCMD_GETTEMP = 1,
