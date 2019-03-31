@@ -24,6 +24,20 @@
 #include "lightSensor.h"
 #include "packet.h"
 
+typedef enum {
+  LIGHT_EVENT_STARTED = 0,
+  LIGHT_EVENT_DAY,
+  LIGHT_EVENT_NIGHT,
+  LIGHT_EVENT_SENSOR_INIT_ERROR,
+  LIGHT_EVENT_SENSOR_READ_ERROR,
+  LIGHT_EVENT_STATUS_QUEUE_ERROR,
+  LIGHT_EVENT_LOG_QUEUE_ERROR,
+  LIGHT_EVENT_SHMEM_ERROR,
+  LIGHT_EVENT_I2C_ERROR,
+  LIGHT_EVENT_EXITING,
+  LIGHT_EVENT_END
+} LightEvent_e;
+
 /*---------------------------------------------------------------------------------*/
 
 /**

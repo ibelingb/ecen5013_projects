@@ -105,16 +105,6 @@ typedef enum {
     REMOTE_EVENT_END
 } RemoteEvent_e;
 
-// TODO - move to header
-typedef enum {
-    LIGHT_EVENT_STARTED = 0,
-    LIGHT_EVENT_DAY,
-    LIGHT_EVENT_NIGHT,
-    LIGHT_EVENT_ERROR,
-    LIGHT_EVENT_EXITING,
-    LIGHT_EVENT_END
-} LightEvent_e;
-
 typedef enum {
   ERROR_CODE_NONE = 0,
   ERROR_CODE_TIMEOUT,

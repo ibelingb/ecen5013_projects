@@ -89,6 +89,14 @@ void* tempSensorThreadHandler(void* threadInfo)
     }
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
+  /* main status msg queue */
+  hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
+  if(hbMsgQueue == -1) {
+    ERROR_PRINT("ERROR: tempThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STATUS_QUEUE_ERROR);
+    return NULL;
+  }
+  
   /* init handle for i2c bus */
 	int fd = initIic("/dev/i2c-2");
 	if(fd < 0) {
@@ -97,7 +105,6 @@ void* tempSensorThreadHandler(void* threadInfo)
     LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_I2C_ERROR);
   }
 	  
-  
   /* Setup Shared memory for thread */
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
@@ -116,14 +123,6 @@ void* tempSensorThreadHandler(void* threadInfo)
     return NULL;
   }
 
-  /* main status msg queue */
-  hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
-  if(hbMsgQueue == -1) {
-    ERROR_PRINT("ERROR: tempThread Failed to Open heartbeat MessageQueue - exiting.\n");
-    LOG_TEMP_SENSOR_EVENT(TEMP_EVENT_STATUS_QUEUE_ERROR);
-    return NULL;
-  }
-  
   /* initialize sensor */
   if(initSensor(fd) == EXIT_FAILURE) { 
     ERROR_PRINT("temp initSensor failed\n"); 

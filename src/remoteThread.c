@@ -48,18 +48,6 @@ static TempDataStruct tempData;  /* Used to read data from Shared Memory */
 static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
-void remoteSigHandler(int signo, siginfo_t *info, void *extra)
-{
-	INFO_PRINT("remoteSigHandler, signum: %d\n",info->si_signo);
-  aliveFlag = 0;
-}
-
-void remoteGetAliveFlag(uint8_t *pAlive)
-{
-  if(pAlive != NULL)
-    *pAlive = aliveFlag;
-}
-
 void* remoteThreadHandler(void* threadInfo)
 {
   sensorInfo = *(SensorThreadInfo *)threadInfo;
@@ -92,7 +80,6 @@ void* remoteThreadHandler(void* threadInfo)
 
   /* block SIGRTs signals */
   sigemptyset(&mask);
-
   for(ind = 0; ind < NUM_THREADS; ++ind)
   {
     if(ind != (uint8_t)PID_REMOTE)
@@ -104,12 +91,12 @@ void* remoteThreadHandler(void* threadInfo)
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
   if(logMsgQueue == -1){
-    printf("ERROR: remoteThread Failed to Open Logging MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteThread Failed to Open Logging MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
   if(hbMsgQueue == -1) {
-    printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
@@ -117,7 +104,7 @@ void* remoteThreadHandler(void* threadInfo)
   /* Setup Shared memory for thread */
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
-    printf("ERROR: remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
@@ -125,7 +112,7 @@ void* remoteThreadHandler(void* threadInfo)
   /* Memory map the shared memory */
   sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
   if(*(int *)sharedMemPtr == -1) {
-    printf("ERROR: remoteThread Failed to complete memory mapping of shared memory - exiting\n");
+    ERROR_PRINT("remoteThread Failed to complete memory mapping of shared memory - exiting\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
@@ -134,7 +121,7 @@ void* remoteThreadHandler(void* threadInfo)
   /* Create Socket */
   sockfdServer = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfdServer == -1){
-    printf("ERROR: remoteThread failed to create socket - exiting.\n");
+    ERROR_PRINT("remoteThread failed to create socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
@@ -152,22 +139,22 @@ void* remoteThreadHandler(void* threadInfo)
   servAddr.sin_addr.s_addr = INADDR_ANY;
   servAddr.sin_port = htons((int)PORT);
   if(bind(sockfdServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
-    printf("ERROR: remoteThread failed to bind socket - exiting.\n");
+    ERROR_PRINT("remoteThread failed to bind socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
   if(listen(sockfdServer, MAX_CLIENTS) == -1) {
-    printf("ERROR: remoteThread failed to successfully listen for client connection - exiting.\n");
+    ERROR_PRINT("remoteThread failed to successfully listen for client connection - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     return NULL;
   }
 
   /* Log RemoteThread successfully created */
-  printf("Created remoteThread to listen on port %d.\n", PORT);
-  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+  INFO_PRINT("Created remoteThread to listen on port %d.\n", PORT);
   MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE);
+  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
 
   while(aliveFlag) {
     /* TODO - derive method to set status sent to main */
@@ -184,7 +171,7 @@ void* remoteThreadHandler(void* threadInfo)
         }
 
         /* Report error if client fails to connect to server */
-        printf("ERROR: remoteThread failed to accept client connection for socket - exiting.\n");
+        ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
         continue;
       } else if(sockfdClient > 0) {
@@ -206,19 +193,19 @@ void* remoteThreadHandler(void* threadInfo)
       }
 
       /* Handle error with receiving data from client socket */
-      printf("ERROR: remoteThread failed to handle incoming command from remote client.\n");
+      ERROR_PRINT("remoteThread failed to handle incoming command from remote client.\n");
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
       continue;
     } else if(clientResponse == 0) { 
       /* Handle disconnect from client socket */
-      printf("WARNING: remoteThread connection lost with client on port %d.\n", PORT);
+      printf("remoteThread connection lost with client on port %d.\n", PORT);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
       continue;
     }
 
     /* Verify bytes received is the expected size for a cmdPacket */
     if(clientResponse != cmdPacketSize){
-      printf("ERROR: remoteThread received cmd of invalid length from remote client.\n"
+      ERROR_PRINT("remoteThread received cmd of invalid length from remote client.\n"
              "Expected {%d} | Received {%d}", cmdPacketSize, clientResponse);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
       continue;
@@ -235,7 +222,7 @@ void* remoteThreadHandler(void* threadInfo)
 
     /* Transmit data packet back to remote client requesting data */
     if(send(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
-      printf("ERROR: remoteThread failed to handle outgoing requested data to remote client.\n");
+      ERROR_PRINT("remoteThread failed to handle outgoing requested data to remote client.\n");
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
       continue;
     }
@@ -348,10 +335,24 @@ static void getCmdResponse(RemoteCmdPacket* packet){
       break;
   }
 
-  /* TODO: Below log causing 3-4 sec delay if too many commands are received - need to resolve */
   if(validCmdRecv)
-    //LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
 
   return;
 }
+
+/*---------------------------------------------------------------------------------*/
+void remoteSigHandler(int signo, siginfo_t *info, void *extra)
+{
+	INFO_PRINT("remoteSigHandler, signum: %d\n",info->si_signo);
+  aliveFlag = 0;
+}
+
+/*---------------------------------------------------------------------------------*/
+void remoteGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
+}
+
 /*---------------------------------------------------------------------------------*/

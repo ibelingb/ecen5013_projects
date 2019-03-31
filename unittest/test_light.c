@@ -428,12 +428,12 @@ int8_t test_InterruptThresholdReadWrite(void)
 	
 
 	/* Set device Interrupt high Threshold to 0x9999 */
-	if(EXIT_FAILURE == apds9301_setLowIntThreshold(fd, highThresholdWrite)) { 
+	if(EXIT_FAILURE == apds9301_setHighIntThreshold(fd, highThresholdWrite)) { 
     ERROR_PRINT("test_InterruptThresholdReadWrite write failed\n"); 
     return EXIT_FAILURE; 
   }
 	/* Read register for high threshold value */
-	if(EXIT_FAILURE == apds9301_getLowIntThreshold(fd, &highThresholdRead)) { 
+	if(EXIT_FAILURE == apds9301_getHighIntThreshold(fd, &highThresholdRead)) { 
     ERROR_PRINT("test_InterruptThresholdReadWrite read failed\n"); 
     return EXIT_FAILURE; 
   } else { 

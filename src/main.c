@@ -280,6 +280,7 @@ void mainCleanup(int sig){
   pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE);
   pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);
   pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_LIGHT);
+  printf("\nDelay to allow threads to terminate gracefully and log exit events...\n\n");
   sleep(3);
 
   /* Trigger while-loop in main to exit; cleanup allocated resources */
