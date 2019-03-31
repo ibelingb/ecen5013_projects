@@ -27,8 +27,7 @@
 #include "remoteThread.h"
 #include "packet.h"
 
-// TODO: Update dynamically as command line argument
-#define SERV_ADDR "192.168.1.220"
+#define DEFAULT_SERV_ADDR "192.168.1.220"
 #define BUFFER_SIZE (3)
 
 /* Prototypes for private/helper functions */
@@ -38,16 +37,22 @@ static void getCmdResponse(RemoteCmdPacket *packet);
 /* Define static and global variables */
 
 /*---------------------------------------------------------------------------------*/
-int main()
+int main(int argc, char *argv[])
 {
   RemoteCmdPacket cmdPacket = {0};
   int sockfd;
   struct sockaddr_in servAddr;
   int inputCmd = 0;
+  char *ipAddress = DEFAULT_SERV_ADDR;
   char inputBuffer[BUFFER_SIZE];
 
+  /* If IP Address provided as cmdline arg, set as IP */
+  if(argc >= 2) {
+    ipAddress = argv[1];
+  }
+
   /** Establish connection on remote socket **/
-  /* Open Socket */
+  /* Open Socket - verify ID is valid */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfd == -1){
     printf("ERROR: remoteClient Application failed to create socket - exiting.\n");
@@ -57,7 +62,10 @@ int main()
   /* Establish Connection with Server */
   servAddr.sin_family = AF_INET;
   servAddr.sin_port = htons((int)PORT);
-  inet_pton(AF_INET, SERV_ADDR, &servAddr.sin_addr);
+  if(inet_pton(AF_INET, ipAddress, &servAddr.sin_addr) != 1){
+    printf("ERROR: remoteClient Application IP address provided of {%s} is invalid - exiting.\n", ipAddress);
+    return -1;
+  }
 
   if(connect(sockfd, (struct sockaddr *)&servAddr, sizeof(servAddr)) == -1) {
     printf("ERROR: remoteClient Application failed to successfully connect to server - exiting.\n");
