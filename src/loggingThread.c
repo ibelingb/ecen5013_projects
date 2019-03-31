@@ -65,7 +65,7 @@ void* logThreadHandler(void* threadInfo)
     int signum = SIGALRM;
     struct timespec timer_interval;
     uint8_t ind, statusMsgCount;
-	sigset_t mask;
+	  sigset_t mask;
 
     /* instantiate temp msg variable for dequeuing */
     logItem_t logItem, prevLogItem;

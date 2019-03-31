@@ -87,17 +87,19 @@ void* remoteThreadHandler(void* threadInfo)
   }
   pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
+  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+
   /* Open FDs for Main and Logging Message queues */
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
   if(logMsgQueue == -1){
     ERROR_PRINT("remoteThread Failed to Open Logging MessageQueue - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_LOG_QUEUE_ERROR);
     return NULL;
   }
   if(hbMsgQueue == -1) {
     ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_STATUS_QUEUE_ERROR);
     return NULL;
   }
 
@@ -105,7 +107,7 @@ void* remoteThreadHandler(void* threadInfo)
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
     ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SHMEM_ERROR);
     return NULL;
   }
 
@@ -113,7 +115,7 @@ void* remoteThreadHandler(void* threadInfo)
   sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
   if(*(int *)sharedMemPtr == -1) {
     ERROR_PRINT("remoteThread Failed to complete memory mapping of shared memory - exiting\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SHMEM_ERROR);
     return NULL;
   }
 
@@ -122,7 +124,7 @@ void* remoteThreadHandler(void* threadInfo)
   sockfdServer = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfdServer == -1){
     ERROR_PRINT("remoteThread failed to create socket - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
@@ -140,24 +142,56 @@ void* remoteThreadHandler(void* threadInfo)
   servAddr.sin_port = htons((int)PORT);
   if(bind(sockfdServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
     ERROR_PRINT("remoteThread failed to bind socket - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
   if(listen(sockfdServer, MAX_CLIENTS) == -1) {
     ERROR_PRINT("remoteThread failed to successfully listen for client connection - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Log RemoteThread successfully created */
   INFO_PRINT("Created remoteThread to listen on port %d.\n", PORT);
   MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE);
-  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+
+  /* BIST/Power-on Test 
+   *    - Waiting for client connection at this point;
+   *    - Verify able to lock mutex and communicate with Shared Memory.
+   */
+  /* Write invalid/inaccurate values to tempData and lightData - verify overwritten by reading SHMEM */
+  tempData.tmp102_temp = 5;
+  tempData.overTempState = 5;
+  lightData.apds9301_luxData = 5;
+  lightData.lightState = 5;
+  pthread_mutex_lock(sensorInfo.sharedMemMutex);
+  memcpy(&tempData, (sharedMemPtr+sensorInfo.tempDataOffset), sizeof(struct TempDataStruct));
+  memcpy(&lightData, (sharedMemPtr+sensorInfo.lightDataOffset), sizeof(struct LightDataStruct));
+  pthread_mutex_unlock(sensorInfo.sharedMemMutex);
+  if((tempData.tmp102_temp != 5) &&
+     (tempData.overTempState != 5) &&
+     (lightData.apds9301_luxData != 5) &&
+     (lightData.lightState != 5))
+  {
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_BIST_COMPLETE);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_INIT_SUCCESS);
+  } else {
+    /* Failed to read SHMEM and overwrite local objects */
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_BIST_COMPLETE);
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_INIT_ERROR);
+    ERROR_PRINT("remoteThread initialization failed.\n");
+    return NULL;
+  }
+  /* Reset values to 0 */
+  tempData.tmp102_temp = 0;
+  tempData.overTempState = 0;
+  lightData.apds9301_luxData = 0;
+  lightData.lightState = 0;
+  /* BIST/Power-on Test Complete */
 
   while(aliveFlag) {
-    /* TODO - derive method to set status sent to main */
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
@@ -172,7 +206,7 @@ void* remoteThreadHandler(void* threadInfo)
 
         /* Report error if client fails to connect to server */
         ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
         continue;
       } else if(sockfdClient > 0) {
         /* Log RemoteThread successfully Connected to client */
@@ -194,7 +228,7 @@ void* remoteThreadHandler(void* threadInfo)
 
       /* Handle error with receiving data from client socket */
       ERROR_PRINT("remoteThread failed to handle incoming command from remote client.\n");
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       continue;
     } else if(clientResponse == 0) { 
       /* Handle disconnect from client socket */
@@ -207,7 +241,7 @@ void* remoteThreadHandler(void* threadInfo)
     if(clientResponse != cmdPacketSize){
       ERROR_PRINT("remoteThread received cmd of invalid length from remote client.\n"
              "Expected {%d} | Received {%d}", cmdPacketSize, clientResponse);
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
 
@@ -223,7 +257,7 @@ void* remoteThreadHandler(void* threadInfo)
     /* Transmit data packet back to remote client requesting data */
     if(send(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
       ERROR_PRINT("remoteThread failed to handle outgoing requested data to remote client.\n");
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
+      LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       continue;
     }
   }
