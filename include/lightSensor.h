@@ -98,7 +98,7 @@ int8_t apds9301_getLuxData(uint8_t file, float *luxData);
  * @param config - Pointer to return Power bits from Control Register.
  *
  * @return - Success or Failure status of get method
- */ // TODO: Update name to be apds9301_getPowerState
+ */
 int8_t apds9301_getControl(uint8_t file, Apds9301_PowerCtrl_e *control);
 
 /**
@@ -174,7 +174,7 @@ int8_t apds9301_getInterruptControl(uint8_t file, Apds9301_IntSelect_e *intSelec
  * @param control - Power state value to set to Control Register.
  *
  * @return - Success or Failure status of set method
- */ // TODO: Update name to be apds9301_setPowerState
+ */
 int8_t apds9301_setControl(uint8_t file, Apds9301_PowerCtrl_e control);
 
 /**

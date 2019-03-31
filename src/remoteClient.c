@@ -109,16 +109,18 @@ void appUsage(){
          "\t8  = TEMPCMD_GETSHUTDOWNMODE\n"
          "\t9  = TEMPCMD_GETALERT\n"
          "\t10 = TEMPCMD_GETCONVRATE\n"
-         "\t11 = LIGHTCMD_GETLUXDATA\n"
-         "\t12 = LIGHTCMD_GETPOWERCTRL\n"
-         "\t13 = LIGHTCMD_GETDEVPARTNO\n"
-         "\t14 = LIGHTCMD_GETDEVREVNO\n"
-         "\t15 = LIGHTCMD_GETTIMINGGAIN\n"
-         "\t16 = LIGHTCMD_GETTIMINGINTEGRATION\n"
-         "\t17 = LIGHTCMD_GETINTSELECT\n"
-         "\t18 = LIGHTCMD_GETINTPERSIST\n"
-         "\t19 = LIGHTCMD_GETLOWTHRES\n"
-         "\t20 = LIGHTCMD_GETHIGHTHRES\n"
+         "\t11 = TEMPCMD_GETOVERTEMPSTATE\n"
+         "\t12 = LIGHTCMD_GETLUXDATA\n"
+         "\t13 = LIGHTCMD_GETPOWERCTRL\n"
+         "\t14 = LIGHTCMD_GETDEVPARTNO\n"
+         "\t15 = LIGHTCMD_GETDEVREVNO\n"
+         "\t16 = LIGHTCMD_GETTIMINGGAIN\n"
+         "\t17 = LIGHTCMD_GETTIMINGINTEGRATION\n"
+         "\t18 = LIGHTCMD_GETINTSELECT\n"
+         "\t19 = LIGHTCMD_GETINTPERSIST\n"
+         "\t20 = LIGHTCMD_GETLOWTHRES\n"
+         "\t21 = LIGHTCMD_GETHIGHTHRES\n"
+         "\t22 = LIGHTCMD_GETLIGHTSTATE\n"
   );
 }
 
@@ -155,6 +157,9 @@ static void getCmdResponse(RemoteCmdPacket *packet){
     case TEMPCMD_GETCONVRATE :
       printf("TEMPCMD_GETCONVRATE data received - {%d}\n", packet->data.status_uint32);
       break;
+    case TEMPCMD_GETOVERTEMPSTATE :
+      printf("TEMPCMD_GETOVERTEMPSTATE data received - {%d}\n", packet->data.status_uint32);
+      break;
     case LIGHTCMD_GETLUXDATA :
       printf("LIGHTCMD_GETLUXDATA data received - {%f}\n", packet->data.status_float);
       break;
@@ -184,6 +189,9 @@ static void getCmdResponse(RemoteCmdPacket *packet){
       break;
     case LIGHTCMD_GETHIGHTHRES :
       printf("LIGHTCMD_GETHIGHTHRES data received - {0x%x}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETLIGHTSTATE:
+      printf("LIGHTCMD_GETLIGHTSTATE data received - {0x%x}\n", packet->data.status_uint32);
       break;
     default:
       printf("Unrecognized command received. Request ignored.\n");

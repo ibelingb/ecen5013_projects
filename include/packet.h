@@ -74,15 +74,15 @@ typedef enum TaskStatus_e
 } TaskStatus_e;
 
 typedef enum {
-    MAIN_EVENT_STARTED_THREADS = 0,
-    MAIN_EVENT_LIGHT_THREAD_UNRESPONSIVE,
-    MAIN_EVENT_TEMP_THREAD_UNRESPONSIVE,
-    MAIN_EVENT_REMOTE_THREAD_UNRESPONSIVE,
-    MAIN_EVENT_LOGGING_THREAD_UNRESPONSIVE,
-    MAIN_EVENT_RESTART_THREAD,
-    MAIN_EVENT_LOG_QUEUE_FULL,
-    MAIN_EVENT_ISSUING_EXIT_CMD,
-    MAIN_EVENT_END
+  MAIN_EVENT_STARTED_THREADS = 0,
+  MAIN_EVENT_LIGHT_THREAD_UNRESPONSIVE,
+  MAIN_EVENT_TEMP_THREAD_UNRESPONSIVE,
+  MAIN_EVENT_REMOTE_THREAD_UNRESPONSIVE,
+  MAIN_EVENT_LOGGING_THREAD_UNRESPONSIVE,
+  MAIN_EVENT_RESTART_THREAD,
+  MAIN_EVENT_LOG_QUEUE_FULL,
+  MAIN_EVENT_ISSUING_EXIT_CMD,
+  MAIN_EVENT_END
 } MainEvent_e;
 
 typedef enum {
@@ -188,6 +188,7 @@ typedef struct TempDataStruct
   Tmp102_Shutdown_e tmp102_shutdownMode;
   Tmp102_Alert_e tmp102_alert;
   Tmp102_ConvRate_e tmp102_convRate;
+  uint8_t overTempState;
 } TempDataStruct;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
@@ -203,6 +204,7 @@ typedef struct LightDataStruct
   Apds9301_IntPersist_e apds9301_intPersist;
   uint16_t apds9301_intThresLow;
   uint16_t apds9301_intThresHigh;
+  LightState_e lightState;
 } LightDataStruct;
 
 /* ------------------------------------------------------------- */

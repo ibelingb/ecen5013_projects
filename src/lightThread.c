@@ -147,10 +147,6 @@ void* lightSensorThreadHandler(void* threadInfo)
 
     if(status == EXIT_SUCCESS)
     {
-      /* Write to shared memory */
-      pthread_mutex_lock(sensorInfo.sharedMemMutex);
-      memcpy(sharedMemPtr+(sensorInfo.lightDataOffset), &lightSensorData, sizeof(LightDataStruct));
-      pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
       /* Set LightState Enum based on Lux data returned */
       if(lightSensorData.apds9301_luxData > LIGHT_DARK_THRESHOLD) {
@@ -170,6 +166,12 @@ void* lightSensorThreadHandler(void* threadInfo)
 
         lightState = LUX_STATE_DARK;
       }
+      lightSensorData.lightState = lightState;
+
+      /* Write to shared memory */
+      pthread_mutex_lock(sensorInfo.sharedMemMutex);
+      memcpy(sharedMemPtr+(sensorInfo.lightDataOffset), &lightSensorData, sizeof(LightDataStruct));
+      pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
       /* TODO - derive method to set status sent to main */
       SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_OK, ERROR_CODE_USER_NONE0);

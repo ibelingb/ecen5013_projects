@@ -182,6 +182,7 @@ void* tempSensorThreadHandler(void* threadInfo)
       ++statusMsgCount;
       printf("Temp Sensor - Over-temp->Normal Transition detected\n");
     }
+    data.overTempState = overTempState;
 
     /* write to shared memory */
     pthread_mutex_lock(sensorInfo.sharedMemMutex);

@@ -289,6 +289,10 @@ static void getCmdResponse(RemoteCmdPacket* packet){
       packet->data.status_uint32 = tempData.tmp102_convRate;
       INFO_PRINT("TEMPCMD_GETCONVRATE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
+    case TEMPCMD_GETOVERTEMPSTATE:
+      packet->data.status_uint32 = tempData.overTempState;
+      INFO_PRINT("TEMPCMD_GETOVERTEMPSTATE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
+      break;
     case LIGHTCMD_GETLUXDATA :
       packet->data.status_float = lightData.apds9301_luxData;
       INFO_PRINT("LIGHTCMD_GETLUXDATA cmd received | Transmitting data: {%f}\n", packet->data.status_float);
@@ -328,6 +332,10 @@ static void getCmdResponse(RemoteCmdPacket* packet){
     case LIGHTCMD_GETHIGHTHRES :
       packet->data.status_uint32 = lightData.apds9301_intThresHigh;
       INFO_PRINT("LIGHTCMD_GETHIGHTHRES cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
+      break;
+    case LIGHTCMD_GETLIGHTSTATE:
+      packet->data.status_uint32 = lightData.lightState;
+      INFO_PRINT("LIGHTCMD_GETLIGHTSTATE cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
       break;
     default:
       ERROR_PRINT("cmd received with value {%d} not recognized - cmd ignored\n", packet->cmd);
