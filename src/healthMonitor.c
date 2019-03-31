@@ -153,11 +153,8 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
 
     /* update missingCount */
     for(ind = 0; ind < NUM_THREADS; ++ind) {
-        threadMissingCount[ind] += missingFlag[ind];
-
         /* if missing exceeds limit, set error status to timeout and call arbitor again */
-        if(threadMissingCount[ind] >= THREAD_MISSING_COUNT)
-        {
+        if(threadMissingCount[ind] >= THREAD_MISSING_COUNT) {
             threadMissingCount[ind] = THREAD_MISSING_COUNT;
             status.processId = ind;
             status.errorCode = (uint8_t)ERROR_CODE_TIMEOUT;
@@ -165,6 +162,10 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
             action = callArbitor(&status);
             processAction(status.processId, action, pExit);
             LOG_MAIN_EVENT((MainEvent_e)(MAIN_EVENT_LIGHT_THREAD_UNRESPONSIVE + ind));
+            ++errorCount;
+        }
+        else {
+            threadMissingCount[ind] += missingFlag[ind];
         }
     }
     MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);

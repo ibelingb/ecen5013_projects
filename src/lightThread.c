@@ -156,7 +156,7 @@ void* lightSensorThreadHandler(void* threadInfo)
     }
 
     /* TODO - derive method to set status sent to main */
-    SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_ERROR, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_OK, ERROR_CODE_USER_NONE0);
 
     /* Wait on signal timer */
     sigwait(&set, &signum);
