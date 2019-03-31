@@ -105,7 +105,7 @@ void* logThreadHandler(void* threadInfo)
     if(logFd < 0)
     {
         ERRNO_PRINT("loggingThread failed to open log file");
-        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_TERMALL0);
 
         /* add log event msg to queue; probably only
          * useful if log thread is restarted and sucesfully 
