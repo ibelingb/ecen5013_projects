@@ -38,8 +38,28 @@ typedef enum {
 } TempEvent_e;
 
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief task manages temp sensor and writes data to shared memory
+ * 
+ * @param threadInfo queue names, etc
+ * @return void* 
+ */
 void* tempSensorThreadHandler(void* threadInfo);
+
+/**
+ * @brief handles delivered signals
+ * 
+ * @param signo delivered signal
+ * @param info signal's info
+ * @param extra and extra stuff
+ */
 void tempSigHandler(int signo, siginfo_t *info, void *extra);
+
+/**
+ * @brief for test, get alive flag
+ * 
+ * @param pAlive flag value
+ */
 void tempGetAliveFlag(uint8_t *pAlive);
 
 /*---------------------------------------------------------------------------------*/
