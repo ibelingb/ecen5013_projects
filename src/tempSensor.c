@@ -79,11 +79,22 @@ int8_t tmp102_getTempC(uint8_t file, float *pTemp)
 
 	/* if extended address mode shift one less bit */
 	uint8_t shiftValue = TMP102_TEMP_START_BIT;
-	if(TMP102_GET_ADDR_MODE(tmp) == TMP102_ADDR_MODE_EXTENDED)
+	float maxTemp = 128.0f;
+	if(TMP102_GET_ADDR_MODE(tmp) == TMP102_ADDR_MODE_EXTENDED) {
 		--shiftValue;
-
-	/* convert bits to Degrees C */
-	*pTemp = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+		maxTemp = 150.0f;
+	}
+	/* test for negative value */
+	float tmpFloat;
+	if((tmp >> 15) != 0) {
+		/* convert bits to Degrees C */
+		tmpFloat = (maxTemp * 2.0f) - TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	}	
+	else {
+		/* convert bits to Degrees C */
+		tmpFloat = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	}
+	*pTemp = tmpFloat;
 	return EXIT_SUCCESS;
 }
 
@@ -103,15 +114,27 @@ int8_t tmp102_getLowThreshold(uint8_t file, float *pLow)
 
 	/* if extended address mode shift one less bit */
 	shiftValue = TMP102_TLOW_START_BIT;
-	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
+	float maxTemp = 128.0f;
+	if(addressMode == TMP102_ADDR_MODE_EXTENDED) {
 		--shiftValue;
+		maxTemp = 150.0f;
+	}
 
 	/* get TLow register value */
 	if(EXIT_FAILURE == tmp102_getReg(file, &tmp, TMP102_TLOW_REG))
 		return EXIT_FAILURE;
 
-	/* convert bits to degrees celcius before returning */
-	*pLow = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	/* test for negative value */
+	float tmpFloat;
+	if((tmp >> 15) != 0) {
+		/* convert bits to Degrees C */
+		tmpFloat = (maxTemp * 2.0f) - TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	}	
+	else {
+		/* convert bits to Degrees C */
+		tmpFloat = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	}
+	*pLow = tmpFloat;
 	return EXIT_SUCCESS;
 }
 
@@ -127,8 +150,16 @@ int8_t tmp102_setLowThreshold(uint8_t file, float low)
 
 	/* if extended address mode shift one less bit */
 	shiftValue = TMP102_TLOW_START_BIT;
-	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
+	float maxTemp = 128.0f;
+	if(addressMode == TMP102_ADDR_MODE_EXTENDED) {
 		--shiftValue;
+		maxTemp = 150.0f;
+	}
+
+	/* test for negative */
+	if(low < 0) {
+		low = (maxTemp * 2.0f) - low;
+	}
 
 	/* convert float to integer */
 	low_bits = TMP102_TEMPC_TO_BITS(low, shiftValue);
@@ -156,15 +187,27 @@ int8_t tmp102_getHighThreshold(uint8_t file, float *pHigh)
 
 	/* if extended address mode shift one less bit */
 	shiftValue = TMP102_THIGH_START_BIT;
-	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
+	float maxTemp = 128.0f;
+	if(addressMode == TMP102_ADDR_MODE_EXTENDED) {
 		--shiftValue;
+		maxTemp = 150.0f;
+	}
 
 	/* get THigh register value */
 	if(EXIT_FAILURE == tmp102_getReg(file, &tmp, TMP102_THIGH_REG))
 		return EXIT_FAILURE;
 
-	/* convert bits to degrees celcius before returning */
-	*pHigh = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	/* test for negative value */
+	float tmpFloat;
+	if((tmp >> 15) != 0) {
+		/* convert bits to Degrees C */
+		tmpFloat = (maxTemp * 2.0f) - TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	}	
+	else {
+		/* convert bits to Degrees C */
+		tmpFloat = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
+	}
+	*pHigh = tmpFloat;
 	return EXIT_SUCCESS;
 }
 
@@ -180,8 +223,16 @@ int8_t tmp102_setHighThreshold(uint8_t file, float high)
 
 	/* if extended address mode shift one less bit */
 	shiftValue = TMP102_THIGH_START_BIT;
-	if(addressMode == TMP102_ADDR_MODE_EXTENDED)
+	float maxTemp = 128.0f;
+	if(addressMode == TMP102_ADDR_MODE_EXTENDED) {
 		--shiftValue;
+		maxTemp = 150.0f;
+	}
+
+	/* test for negative */
+	if(high < 0) {
+		high = (maxTemp * 2.0f) - high;
+	}
 
 	/* convert float to integer */
 	high_bits = TMP102_TEMPC_TO_BITS(high, shiftValue);

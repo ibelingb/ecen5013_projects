@@ -14,8 +14,8 @@
 # General / default variables for all platforms / architectures
 CFLAGS = -Wall -g -O0 -Werror -pthread
 CPPFLAGS = -MD -MP
-TARGET = main
-PLATFORM= BBG
+TARGET = client
+PLATFORM = BBG
 LDFLAGS = -lrt
 include mk_files/$(TARGET).mk
 INCLDS = -I./include

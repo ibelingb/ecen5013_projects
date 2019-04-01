@@ -115,6 +115,7 @@ void* logThreadHandler(void* threadInfo)
     }
     /* add log event msg to queue */
     LOG_LOG_EVENT(LOG_EVENT_FILE_OPEN);
+    LOG_LOG_EVENT(LOG_EVENT_BIST_COMPLETE);
 
     /* Clear memory objects */
     memset(&set, 0, sizeof(sigset_t));

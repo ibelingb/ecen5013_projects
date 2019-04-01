@@ -113,8 +113,9 @@ class LogEvent_e(IntEnum):
     LOG_EVENT_WRITE_LOGFILE_ERROR = 2
     LOG_EVENT_SHMEM_ERROR = 3
     LOG_EVENT_OPEN_LOGFILE_ERROR  = 4
-    LOG_EVENT_EXITING = 5
-    LOG_EVENT_END = 6
+    LOG_EVENT_BIST_COMPLETE = 5
+    LOG_EVENT_EXITING = 6
+    LOG_EVENT_END = 7
 
 
 class MainEvent_e(IntEnum):
@@ -146,6 +147,7 @@ class RemoteEvent_e(IntEnum):
     END = 14
 
 class RemoteCmd_e(IntEnum):
+    TEMPCMD_OTHER = 0
     TEMPCMD_GETTEMP = 1
     TEMPCMD_GETLOWTHRES = 2
     TEMPCMD_GETHIGHTHRES = 3
