@@ -105,6 +105,11 @@ int main(int argc, char *argv[])
 
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
+/*---------------------------------------------------------------------------------*/
+/**
+ * @brief - Prints the remoteClient options to request data from the Sensor Application.
+ * @return void
+ */
 void appUsage(){
   printf("\nEnter a value to specify a command to send to the Sensor Application:\n"
          "\t1  = TEMPCMD_GETTEMP\n"
@@ -132,7 +137,19 @@ void appUsage(){
   );
 }
 
+/**
+ * @brief - Process data received from sensor application to print returned data.
+ *
+ * @param packet - Data packet received from Sensor Application to process and print results.
+ * @return void
+ */
 static void getCmdResponse(RemoteCmdPacket *packet){
+  if(packet == NULL)
+  {
+    printf("getCmdResponse() received NULL for packet argument - Cmd response couldn't be processed.\n");
+    return;
+  }
+
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
     case TEMPCMD_GETTEMP :
