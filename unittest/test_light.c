@@ -30,7 +30,6 @@ int fd;
 uint8_t testCount = 0;
 
 /* test cases */
-int8_t test_CommandWrite(void);
 int8_t test_ControlReadWrite(void);
 int8_t test_TimingGainReadWrite(void);
 int8_t test_TimingIntReadWrite(void);
@@ -38,8 +37,6 @@ int8_t test_InterruptControl(void);
 int8_t test_DeviceIdRead(void);
 int8_t test_InterruptThresholdReadWrite(void);
 int8_t test_LuxDataRead(void);
-
-// TODO: Add negative test cases
 
 /*---------------------------------------------------------------------------------*/
 int main(void)
@@ -127,13 +124,33 @@ int8_t test_ControlReadWrite(void)
 		ERROR_PRINT("test_ControlReadWrite failed to get APDS9301 state of 0x%x\n", APDS9301_CTRL_POWERUP);
 		return EXIT_FAILURE;
 	}
+
+  /* Attempt passing an invalid value; verify register not updated */
+  controlRegWrite = 13;
+	if(EXIT_FAILURE != apds9301_setControl(fd, controlRegWrite)) { 
+    ERROR_PRINT("test_ControlReadWrite failed to reject invalid controlReg Write value\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Control register */
+	if(EXIT_FAILURE == apds9301_getControl(fd, &controlRegRead)) { 
+    ERROR_PRINT("test_ControlReadWrite read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 control register returned value after invalid value sent: 0x%x\n", controlRegRead); 
+  }
+	/* Verify device is powered on (state hasn't changed) */
+	if(controlRegRead != APDS9301_CTRL_POWERUP)
+	{ 
+		ERROR_PRINT("test_ControlReadWrite failed to get APDS9301 state of 0x%x\n", APDS9301_CTRL_POWERUP);
+		return EXIT_FAILURE;
+	}
 	
 	return EXIT_SUCCESS;
 }
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief Unit Test to read and write the Timing register Gain field on the APDS9301 device
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
 int8_t test_TimingGainReadWrite(void)
@@ -184,12 +201,32 @@ int8_t test_TimingGainReadWrite(void)
 		return EXIT_FAILURE;
 	}
 
+  /* Attempt passing an invalid value; verify register not updated */
+  timingGainWrite = 13;
+	if(EXIT_FAILURE != apds9301_setTimingGain(fd, timingGainWrite)) { 
+    ERROR_PRINT("test_TimingGainReadWrite failed to reject invalid TimingGain Write value\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Timing register for gain bit */
+	if(EXIT_FAILURE == apds9301_getTimingGain(fd, &timingGainRead)) { 
+    ERROR_PRINT("test_TimingGainReadWrite read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Timing register returned gain register value: 0x%x\n", timingGainRead); 
+  }
+	/* Verify device gain is low (not changed) */
+	if(timingGainRead != APDS9301_TIMING_GAIN_LOW)
+	{ 
+		ERROR_PRINT("test_TimingGainReadWrite failed to set/get APDS9301 gain to be 0x%x\n", APDS9301_TIMING_GAIN_LOW);
+		return EXIT_FAILURE;
+  }
+
 	return EXIT_SUCCESS;
 }
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief Unit Test to read and write the Timing register Integration field on the APDS9301 device
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
 int8_t test_TimingIntReadWrite(void)
@@ -260,11 +297,32 @@ int8_t test_TimingIntReadWrite(void)
 		return EXIT_FAILURE;
 	}
 
+  /* Attempt passing an invalid value; verify register not updated */
+  timingIntWrite = 13;
+	if(EXIT_FAILURE != apds9301_setTimingIntegration(fd, timingIntWrite)) { 
+    ERROR_PRINT("test_TimingIntReadWrite failed to reject invalid TimingInt Write value\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Timing register for integration bit */
+	if(EXIT_FAILURE == apds9301_getTimingIntegration(fd, &timingIntRead)) { 
+    ERROR_PRINT("test_TimingIntReadWrite read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Timing register returned integration value: 0x%x\n", timingIntRead); 
+  }
+	/* Verify device integration is 402 msec (not changed) */
+	if(timingIntRead != APDS9301_TIMING_INT_402)
+	{ 
+		ERROR_PRINT("test_TimingIntReadWrite failed to set/get APDS9301 integration to be 0x%x\n", APDS9301_TIMING_INT_402);
+		return EXIT_FAILURE;
+	}
+
 	return EXIT_SUCCESS;
 }
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief Unit Test to read and write the Interrupt Control register Select and Persist 
+ *        fields on the APDS9301 device
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
 int8_t test_InterruptControl(void)
@@ -355,12 +413,91 @@ int8_t test_InterruptControl(void)
 		return EXIT_FAILURE;
 	}
 
+
+  /* Attempt passing an invalid intSelect value; verify register not updated */
+  intSelect = 13;
+  intPersist = APDS9301_INT_PERSIST_EVERY_CYCLE;
+	if(EXIT_FAILURE != apds9301_setInterruptControl(fd, intSelect, intPersist)) { 
+    ERROR_PRINT("test_InterruptControl failed to reject invalid intSelect Write value\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Interrupt Control reg to receive Interrupt select and persist info */
+	if(EXIT_FAILURE == apds9301_getInterruptControl(fd, &intSelect, &intPersist)) { 
+    ERROR_PRINT("test_InterruptControl read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Control register returned Select value: 0x%x | Persist value: 0x%x\n", intSelect, intPersist); 
+  }
+	/* Verify device Interrupt select and Persist set to specified values (not changed) */
+	if(intSelect != APDS9301_INT_SELECT_LEVEL_DISABLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Select value to be 0x%x\n", APDS9301_INT_SELECT_LEVEL_DISABLE);
+		return EXIT_FAILURE;
+	}
+	if(intPersist != APDS9301_INT_PERSIST_EVERY_CYCLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Persist value to be 0x%x\n", APDS9301_INT_PERSIST_EVERY_CYCLE);
+		return EXIT_FAILURE;
+	}
+
+  /* Attempt passing an invalid intPersist value; verify register not updated */
+  intSelect = APDS9301_INT_SELECT_LEVEL_DISABLE;
+  intPersist = 99;
+	if(EXIT_FAILURE != apds9301_setInterruptControl(fd, intSelect, intPersist)) { 
+    ERROR_PRINT("test_InterruptControl failed to reject invalid intPersist Write value\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Interrupt Control reg to receive Interrupt select and persist info */
+	if(EXIT_FAILURE == apds9301_getInterruptControl(fd, &intSelect, &intPersist)) { 
+    ERROR_PRINT("test_InterruptControl read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Control register returned Select value: 0x%x | Persist value: 0x%x\n", intSelect, intPersist); 
+  }
+	/* Verify device Interrupt select and Persist set to specified values (not changed) */
+	if(intSelect != APDS9301_INT_SELECT_LEVEL_DISABLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Select value to be 0x%x\n", APDS9301_INT_SELECT_LEVEL_DISABLE);
+		return EXIT_FAILURE;
+	}
+	if(intPersist != APDS9301_INT_PERSIST_EVERY_CYCLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Persist value to be 0x%x\n", APDS9301_INT_PERSIST_EVERY_CYCLE);
+		return EXIT_FAILURE;
+	}
+
+  /* Attempt passing invalid intSelect and intPersist value; verify register not updated */
+  intSelect = 13;
+  intPersist = 99;
+	if(EXIT_FAILURE != apds9301_setInterruptControl(fd, intSelect, intPersist)) { 
+    ERROR_PRINT("test_InterruptControl failed to reject invalid intSelect and intPersist Write value\n"); 
+    return EXIT_FAILURE; 
+  }
+	/* Read Interrupt Control reg to receive Interrupt select and persist info */
+	if(EXIT_FAILURE == apds9301_getInterruptControl(fd, &intSelect, &intPersist)) { 
+    ERROR_PRINT("test_InterruptControl read failed\n"); 
+    return EXIT_FAILURE; 
+  } else { 
+    INFO_PRINT("APDS9301 Interrupt Control register returned Select value: 0x%x | Persist value: 0x%x\n", intSelect, intPersist); 
+  }
+	/* Verify device Interrupt select and Persist set to specified values (not changed) */
+	if(intSelect != APDS9301_INT_SELECT_LEVEL_DISABLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Select value to be 0x%x\n", APDS9301_INT_SELECT_LEVEL_DISABLE);
+		return EXIT_FAILURE;
+	}
+	if(intPersist != APDS9301_INT_PERSIST_EVERY_CYCLE)
+	{ 
+		ERROR_PRINT("test_InterruptControl failed to set/get APDS9301 Interrupt Persist value to be 0x%x\n", APDS9301_INT_PERSIST_EVERY_CYCLE);
+		return EXIT_FAILURE;
+	}
+
 	return EXIT_SUCCESS;
 }
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief Unit Test to read the Device ID register on the APDS9301 device
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
 int8_t test_DeviceIdRead(void)
@@ -395,7 +532,8 @@ int8_t test_DeviceIdRead(void)
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief Unit Test to read and write the Interrupt Low and High Threshold register 
+ *        fields on the APDS9301 device
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
 int8_t test_InterruptThresholdReadWrite(void)
@@ -451,7 +589,7 @@ int8_t test_InterruptThresholdReadWrite(void)
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief TODO
+ * @brief Unit Test to read the Lux Sensor Data register on the APDS9301 device
  * @return int8_t test pass / fail (EXIT_FAILURE)
  */
 int8_t test_LuxDataRead(void)

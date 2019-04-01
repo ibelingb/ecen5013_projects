@@ -52,7 +52,7 @@ void mainCleanup(int sig);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
-pthread_mutex_t gSharedMemMutex; // TODO: Could have separate mutexes for each sensor writing to SHM
+pthread_mutex_t gSharedMemMutex;
 pthread_mutex_t gI2cBusMutex; 
 
 static uint8_t gExit = 1;

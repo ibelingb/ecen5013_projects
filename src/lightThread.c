@@ -174,7 +174,6 @@ void* lightSensorThreadHandler(void* threadInfo)
       memcpy(sharedMemPtr+(sensorInfo.lightDataOffset), &lightSensorData, sizeof(LightDataStruct));
       pthread_mutex_unlock(sensorInfo.sharedMemMutex);
 
-      /* TODO - derive method to set status sent to main */
       SEND_STATUS_MSG(hbMsgQueue, PID_LIGHT, STATUS_OK, ERROR_CODE_USER_NONE0);
     }
     else 

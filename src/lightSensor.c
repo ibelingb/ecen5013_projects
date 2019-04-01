@@ -353,11 +353,20 @@ int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect
   /* Determine Interrupt Control Select value to set based on input */
   if(intSelect == APDS9301_INT_SELECT_LEVEL_DISABLE){
     reg &= ~(APDS9301_INT_CONTROL_SEL_MASK);
-  } else {
+  } else if (intSelect == APDS9301_INT_SELECT_LEVEL_ENABLE) {
     reg |= 0x10;
+  } else {
+    ERROR_PRINT("apds9301_setInterruptControl() received an invalid input for setting the APDS9301 "
+                "Interrupt Control reg Select Field - write ignored.\n");
+    return EXIT_FAILURE;
   }
 
-  /* Determine Interrupt Persist Select value to set based on input */
+  /* Determine Interrupt Control Persist value to set based on input */
+  if(persist > APDS9301_INT_PERSIST_OUTSIDE_15P) {
+    ERROR_PRINT("apds9301_setInterruptControl() received an invalid input for setting the APDS9301 "
+                "Interrupt Control reg Presist Field - write ignored.\n");
+    return EXIT_FAILURE;
+  }
   reg &= ~(APDS9301_INT_CONTROL_PERSIST_MASK);
   reg |= persist;
 

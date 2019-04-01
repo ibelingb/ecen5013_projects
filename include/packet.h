@@ -89,7 +89,6 @@ typedef enum {
   ERROR_CODE_NONE = 0,
   ERROR_CODE_TIMEOUT,
   ERROR_CODE_RECVD_NULL_PTR,
-  /* TODO - put other general errors here */
 
   /* start of user unique errors, to be type casted */
   ERROR_CODE_USER_NONE0 = 128,
