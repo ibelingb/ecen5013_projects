@@ -43,27 +43,30 @@ typedef enum {
 /*---------------------------------------------------------------------------------*/
 
 /**
- * @brief 
+ * @brief - APDS-9301 Light Sensor Thread used to periodically read sensor data and write
+ *          to Sensor Shared Memory.
  *
- * @param threadInfo
+ * @param threadInfo - Struct containing resources allocated and filenames established by main()
  *
- * @return 
+ * @return void*
  */
 void* lightSensorThreadHandler(void* threadInfo);
 
 /**
- * @brief 
+ * @brief - Method for handling signals sent to lightSensor Child Thread
  *
- * @param signo
- * @param info
- * @param extra
+ * @param signo - Signal number
+ * @param info - Struct used to pass data through to Signal Handler.
+ * @param extra - Additional params if needed by sigAction struct when setting sa_sigaction
+ * @return void
  */
 void lightSigHandler(int signo, siginfo_t *info, void *extra);
 
 /**
- * @brief 
+ * @brief Get method to receive lightThread's alive status.
  *
- * @param pAlive
+ * @param pAlive - Pointer to return alive status back to caller function to.
+ * @return void
  */
 void lightGetAliveFlag(uint8_t *pAlive);
 

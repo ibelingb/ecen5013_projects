@@ -50,6 +50,12 @@ static uint8_t aliveFlag = 1;
 /*---------------------------------------------------------------------------------*/
 void* remoteThreadHandler(void* threadInfo)
 {
+  /* Validate input */
+  if(threadInfo == NULL){
+    ERROR_PRINT("remoteThread Failed to initialize; NULL pointer for provided threadInfo parameter - exiting.\n");
+    return NULL;
+  }
+
   sensorInfo = *(SensorThreadInfo *)threadInfo;
   RemoteCmdPacket cmdPacket = {0};
   mqd_t logMsgQueue; /* logger MessageQueue */
@@ -276,8 +282,37 @@ void* remoteThreadHandler(void* threadInfo)
 }
 
 /*---------------------------------------------------------------------------------*/
+void remoteSigHandler(int signo, siginfo_t *info, void *extra)
+{
+  if((info != NULL) && (extra != NULL))
+  {
+    INFO_PRINT("remoteSigHandler, signum: %d\n",info->si_signo);
+    aliveFlag = 0;
+  }
+}
+
+/*---------------------------------------------------------------------------------*/
+void remoteGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
+}
+
+/*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
+/*---------------------------------------------------------------------------------*/
+/**
+ * @brief - Populate provided packet with requested command data from data read from SharedMemory.
+ *
+ * @param packet - Pointer to packet to populate and return to caller.
+ * @return void
+ */
 static void getCmdResponse(RemoteCmdPacket* packet){
+  if(packet == NULL){
+    ERROR_PRINT("getCmdResponse() received NULL pointer for packet parameter - Process Cmd Response failed.\n");
+    return;
+  }
+
   /* Log cmd received */
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
 
@@ -381,20 +416,6 @@ static void getCmdResponse(RemoteCmdPacket* packet){
   LOG_REMOTE_CMD_EVENT(packet->cmd);
 
   return;
-}
-
-/*---------------------------------------------------------------------------------*/
-void remoteSigHandler(int signo, siginfo_t *info, void *extra)
-{
-	INFO_PRINT("remoteSigHandler, signum: %d\n",info->si_signo);
-  aliveFlag = 0;
-}
-
-/*---------------------------------------------------------------------------------*/
-void remoteGetAliveFlag(uint8_t *pAlive)
-{
-  if(pAlive != NULL)
-    *pAlive = aliveFlag;
 }
 
 /*---------------------------------------------------------------------------------*/

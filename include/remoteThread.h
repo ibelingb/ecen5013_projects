@@ -85,27 +85,30 @@ typedef struct RemoteCmdPacket
 /*---------------------------------------------------------------------------------*/
 
 /**
- * @brief 
+ * @brief - Remote Socket Server Thread used to connect application via socket to an
+ *          external client. Receive requests for data and pass back info back to client.
  *
- * @param threadInfo
+ * @param threadInfo - Struct containing resources allocated and filenames established by main()
  *
- * @return 
+ * @return void*
  */
 void* remoteThreadHandler(void* threadInfo);
 
 /**
  * @brief 
  *
- * @param signo
- * @param info
- * @param extra
+ * @param signo - Signal number
+ * @param info - Struct used to pass data through to Signal Handler.
+ * @param extra - Additional params if needed by sigAction struct when setting sa_sigaction
+ * @return void
  */
 void remoteSigHandler(int signo, siginfo_t *info, void *extra);
 
 /**
- * @brief 
+ * @brief Get method to receive lightThread's alive status.
  *
- * @param pAlive
+ * @param pAlive - Pointer to return alive status back to caller function to.
+ * @return void
  */
 void remoteGetAliveFlag(uint8_t *pAlive);
 

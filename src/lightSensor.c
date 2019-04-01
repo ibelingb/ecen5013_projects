@@ -11,6 +11,9 @@
  * @file lightSensor.c
  * @brief APDS-9301 light sensor library
  *
+ * Provides API for APDS9301 Light Sensor to read and write data from device over I2C
+ * interface.
+ *
  ************************************************************************************
  */
 
@@ -27,30 +30,30 @@
 #define APDS9301_CMD_WORD_BIT       (0x20)
 #define APDS9301_CMD_INT_CLEAR_BIT  (0x40)
 
-#define APDS9301_CONTROL_REG    (0x80ul)
-#define APDS9301_TIMING_REG     (0x81ul)
-#define APDS9301_THRESHLOWLOW   (0x82ul)
-#define APDS9301_THRESHLOWHIGH  (0x83ul)
-#define APDS9301_THRESHHIGHLOW  (0x84ul)
-#define APDS9301_THRESHHIGHHIGH (0x85ul)
+#define APDS9301_CONTROL_REG        (0x80ul)
+#define APDS9301_TIMING_REG         (0x81ul)
+#define APDS9301_THRESHLOWLOW       (0x82ul)
+#define APDS9301_THRESHLOWHIGH      (0x83ul)
+#define APDS9301_THRESHHIGHLOW      (0x84ul)
+#define APDS9301_THRESHHIGHHIGH     (0x85ul)
 #define APDS9301_INTERRUPT_CTRL_REG (0x86ul)
-#define APDS9301_ID_REG         (0x8Aul)
-#define APDS9301_DATA0LOW_REG   (0x8Cul)
-#define APDS9301_DATA0HIGH_REG  (0x8Dul)
-#define APDS9301_DATA1LOW_REG   (0x8Eul)
-#define APDS9301_DATA1HIGH_REG  (0x8Ful)
+#define APDS9301_ID_REG             (0x8Aul)
+#define APDS9301_DATA0LOW_REG       (0x8Cul)
+#define APDS9301_DATA0HIGH_REG      (0x8Dul)
+#define APDS9301_DATA1LOW_REG       (0x8Eul)
+#define APDS9301_DATA1HIGH_REG      (0x8Ful)
 
-#define APDS9301_CONTROL_MASK       (0x03)
-#define APDS9301_DEV_PARTNO_MASK    (0xF0)
-#define APDS9301_DEV_PARTNO_OFFSET  (0x04)
-#define APDS9301_DEV_REVNO_MASK     (0x0F)
-#define APDS9301_DEV_REVNO_OFFSET   (0x00)
-#define APDS9301_TIMING_REG_MASK    (0x1B)
-#define APDS9301_TIMING_GAIN_MASK   (0x10)
-#define APDS9301_TIMING_GAIN_OFFSET (0x04)
-#define APDS9301_TIMING_MANUAL_MASK (0x08)
+#define APDS9301_CONTROL_MASK         (0x03)
+#define APDS9301_DEV_PARTNO_MASK      (0xF0)
+#define APDS9301_DEV_PARTNO_OFFSET    (0x04)
+#define APDS9301_DEV_REVNO_MASK       (0x0F)
+#define APDS9301_DEV_REVNO_OFFSET     (0x00)
+#define APDS9301_TIMING_REG_MASK      (0x1B)
+#define APDS9301_TIMING_GAIN_MASK     (0x10)
+#define APDS9301_TIMING_GAIN_OFFSET   (0x04)
+#define APDS9301_TIMING_MANUAL_MASK   (0x08)
 #define APDS9301_TIMING_MANUAL_OFFSET (0x03)
-#define APDS9301_TIMING_INT_MASK    (0x03)
+#define APDS9301_TIMING_INT_MASK      (0x03)
 #define APDS9301_TIMING_INT_OFFSET    (0x00)
 
 #define APDS9301_INT_CONTROL_SEL_MASK       (0x30)
@@ -58,10 +61,9 @@
 #define APDS9301_INT_CONTROL_PERSIST_MASK   (0x0F)
 #define APDS9301_INT_CONTROL_PERSIST_OFFSET (0x00)
 
-
-#define APDS9301_REG_SIZE       (1) /* Size of APDS9301 register in bytes */
-#define APDS9301_WORD_SIZE      (2) /* Size of APDS9301 Word in bytes */
-#define APDS9301_ENDIANNESS     (0) /* APDS9301 device endianness of returned data */
+#define APDS9301_REG_SIZE   (1) /* Size of APDS9301 register in bytes */
+#define APDS9301_WORD_SIZE  (2) /* Size of APDS9301 Word in bytes */
+#define APDS9301_ENDIANNESS (0) /* APDS9301 device endianness of returned data */
 
 /* Prototypes for private/helper functions */
 int8_t apds9301_getReg(uint8_t file, uint8_t *pReg, uint8_t REG);
@@ -186,7 +188,7 @@ int8_t apds9301_getDeviceId(uint8_t file, uint8_t *partNo, uint8_t *revNo)
   uint8_t regValue;
 
   /* Validate inputs */
-  if((partNo == NULL) || revNo == NULL)
+  if((partNo == NULL) || (revNo == NULL))
     return EXIT_FAILURE;
 
   /* Get DeviceID register value */
@@ -420,6 +422,15 @@ int8_t apds9301_setHighIntThreshold(uint8_t file, uint16_t intThreshold)
 /*---------------------------------------------------------------------------------*/
 /* HELPER FUNCTIONS */
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief Read 8-bit register using I2C getIicRegister() method
+ *
+ * @param file - FD for sensor device.
+ * @param pReg - Pointer for return value to be pass by (8-bit value).
+ * @param REG - Address on APDS-9301 device register to read from.
+ *
+ * @return int8_t status, EXIT_SUCCESS if succeeds
+ */
 int8_t apds9301_getReg(uint8_t file, uint8_t *pReg, uint8_t REG){
   /* Validate inputs */
   if(pReg == NULL)
@@ -433,6 +444,15 @@ int8_t apds9301_getReg(uint8_t file, uint8_t *pReg, uint8_t REG){
   *pReg = (uint8_t)(0xFF & regValue);
   return EXIT_SUCCESS;
 }
+/**
+ * @brief Read 16-bit register using I2C getIicRegister() method
+ *
+ * @param file - FD for sensor device.
+ * @param pWord - Pointer for return value to be pass by (16-bit value).
+ * @param REG - Address on APDS-9301 device register to read from.
+ *
+ * @return int8_t status, EXIT_SUCCESS if succeeds
+ */
 /*---------------------------------------------------------------------------------*/
 int8_t apds9301_getWord(uint8_t file, uint16_t *pWord, uint8_t REG)
 {
@@ -454,9 +474,17 @@ int8_t apds9301_getWord(uint8_t file, uint16_t *pWord, uint8_t REG)
 }
 
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief Write 16-bit register using I2C setIicRegister() method
+ *
+ * @param file - FD for sensor device.
+ * @param word - 16-bit value to write.
+ * @param REG - Address on APDS-9301 device register to write to.
+ *
+ * @return int8_t status, EXIT_SUCCESS if succeeds
+ */
 int8_t apds9301_writeWord(uint8_t file, uint16_t word, uint8_t REG)
 {
-
   /* Set Command Code for I2C Write protocol */
   REG |= APDS9301_CMD_WORD_BIT;
 
