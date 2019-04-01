@@ -32,8 +32,28 @@ typedef enum {
 } LogEvent_e;
 
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief logging thread, dequeues and writes items to file
+ * 
+ * @param threadInfo queue info and file name
+ * @return void* 
+ */
 void* logThreadHandler(void* threadInfo);
+
+/**
+ * @brief signal handler for logger
+ * 
+ * @param signo signal delivered
+ * @param info signal's info
+ * @param extra extra signal info
+ */
 void loggingSigHandler(int signo, siginfo_t *info, void *extra);
+
+/**
+ * @brief get value of alive flag (for testing)
+ * 
+ * @param pAlive where to store flag
+ */
 void logGetAliveFlag(uint8_t *pAlive);
 
 /*---------------------------------------------------------------------------------*/
