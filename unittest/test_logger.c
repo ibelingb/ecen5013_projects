@@ -160,8 +160,6 @@ static void *DUMMY_lightThread(void *log)
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_DAY);
     usleep(10000);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_NIGHT);
-    usleep(10000);
-    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_ERROR);
     INFO_PRINT("light tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     while(gExitSig)
@@ -216,8 +214,6 @@ static void *DUMMY_remoteThread(void *log)
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
     usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
-    usleep(10000);
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_ERROR);
     usleep(10000);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
     INFO_PRINT("remote tid: %d\n",(pid_t)syscall(SYS_gettid));
