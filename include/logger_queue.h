@@ -22,11 +22,44 @@
 #include "logger_types.h"
 #include <mqueue.h>
 
+/**
+ * @brief initialize the posix queue logger
+ * 
+ * @param pQueue pointer to handle
+ * @return uint8_t success of operation
+ */
 uint8_t init_queue_logger(void *pQueue);
 
+/**
+ * @brief flush the queue
+ * 
+ * @return uint8_t success of operation
+ */
 uint8_t log_queue_flush(void);
+
+/**
+ * @brief add item to queue
+ * 
+ * @param pLogItem item to add
+ * @return uint8_t success of operation
+ */
 uint8_t log_queue_item(logItem_t *pLogItem);
+
+/**
+ * @brief remove item from queue
+ * 
+ * @param pLogItem pointer to container to store removed item
+ * @return uint8_t success operation
+ */
 uint8_t log_dequeue_item(logItem_t *pLogItem);
+
+/**
+ * @brief write item to file
+ * 
+ * @param pLogItem item to write
+ * @param filefd file pointer to write to
+ * @return uint8_t  success of operation
+ */
 uint8_t log_write_item(logItem_t *pLogItem, int filefd);
 
 #endif	/* LOGGER_QUEUE_H */

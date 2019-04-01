@@ -54,6 +54,10 @@ void set_sig_handlers(void);
 	{ ERRNO_PRINT("SEND_STATUS_MSG fail"); }\
 })
 
+/**
+ * @brief get string of PID enum
+ * 
+ */
 __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procId)
 {
     switch (procId) {
@@ -75,6 +79,10 @@ __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procI
     }
 }
 
+/**
+ * @brief print status header info
+ * 
+ */
 __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPacket *pStatus)
 {
     if((pStatus->errorCode >= ERROR_CODE_USER_NOTIFY0) && (pStatus->errorCode <= ERROR_CODE_USER_NOTIFY7))
@@ -103,6 +111,10 @@ __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPac
 
 }
 
+/**
+ * @brief print status message
+ * 
+ */
 __attribute__((always_inline)) inline void PRINT_STATUS_MSG(TaskStatusPacket *pStatus)
 {
     PRINT_STATUS_MSG_HEADER(pStatus);

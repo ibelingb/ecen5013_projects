@@ -31,6 +31,15 @@
 #define LOG_LOOP_TIME_SEC       (0)
 #define LOG_LOOP_TIME_NSEC      (5e-3 * 1e9)
 
+/**
+ * @brief generic setup of posix timer
+ * 
+ * @param pSet pointer to set struct
+ * @param pTimer pointer to timer
+ * @param signum signal number
+ * @param pRate timing of timer
+ * @return int8_t  success of operation
+ */
 int8_t setupTimer(sigset_t *pSet, timer_t *pTimer, int signum, const struct timespec *pRate);
 
 #endif /* CMN_TIMER_H */

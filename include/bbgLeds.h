@@ -19,14 +19,20 @@
 
 #include <stdint.h>
 
-// TODO: update
-#define LED1 (0x00)
-#define LED2 (0x01)
-#define LED3 (0x02)
-#define LED4 (0x03)
-
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief implements state machine to drive status led
+ * 
+ * @param newError new error flag
+ * @return int8_t success of operation
+ */
 int8_t setStatusLed(uint8_t newError);
+
+/**
+ * @brief initializes led gpio
+ * 
+ * @return int8_t success of operation
+ */
 int8_t initLed(void);
 
 /*---------------------------------------------------------------------------------*/
