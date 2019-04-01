@@ -1,6 +1,6 @@
 /***********************************************************************************
  * @author Josh Malburg
- * 
+ * joshua.malburg@colorado.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
  * @date March 15, 2019
@@ -8,8 +8,8 @@
  * gcc (Ubuntu)
  ************************************************************************************
  *
- * @file test_logger_queue.c
- * @brief verify logger msgs & writes to queue
+ * @file logger_queue.c
+ * @brief functions for queueing, etc to posix logger queue
  *
  ************************************************************************************
  */
