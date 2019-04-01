@@ -48,7 +48,7 @@
 
 /* private functions */
 void set_sig_handlers(void);
-void mainCleanup(int sig);
+void sigintHandler(int sig);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]){
   /* set signal handlers and actions */
 	set_sig_handlers();
   struct sigaction sigAction;
-  sigAction.sa_handler = mainCleanup;
+  sigAction.sa_handler = sigintHandler;
   sigAction.sa_flags = 0;
   sigaction(SIGINT, &sigAction, NULL);
 
@@ -243,7 +243,9 @@ int main(int argc, char *argv[]){
     /* wait on signal timer */
     sigwait(&set, &signum);
 
+    /* If wish to log each heartbeat event monitored by main, uncomment below */
     //LOG_HEARTBEAT();
+
     newError = 0;
     monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
     MUTED_PRINT("newError: %d\n", newError);
@@ -275,7 +277,18 @@ int main(int argc, char *argv[]){
   close(sharedMemFd);
 }
 
-void mainCleanup(int sig){
+/*---------------------------------------------------------------------------------*/
+/**
+ * @brief Handler for SIGINT signal being received by main() - Kill application
+ *
+ * When SIGINT signal (ctrl+c) received by application, send kill signals to 
+ * terminate Remote, Temp, and Light children threads and have main exit from 
+ * processing loop to allow for gracefully termination of application.
+ *
+ * @param sig - param required by sigAction struct.
+ * @return void
+ */
+void sigintHandler(int sig){
   /* Send signal to all children threads to terminate */
   pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE);
   pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);

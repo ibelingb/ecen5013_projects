@@ -27,7 +27,7 @@
 #include "remoteThread.h"
 #include "packet.h"
 
-#define DEFAULT_SERV_ADDR "10.0.0.87"
+#define DEFAULT_SERV_ADDR "192.168.1.220"
 #define BUFFER_SIZE (3)
 
 /* Prototypes for private/helper functions */

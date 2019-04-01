@@ -55,6 +55,12 @@ static uint8_t aliveFlag = 1;
 /*---------------------------------------------------------------------------------*/
 void* lightSensorThreadHandler(void* threadInfo)
 {
+  /* Validate input */
+  if(threadInfo == NULL){
+    ERROR_PRINT("lightThread Failed to initialize; NULL pointer for provided threadInfo parameter - exiting.\n");
+    return NULL;
+  }
+
   SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
   LightDataStruct lightSensorData = {0};
   LightState_e lightState = LUX_STATE_LIGHT;
@@ -198,10 +204,37 @@ void* lightSensorThreadHandler(void* threadInfo)
 }
 
 /*---------------------------------------------------------------------------------*/
+void lightSigHandler(int signo, siginfo_t *info, void *extra)
+{
+  if((info != NULL) && (extra != NULL))
+  {
+    INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
+    aliveFlag = 0;
+  }
+}
+
+/*---------------------------------------------------------------------------------*/
+void lightGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
+}
+
+/*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief - Reads APDS-9301 registers and populates LightDataStruct passed via pointer.
+ *
+ * @param sensorFd - FD for APDS-9301 sensor device.
+ * @param lightData - LightDataStruct pointer to populate and pass read data back to caller.
+ * @return EXIT_SUCCESS or EXIT_FAILURE for successful reading device registers.
+ */
 int8_t getLightSensorData(int sensorFd, LightDataStruct *lightData) 
 {
+  if(lightData == NULL)
+    return EXIT_FAILURE;
+
   if(EXIT_FAILURE == verifyLightSensorComm(sensorFd))
     return EXIT_FAILURE;
 
@@ -219,6 +252,12 @@ int8_t getLightSensorData(int sensorFd, LightDataStruct *lightData)
 }
 
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief - Initialization method for APDS-9301 Light Sensor.
+ *
+ * @param sensorFd - FD for APDS-9301 sensor device.
+ * @return EXIT_SUCCESS or EXIT_FAILURE for successful setting device registers.
+ */
 int8_t initLightSensor(int sensorFd)
 {
   int failureCount = 0;
@@ -298,6 +337,13 @@ int8_t initLightSensor(int sensorFd)
 }
 
 /*---------------------------------------------------------------------------------*/
+/**
+ * @brief - Method to check that communication with ADPS-9301 device is successful
+ *          over I2C by reading Device Part Number.
+ *
+ * @param sensorFd - FD for APDS-9301 sensor device.
+ * @return EXIT_SUCCESS or EXIT_FAILURE for successful comm with device.
+ */
 int8_t verifyLightSensorComm(int sensorFd) 
 {
   uint8_t devicePartNo, deviceRevNo = 0;
@@ -313,16 +359,3 @@ int8_t verifyLightSensorComm(int sensorFd)
 }
 
 /*---------------------------------------------------------------------------------*/
-void lightSigHandler(int signo, siginfo_t *info, void *extra)
-{
-  INFO_PRINT("lightSigHandler, signum: %d\n",info->si_signo);
-  aliveFlag = 0;
-}
-
-/*---------------------------------------------------------------------------------*/
-void lightGetAliveFlag(uint8_t *pAlive)
-{
-  if(pAlive != NULL)
-    *pAlive = aliveFlag;
-}
-
