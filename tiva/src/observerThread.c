@@ -20,7 +20,8 @@
 
 /* app specific includes */
 #include "cmn_timer.h"
-#include "packet.h"
+#include "tiva_packet.h"
+#include <packet.h>
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -34,25 +35,22 @@
 void observerTask(void *pvParameters)
 {
     uint8_t count = 0, errCount = 0;
-    LogPacket_t logMsg;
+    TaskStatusPacket statusMsg;
 
-
-    /* set portion of logMsg that does not change */
-    memset(&logMsg, 0,sizeof(LogPacket_t));
-    memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
-    logMsg.msgId = PID_OBSERVER;
-    logMsg.temp = 0;
+    /* set portion of statusMsg that does not change */
+    memset(&statusMsg, 0,sizeof(TaskStatusPacket));
+    statusMsg.processId = PID_OBSERVER;
 
     /* get log queue handle */
     ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
 
     for (;;) {
-        /* update logMsg */
-        logMsg.count = count++;
-        logMsg.time = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
+        /* update statusMsg */
+        statusMsg.header = count++;
+        statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
         /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&logMsg, (TickType_t)10) != pdPASS) {
+        if(xQueueSend(info.logFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
             ++errCount;
         }
 

@@ -19,15 +19,17 @@
 #include <string.h>
 
 /* app specific includes */
-#include "packet.h"
 #include "tiva_i2c.h"
 #include "cmn_timer.h"
+#include "tiva_packet.h"
+
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
 #include <queue.h>
 #include <task.h>
 
+#include "packet.h"
 
 #define TMP102_ADDR             (0x48ul)                    /* I2C address of sensor */
 #define TMP102_TEMP_REG         (0x00ul)
@@ -37,18 +39,17 @@
 #define TMP102_BITS_TO_TEMPC(BITS, SHIFT) (((float)((0xFFFF & (BITS)) >> SHIFT)) * TMP102_TEMP_SCALEFACTOR)
 
 
-int8_t tmp102_getTempC(float *pTemp);
+int8_t getTempC(float *pTemp);
 
 void lightTask(void *pvParameters)
 {
     uint8_t errCount = 0, count = 0;
-    LogPacket_t logMsg;
+    TaskStatusPacket statusMsg;
     float temperature;
 
 
-    memset(&logMsg, 0, sizeof(LogPacket_t));
-    memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
-    logMsg.msgId = PID_LIGHT;
+    memset(&statusMsg, 0, sizeof(TaskStatusPacket));
+    statusMsg.processId = PID_LIGHT;
 
 
     /* get log queue handle */
@@ -57,19 +58,21 @@ void lightTask(void *pvParameters)
     /* init i2c bus */
     initI2c(info.sysClock);
 
+    /* init sensor */
+    /* TODO */
+
     for (;;) {
         /* got read temp from sensor*/
-        if(tmp102_getTempC(&temperature) != EXIT_SUCCESS) {
+        if(getTempC(&temperature) != EXIT_SUCCESS) {
             temperature = -100.0f;
         }
 
-        /* update logMsg */
-        logMsg.count = count++;
-        logMsg.time = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
-        logMsg.temp = temperature;
+        /* update statusMsg */
+        statusMsg.header = count++;
+        statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
         /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&logMsg, (TickType_t)10) != pdPASS) {
+        if(xQueueSend(info.logFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
             ++errCount;
         }
 
@@ -78,7 +81,7 @@ void lightTask(void *pvParameters)
     }
 }
 
-int8_t tmp102_getTempC(float *pTemp)
+int8_t getTempC(float *pTemp)
 {
     uint8_t data[2];
     uint16_t tmp;

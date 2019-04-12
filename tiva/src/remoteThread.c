@@ -21,8 +21,9 @@
 
 /* app specific includes */
 #include "cmn_timer.h"
-#include "packet.h"
 #include "uartstdio.h"
+#include "tiva_packet.h"
+#include "packet.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"
@@ -43,7 +44,7 @@ void remoteTask(void *pvParameters)
 {
     /* TODO - timer too long? */
     const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
-    LogPacket_t logMsg;
+    TaskStatusPacket statusMsg;
 
     /* init UART IO */
     init();
@@ -64,9 +65,9 @@ void remoteTask(void *pvParameters)
         /* TODO - send via network method */
 
         /* get thread status msgs */
-        if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
+        if(xQueueReceive(info.logFd, (void *)&statusMsg, xDelay) != pdFALSE)
         {
-            switch (logMsg.msgId) {
+            switch (statusMsg.processId) {
             case PID_LIGHT:
             case PID_SOLENOID:
             case PID_OBSERVER:
@@ -75,7 +76,7 @@ void remoteTask(void *pvParameters)
                 /* TODO - send via network method */
 
                 /* UART can go away, no requirements */
-                UARTprintf("\r\n Got %d count at %d ms from %s", logMsg.count, logMsg.time, logMsg.name);
+                UARTprintf("\r\n Got %d count at %d ms from %d", statusMsg.header, statusMsg.timestamp, statusMsg.processId);
                 break;
             default:
                 break;

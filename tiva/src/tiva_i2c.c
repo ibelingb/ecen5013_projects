@@ -163,8 +163,6 @@ int8_t recvIic1Byte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 
 int8_t recvIic2Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
-    uint8_t data[2];
-
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, false);
 

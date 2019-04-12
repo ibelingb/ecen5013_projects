@@ -26,15 +26,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 /* app specific includes */
 #include "main.h"
-#include "packet.h"
-
 #include "lightThread.h"
 #include "remoteThread.h"
 #include "moistureThread.h"
 #include "solenoidThread.h"
 #include "observerThread.h"
+#include "tiva_packet.h"
+#include "packet.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -49,8 +50,7 @@
 #include "task.h"
 #include "queue.h"
 
-#define LOG_QUEUE_LENGTH        (8)
-#define LOGGER_DELAY_MS         (1000)
+#define STATUS_QUEUE_LENGTH        (8)
 
 int main(void)
 {
@@ -61,15 +61,16 @@ int main(void)
     sysClock = SysCtlClockFreqSet((SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
                             SYSCTL_XTAL_25MHZ |SYSCTL_CFG_VCO_480), SYSTEM_CLOCK);
 
-    /* create log queue */
-    QueueHandle_t logQueue = xQueueCreate(LOG_QUEUE_LENGTH, sizeof(LogPacket_t));
-    if(logQueue == 0) {
+    /* create status queue */
+    QueueHandle_t statusQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct TaskStatusPacket));
+    if(statusQueue == 0) {
         return EXIT_FAILURE;
+        /* TODO - don't want to return, send msg to Control Node */
     }
 
     /* init thread info struct */
     memset(&info, 0,sizeof(ThreadInfo_t));
-    info.logFd = logQueue;
+    info.logFd = statusQueue;
     info.sysClock = sysClock;
     info.xStartTime = xTaskGetTickCount();
 

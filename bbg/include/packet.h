@@ -18,7 +18,10 @@
 #define PACKET_H_
 
 #include <stdint.h>
+
+#ifdef __linux__
 #include <pthread.h>
+#endif
 #include "tempSensor.h"
 #include "lightSensor.h"
 #include "logger_types.h"
@@ -158,8 +161,7 @@ typedef enum LogLevel_e
 
 /* ------------------------------------------------------------- */
 /*** PACKET/STRUCT DEFINITIONS ***/
-typedef struct TaskStatusPacket
-{
+typedef struct TaskStatusPacket {
   uint16_t header;
   uint32_t timestamp;
   ProcessId_e processId;
@@ -221,8 +223,10 @@ typedef struct SensorThreadInfo
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
   char sensorSharedMemoryName[IPC_NAME_SIZE];
+#ifdef __linux__
   pthread_mutex_t* sharedMemMutex;
   pthread_mutex_t* i2cBusMutex;
+#endif
   int sharedMemSize;
   int tempDataOffset;  /* Offset into SharedMemory for TempDataStruct (in bytes) */
   int lightDataOffset; /* Offset into SharedMemory for LightDataStruct (in bytes) */

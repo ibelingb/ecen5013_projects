@@ -7,40 +7,27 @@
  * CCS  Version: 8.3.0.00009
  ************************************************************************************
  *
- * packet.h
+ * tiva_packet.h
  *
  ************************************************************************************
  */
 
-#ifndef PACKET_H_
-#define PACKET_H_
+#ifndef TIVA_PACKET_H_
+#define TIVA_PACKET_H_
+
+/* TODO - merge w/ BBG packet.h, only need one */
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
 #include "queue.h"
 
-typedef enum ProcessId_e
-{
-  PID_LIGHT = 0,
-  PID_TEMP,
-  PID_REMOTE,
-  PID_LOGGING,
-  PID_MOISTURE,
-  PID_OBSERVER,
-  PID_SOLENOID,
-  PID_CONSOLE,
-  PID_REMOTE_CLIENT,
-  PID_SYSMON,
-  PID_END
-} ProcessId_e;
-
-typedef struct {
-    ProcessId_e msgId;  /* message Id */
-    uint32_t time;      /* in msec */
-    float temp;         /* times 1000 */
-    uint32_t count;     /* toggle count */
-    uint8_t name[8];    /* author's name */
-} LogPacket_t;
+//typedef struct {
+//    ProcessId_e msgId;  /* message Id */
+//    uint32_t time;      /* in msec */
+//    float temp;         /* times 1000 */
+//    uint32_t count;     /* toggle count */
+//    uint8_t name[8];    /* author's name */
+//} StatusPacket_t;
 
 typedef struct {
     QueueHandle_t logFd;
@@ -48,4 +35,16 @@ typedef struct {
     TickType_t xStartTime;
 } ThreadInfo_t;
 
-#endif /* PACKET_H_ */
+typedef struct {
+    uint16_t highThreshold;
+    uint16_t lowThreshold;
+    uint16_t moistureLevel;
+} MoistureDataStruct;
+
+typedef struct {
+    uint8_t cmd;
+    uint8_t state;
+    uint16_t remainingOnTime;
+} SolenoidDataStruct;
+
+#endif /* TIVA_PACKET_H_ */
