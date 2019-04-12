@@ -88,8 +88,6 @@ int main(void)
     info.shmemMutex = xSemaphoreCreateMutex();
     info.pShmem = &shmem;
 
-
-
     /* create threads */
     xTaskCreate(observerTask, (const portCHAR *)"Observer",
                 configMINIMAL_STACK_SIZE, (void *)&info, 1, &observerTaskHandle);
@@ -108,7 +106,6 @@ int main(void)
 
     vTaskStartScheduler();
 
-    //free(pShmem);
     return EXIT_SUCCESS;
 }
 

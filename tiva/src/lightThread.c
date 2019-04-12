@@ -25,8 +25,8 @@
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
-#include <queue.h>
-#include <task.h>
+#include "queue.h"
+#include "task.h"
 #include "semphr.h"
 
 #include "packet.h"
@@ -47,10 +47,8 @@ void lightTask(void *pvParameters)
     TaskStatusPacket statusMsg;
     float temperature;
 
-
     memset(&statusMsg, 0, sizeof(TaskStatusPacket));
     statusMsg.processId = PID_LIGHT;
-
 
     /* get status queue handle */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);

@@ -34,8 +34,8 @@
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
-#include <queue.h>
-#include <task.h>
+#include "queue.h"
+#include "task.h"
 #include "semphr.h"
 
 
@@ -47,7 +47,7 @@ void solenoidTask(void *pvParameters)
     /* init LED gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION));
-    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0);
+    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_1);
 
     /* set portion of statusMsg that does not change */
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));
@@ -69,7 +69,6 @@ void solenoidTask(void *pvParameters)
 
         /* Turn on the LED */
         enable = enable == 0 ? 0xFF : 0x00;
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, GPIO_PIN_0 & enable);
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & enable);
 
         /* try to get semaphore */

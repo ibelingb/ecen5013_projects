@@ -33,8 +33,8 @@
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
-#include <queue.h>
-#include <task.h>
+#include "queue.h"
+#include "task.h"
 #include "semphr.h"
 
 void init(void);
