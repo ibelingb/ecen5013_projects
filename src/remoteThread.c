@@ -31,7 +31,7 @@
 #include "remoteThread.h"
 #include "packet.h"
 #include "logger.h"
-#include "debug.h"
+#include "my_debug.h"
 #include "cmn_timer.h"
 #include "platform.h"
 #include "healthMonitor.h"

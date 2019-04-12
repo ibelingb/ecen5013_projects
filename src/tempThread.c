@@ -26,7 +26,7 @@
 #include <fcntl.h>    //for O_RDWR
 
 #include "tempThread.h"
-#include "debug.h"
+#include "my_debug.h"
 #include "logger.h"
 #include "cmn_timer.h"
 #include "tempSensor.h"

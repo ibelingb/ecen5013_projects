@@ -30,7 +30,7 @@
 #include "lightSensor.h"
 #include "lu_iic.h"
 #include "logger.h"
-#include "debug.h"
+#include "my_debug.h"
 #include "cmn_timer.h"
 #include "packet.h"
 #include "platform.h"

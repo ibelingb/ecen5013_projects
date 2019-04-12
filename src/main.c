@@ -35,7 +35,7 @@
 #include "loggingThread.h"
 #include "packet.h"
 #include "bbgLeds.h"
-#include "debug.h"
+#include "my_debug.h"
 #include "logger.h"
 #include "cmn_timer.h"
 #include "platform.h"

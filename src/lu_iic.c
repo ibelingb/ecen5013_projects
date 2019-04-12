@@ -28,7 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "debug.h"
+#include "my_debug.h"
 
 
 int8_t getIicRegister(int file, uint8_t slavAddr, uint8_t reg, uint32_t *pReg_value, uint8_t regSize, uint8_t regEndianness)

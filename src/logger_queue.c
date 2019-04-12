@@ -23,7 +23,7 @@
 #include <pthread.h>
 #include <sys/syscall.h>
 
-#include "debug.h"
+#include "my_debug.h"
 #include "logger_types.h"
 #include "packet.h"
 

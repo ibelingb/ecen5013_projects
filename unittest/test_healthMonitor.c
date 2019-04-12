@@ -27,7 +27,7 @@
 #include <fcntl.h>          //for O_RDWR
 #include <signal.h>
 
-#include "debug.h"
+#include "my_debug.h"
 #include "healthMonitor.h"
 #include "tempThread.h"
 #include "lightThread.h"

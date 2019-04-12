@@ -17,7 +17,7 @@
 
 
 #include "logger_types.h"
-#include "debug.h"
+#include "my_debug.h"
 #include <stddef.h>
 
 #ifdef __linux__

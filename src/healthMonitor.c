@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <syscall.h>
 
-#include "debug.h"
+#include "my_debug.h"
 #include "packet.h"
 #include "platform.h"
 

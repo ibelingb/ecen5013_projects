@@ -24,7 +24,7 @@
 
 #include "lightSensor.h"
 #include "lu_iic.h"
-#include "debug.h"
+#include "my_debug.h"
 
 #define APDS9301_I2C_ADDR           (0x39ul)
 #define APDS9301_CMD_WORD_BIT       (0x20)

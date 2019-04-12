@@ -24,7 +24,7 @@
 #include <string.h>     // for strerror()
 #include <sys/syscall.h>
 
-#include "debug.h"
+#include "my_debug.h"
 #include "logger.h"
 #include "tempThread.h"
 #include "lightThread.h"

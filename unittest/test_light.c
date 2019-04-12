@@ -21,7 +21,7 @@
 
 #include "lu_iic.h"
 #include "lightSensor.h"
-#include "debug.h"
+#include "my_debug.h"
 
 #define LIGHT_SAMPLES	(4)
 

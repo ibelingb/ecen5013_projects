@@ -26,7 +26,7 @@
 #include <fcntl.h>
 
 #include "loggingThread.h"
-#include "debug.h"
+#include "my_debug.h"
 #include "logger.h"
 #include "packet.h"
 #include "cmn_timer.h"

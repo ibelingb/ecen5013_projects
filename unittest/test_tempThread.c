@@ -28,7 +28,7 @@
 #include <sys/shm.h>
 #include <sys/mman.h>
 
-#include "debug.h"
+#include "my_debug.h"
 #include "tempThread.h"
 #include "lightThread.h"
 #include "healthMonitor.h"

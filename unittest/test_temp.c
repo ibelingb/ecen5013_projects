@@ -23,7 +23,7 @@
 
 #include "lu_iic.h"
 #include "tempSensor.h"
-#include "debug.h"
+#include "my_debug.h"
 
 #define TEMP_SAMPLES	(4)
 
