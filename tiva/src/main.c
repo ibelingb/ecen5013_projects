@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 /* app specific includes */
 #include "main.h"
 #include "lightThread.h"
@@ -75,8 +74,11 @@ int main(void)
         /* TODO - don't want to return, send msg to Control Node */
     }
 
-    /* create sensor data mutex */
-
+    /* create shared memory block */
+    static Shmem_t shmem;
+    memset(&shmem, 0,sizeof(LightDataStruct) +
+                       sizeof(MoistureDataStruct) +
+                       sizeof(SolenoidDataStruct));
 
     /* init thread info struct */
     memset(&info, 0,sizeof(SensorThreadInfo));
@@ -84,10 +86,9 @@ int main(void)
     info.sysClock = sysClock;
     info.xStartTime = xTaskGetTickCount();
     info.shmemMutex = xSemaphoreCreateMutex();
+    info.pShmem = &shmem;
 
-    if(info.shmemMutex == NULL) {
-        /* set error */
-    }
+
 
     /* create threads */
     xTaskCreate(observerTask, (const portCHAR *)"Observer",
@@ -106,6 +107,8 @@ int main(void)
                 configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);
 
     vTaskStartScheduler();
+
+    //free(pShmem);
     return EXIT_SUCCESS;
 }
 

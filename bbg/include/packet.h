@@ -233,6 +233,14 @@ typedef struct {
     uint16_t remainingOnTime;
 } SolenoidDataStruct;
 
+#ifndef __linux__
+typedef struct {
+    LightDataStruct lightData;
+    MoistureDataStruct moistData;
+    SolenoidDataStruct solenoidData;
+} Shmem_t;
+#endif
+
 /* ------------------------------------------------------------- */
 /*** THREAD INFO STRUCT DEFINITIONS ***/
 /* Struct defining the set of arguments passed to each thread when it's created */
@@ -247,6 +255,7 @@ typedef struct SensorThreadInfo
   pthread_mutex_t* i2cBusMutex;
 #else
   SemaphoreHandle_t shmemMutex;
+  Shmem_t *pShmem;
   QueueHandle_t statusFd;
   uint32_t sysClock;
   TickType_t xStartTime;

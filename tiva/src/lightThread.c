@@ -80,6 +80,7 @@ void lightTask(void *pvParameters)
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
             /* write data to shmem */
+            info.pShmem->lightData.apds9301_luxData = temperature;
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);

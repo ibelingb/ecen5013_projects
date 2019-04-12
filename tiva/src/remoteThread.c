@@ -42,6 +42,7 @@ void init(void);
 
 void remoteTask(void *pvParameters)
 {
+    float temp;
     /* TODO - timer too long? */
     const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
     TaskStatusPacket statusMsg;
@@ -63,6 +64,7 @@ void remoteTask(void *pvParameters)
         {
             /* read data from shmem */
             /* TODO - read shmem method */
+            temp = info.pShmem->lightData.apds9301_luxData;
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
@@ -76,6 +78,9 @@ void remoteTask(void *pvParameters)
         {
             switch (statusMsg.processId) {
             case PID_LIGHT:
+                UARTprintf("\r\n Temperature %d.%d degC",
+                           (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
+                break;
             case PID_SOLENOID:
             case PID_OBSERVER:
             case PID_MOISTURE:
