@@ -41,8 +41,9 @@ void observerTask(void *pvParameters)
 {
     uint8_t count = 0, errCount = 0, alarm = 0, prev_alarm = 0;
     TaskStatusPacket statusMsg;
+    LogMsgPacket logMsg;
 
-    /* init LED gpio */
+    /* init alarm gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION));
     GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, ALARM_GPIO_PIN);
@@ -51,8 +52,16 @@ void observerTask(void *pvParameters)
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));
     statusMsg.processId = PID_OBSERVER;
 
+    /* set portion of statusMsg that does not change */
+    memset(&logMsg, 0,sizeof(LogMsgPacket));
+
     /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
+
+    /* TODO - set BIST error in logMsg if necessary */
+    if(xQueueSend(info.logFd, ( void *)&logMsg, THREAD_MUTEX_DELAY) != pdPASS) {
+        ++errCount;
+    }
 
     for (;;) {
         /* update statusMsg */
@@ -60,7 +69,7 @@ void observerTask(void *pvParameters)
         statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
         /* send status msg */
-        if(xQueueSend(info.statusFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
+        if(xQueueSend(info.statusFd, ( void *)&statusMsg, THREAD_MUTEX_DELAY) != pdPASS) {
             ++errCount;
         }
 

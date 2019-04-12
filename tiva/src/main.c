@@ -50,11 +50,13 @@
 #include "semphr.h"
 
 #define STATUS_QUEUE_LENGTH        (8)
+#define LOG_QUEUE_LENGTH        (8)
 
 int main(void)
 {
     uint32_t sysClock;
     static SensorThreadInfo info;
+    LogMsgPacket logMsg;
 
     /* Handles for the tasks create by main() */
     static TaskHandle_t lightTaskHandle = NULL;
@@ -71,7 +73,14 @@ int main(void)
     QueueHandle_t statusQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct TaskStatusPacket));
     if(statusQueue == 0) {
         return EXIT_FAILURE;
-        /* TODO - don't want to return, send msg to Control Node */
+        /* TODO - don't want to return, what to do?? */
+    }
+
+    /* create log queue */
+    QueueHandle_t logQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct LogMsgPacket));
+    if(logQueue == 0) {
+        return EXIT_FAILURE;
+        /* TODO - don't want to return, what to do?? */
     }
 
     /* create shared memory block */
@@ -83,6 +92,7 @@ int main(void)
     /* init thread info struct */
     memset(&info, 0,sizeof(SensorThreadInfo));
     info.statusFd = statusQueue;
+    info.logFd = logQueue;
     info.sysClock = sysClock;
     info.xStartTime = xTaskGetTickCount();
     info.shmemMutex = xSemaphoreCreateMutex();
@@ -106,6 +116,8 @@ int main(void)
 
     vTaskStartScheduler();
 
+    vQueueDelete(logQueue);
+    vQueueDelete(statusQueue);
     return EXIT_SUCCESS;
 }
 

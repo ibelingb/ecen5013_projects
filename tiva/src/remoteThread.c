@@ -23,6 +23,7 @@
 #include "cmn_timer.h"
 #include "uartstdio.h"
 #include "packet.h"
+#include "my_debug.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"
@@ -42,10 +43,12 @@ void init(void);
 
 void remoteTask(void *pvParameters)
 {
+    uint8_t count = 0, errCount = 0;
     float temp;
     /* TODO - timer too long? */
     const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
     TaskStatusPacket statusMsg;
+    LogMsgPacket logMsg;
 
     /* init UART IO */
     init();
@@ -53,12 +56,22 @@ void remoteTask(void *pvParameters)
     /* initialize socket */
     /* TODO - socket stuff */
 
-    /* get status queue handle */
+    /* set portion of statusMsg that does not change */
+    memset(&logMsg, 0,sizeof(LogMsgPacket));
+
+    /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
+
+    /* TODO - set BIST error in logMsg if necessary */
+    if(xQueueSend(info.logFd, ( void *)&logMsg, THREAD_MUTEX_DELAY) != pdPASS) {
+        ++errCount;
+    }
 
     /* send data and status msgs to Control Node */
     for (;;)
     {
+        ++count;
+
         /* try to get semaphore */
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
@@ -69,7 +82,6 @@ void remoteTask(void *pvParameters)
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
         }
-
         /* send read data */
         /* TODO - send via network method */
 
@@ -78,7 +90,7 @@ void remoteTask(void *pvParameters)
         {
             switch (statusMsg.processId) {
             case PID_LIGHT:
-                UARTprintf("\r\n Temperature %d.%d degC",
+                INFO_PRINT("\r\n Temperature %d.%d degC",
                            (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
                 break;
             case PID_SOLENOID:
@@ -88,11 +100,18 @@ void remoteTask(void *pvParameters)
                 /* TODO - send via network method */
 
                 /* UART can go away, no requirements */
-                UARTprintf("\r\n Got %d count at %d ms from %d", statusMsg.header, statusMsg.timestamp, statusMsg.processId);
+                INFO_PRINT("\r\n Got %d count at %d ms from %d", statusMsg.header, statusMsg.timestamp, statusMsg.processId);
                 break;
             default:
                 break;
             }
+        }
+
+        /* get log msgs */
+        if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
+        {
+            /* send read log msg */
+            /* TODO - send via network method */
         }
     }
 }

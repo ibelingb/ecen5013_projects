@@ -257,6 +257,7 @@ typedef struct SensorThreadInfo
   SemaphoreHandle_t shmemMutex;
   Shmem_t *pShmem;
   QueueHandle_t statusFd;
+  QueueHandle_t logFd;
   uint32_t sysClock;
   TickType_t xStartTime;
 #endif
