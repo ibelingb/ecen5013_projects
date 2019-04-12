@@ -22,43 +22,77 @@
 /* app specific includes */
 #include "cmn_timer.h"
 #include "packet.h"
+#include "uartstdio.h"
 
 /* TivaWare includes */
-#include "driverlib/sysctl.h"   /* for clk */
+#include "driverlib/sysctl.h"
 #include "driverlib/debug.h"
+#include "driverlib/gpio.h"
+#include "driverlib/pin_map.h"
+#include "inc/hw_memmap.h"
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
 #include <queue.h>
 #include <task.h>
 
+void init(void);
+
+
 void remoteTask(void *pvParameters)
 {
-    uint8_t count = 0, errCount = 0;
+    /* TODO - timer too long? */
+    const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
     LogPacket_t logMsg;
 
+    /* init UART IO */
+    init();
 
-    /* set portion of logMsg that does not change */
-    memset(&logMsg, 0,sizeof(LogPacket_t));
-    memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
-    logMsg.msgId = PID_REMOTE_CLIENT;
-    logMsg.temp = 0;
+    /* initialize socket */
+    /* TODO - socket stuff */
 
     /* get log queue handle */
     ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
 
-    for (;;) {
+    /* send data and status msgs to Control Node */
+    for (;;)
+    {
+        /* read shared memory data */
+        /* TODO - read shmem method */
 
-        /* update logMsg */
-        logMsg.count = count++;
-        logMsg.time = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
+        /* send read data */
+        /* TODO - send via network method */
 
-        /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&logMsg, (TickType_t)10) != pdPASS) {
-            ++errCount;
+        /* get thread status msgs */
+        if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
+        {
+            switch (logMsg.msgId) {
+            case PID_LIGHT:
+            case PID_SOLENOID:
+            case PID_OBSERVER:
+            case PID_MOISTURE:
+                /* send read data */
+                /* TODO - send via network method */
+
+                /* UART can go away, no requirements */
+                UARTprintf("\r\n Got %d count at %d ms from %s", logMsg.count, logMsg.time, logMsg.name);
+                break;
+            default:
+                break;
+            }
         }
-
-        /* sleep */
-        vTaskDelay(REMOTE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
+}
+
+/* initialize IO for UART */
+void init(void)
+{
+    /* init UART IO */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+    GPIOPinConfigure(GPIO_PA0_U0RX);
+    GPIOPinConfigure(GPIO_PA1_U0TX);
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    /* setup UART */
+    UARTStdioConfig(0, 57600, SYSTEM_CLOCK);
 }

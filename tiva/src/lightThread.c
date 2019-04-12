@@ -41,7 +41,7 @@ int8_t tmp102_getTempC(float *pTemp);
 
 void lightTask(void *pvParameters)
 {
-    uint8_t errCount, count;
+    uint8_t errCount = 0, count = 0;
     LogPacket_t logMsg;
     float temperature;
 
@@ -64,7 +64,7 @@ void lightTask(void *pvParameters)
         }
 
         /* update logMsg */
-        logMsg.count = count;
+        logMsg.count = count++;
         logMsg.time = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
         logMsg.temp = temperature;
 

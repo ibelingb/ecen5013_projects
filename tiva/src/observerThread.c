@@ -12,7 +12,6 @@
  *
  ************************************************************************************
  */
-
 /* stdlib includes */
 #include <stdint.h>
 #include <stdlib.h>
@@ -22,14 +21,10 @@
 /* app specific includes */
 #include "cmn_timer.h"
 #include "packet.h"
-#include "uartstdio.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
 #include "driverlib/debug.h"
-#include "driverlib/gpio.h"
-#include "driverlib/pin_map.h"
-#include "inc/hw_memmap.h"
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
@@ -38,41 +33,30 @@
 
 void observerTask(void *pvParameters)
 {
-    const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
+    uint8_t count = 0, errCount = 0;
     LogPacket_t logMsg;
 
-    /* init UART IO */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-    GPIOPinConfigure(GPIO_PA0_U0RX);
-    GPIOPinConfigure(GPIO_PA1_U0TX);
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
-    /* setup UART */
-    UARTStdioConfig(0, 57600, SYSTEM_CLOCK);
+    /* set portion of logMsg that does not change */
+    memset(&logMsg, 0,sizeof(LogPacket_t));
+    memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
+    logMsg.msgId = PID_OBSERVER;
+    logMsg.temp = 0;
 
     /* get log queue handle */
     ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
 
     for (;;) {
-        /* get / wait for msg */
-        if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
-        {
-            switch (logMsg.msgId) {
-            case PID_LIGHT:
-                UARTprintf("\r\n Temperature %d.%d degC at %d ms from %s",
-                           (uint16_t)logMsg.temp, ((uint16_t)(logMsg.temp * 1000)) - (((uint16_t)logMsg.temp) * 1000),
-                           logMsg.time, logMsg.name);
-                break;
-            case PID_SOLENOID:
-                UARTprintf("\r\n Got %d count at %d ms from %s", logMsg.count, logMsg.time, logMsg.name);
-                break;
-            case PID_REMOTE_CLIENT:
-                UARTprintf("\r\n Got %d count at %d ms from %s", logMsg.count, logMsg.time, logMsg.name);
-                break;
-            case PID_MOISTURE:
-                UARTprintf("\r\n Got %d count at %d ms from %s", logMsg.count, logMsg.time, logMsg.name);
-                break;
-            }
+        /* update logMsg */
+        logMsg.count = count++;
+        logMsg.time = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
+
+        /* send msg */
+        if(xQueueSend(info.logFd, ( void *)&logMsg, (TickType_t)10) != pdPASS) {
+            ++errCount;
         }
+
+        /* sleep */
+        vTaskDelay(REMOTE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
 }
