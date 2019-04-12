@@ -1,22 +1,21 @@
 /***********************************************************************************
- * @author Josh Malburg
- * joshua.malburg@colorad.edu
+ * @author Brian Ibeling and Joshua Malburg
+ * Brian.Ibeling@colorado.edu, joshua.malburg@colorad.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
- * @date March 23, 2019
- * arm-linux-gnueabi (Buildroot)
- * gcc (Ubuntu)
+ * @date April 12, 2019
+ * CCS  Version: 8.3.0.00009
  ************************************************************************************
  *
- * @file platform.h
- * @brief general information about the application and hardware needed by many sources
+ * @file remoteThread.h
+ * @brief
  *
  ************************************************************************************
  */
 
-#ifndef PLATFORM_H_
-#define PLATFORM_H_
+#ifndef REMOTETHREAD_H_
+#define REMOTETHREAD_H_
 
-#define NUM_THREADS (4)
+void remoteTask(void *pvParameters);
 
-#endif /* PLATFORM_H_ */
+#endif /* REMOTETHREAD_H_ */

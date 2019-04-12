@@ -18,7 +18,15 @@
 #define PACKET_H_
 
 #include <stdint.h>
+
+#ifdef __linux__
 #include <pthread.h>
+#else
+/* FreeRTOS includes */
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "semphr.h"
+#endif
 #include "tempSensor.h"
 #include "lightSensor.h"
 #include "logger_types.h"
@@ -52,6 +60,12 @@ typedef enum ProcessId_e
   PID_TEMP,
   PID_REMOTE,
   PID_LOGGING,
+  PID_MOISTURE,
+  PID_OBSERVER,
+  PID_SOLENOID,
+  PID_CONSOLE,
+  PID_REMOTE_CLIENT,
+  PID_SYSMON,
   PID_END
 } ProcessId_e;
 
@@ -152,8 +166,7 @@ typedef enum LogLevel_e
 
 /* ------------------------------------------------------------- */
 /*** PACKET/STRUCT DEFINITIONS ***/
-typedef struct TaskStatusPacket
-{
+typedef struct TaskStatusPacket {
   uint16_t header;
   uint32_t timestamp;
   ProcessId_e processId;
@@ -206,17 +219,47 @@ typedef struct LightDataStruct
   LightState_e lightState;
 } LightDataStruct;
 
+/* This struct will be used within shared memory to define data structure to read/write btw nodes/threads */
+typedef struct {
+    uint16_t highThreshold;
+    uint16_t lowThreshold;
+    uint16_t moistureLevel;
+} MoistureDataStruct;
+
+/* This struct will be used within shared memory to define data structure to read/write btw nodes/threads */
+typedef struct {
+    uint8_t cmd;
+    uint8_t state;
+    uint16_t remainingOnTime;
+} SolenoidDataStruct;
+
+#ifndef __linux__
+typedef struct {
+    LightDataStruct lightData;
+    MoistureDataStruct moistData;
+    SolenoidDataStruct solenoidData;
+} Shmem_t;
+#endif
+
 /* ------------------------------------------------------------- */
 /*** THREAD INFO STRUCT DEFINITIONS ***/
 /* Struct defining the set of arguments passed to each thread when it's created */
 
 typedef struct SensorThreadInfo
 {
+#ifdef __linux__
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
   char sensorSharedMemoryName[IPC_NAME_SIZE];
   pthread_mutex_t* sharedMemMutex;
   pthread_mutex_t* i2cBusMutex;
+#else
+  SemaphoreHandle_t shmemMutex;
+  Shmem_t *pShmem;
+  QueueHandle_t statusFd;
+  uint32_t sysClock;
+  TickType_t xStartTime;
+#endif
   int sharedMemSize;
   int tempDataOffset;  /* Offset into SharedMemory for TempDataStruct (in bytes) */
   int lightDataOffset; /* Offset into SharedMemory for LightDataStruct (in bytes) */
