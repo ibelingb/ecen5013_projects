@@ -41,7 +41,7 @@ void remoteTask(void *pvParameters)
     /* set portion of logMsg that does not change */
     memset(&logMsg, 0,sizeof(LogPacket_t));
     memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
-    logMsg.msgId = MSG_ID_LED;
+    logMsg.msgId = PID_REMOTE_CLIENT;
     logMsg.temp = 0;
 
     /* get log queue handle */
@@ -59,6 +59,6 @@ void remoteTask(void *pvParameters)
         }
 
         /* sleep */
-        vTaskDelay(LED_TASK_DELAY_SEC * configTICK_RATE_HZ);
+        vTaskDelay(REMOTE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
 }

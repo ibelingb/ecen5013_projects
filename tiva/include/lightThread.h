@@ -16,7 +16,7 @@
 #ifndef LIGHT_THREAD_H_
 #define LIGHT_THREAD_H_
 
-void tempTask(void *pvParameters);
+void lightTask(void *pvParameters);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */

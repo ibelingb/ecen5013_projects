@@ -39,7 +39,7 @@
 
 int8_t tmp102_getTempC(float *pTemp);
 
-void tempTask(void *pvParameters)
+void lightTask(void *pvParameters)
 {
     uint8_t errCount, count;
     LogPacket_t logMsg;
@@ -48,7 +48,7 @@ void tempTask(void *pvParameters)
 
     memset(&logMsg, 0, sizeof(LogPacket_t));
     memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
-    logMsg.msgId = MSG_ID_TEMP;
+    logMsg.msgId = PID_LIGHT;
 
 
     /* get log queue handle */
@@ -74,7 +74,7 @@ void tempTask(void *pvParameters)
         }
 
         /* sleep */
-        vTaskDelay(TEMP_TASK_DELAY_SEC * configTICK_RATE_HZ);
+        vTaskDelay(LIGHT_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
 }
 

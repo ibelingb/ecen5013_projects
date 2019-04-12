@@ -16,9 +16,12 @@
 #ifndef CMN_TIMER_H_
 #define CMN_TIMER_H_
 
-#define LED_TASK_DELAY_SEC              (0.1)
-#define TEMP_TASK_DELAY_SEC             (1)
-#define REMOTE_TASK_DELAY_SEC           (1)
-#define OBSERVER_TASK_DELAY_SEC         (1)
+#define SOLENOID_TASK_DELAY_SEC         (0.5)
+#define LIGHT_TASK_DELAY_SEC            (0.5)
+#define REMOTE_TASK_DELAY_SEC           (0.5)
+#define OBSERVER_TASK_DELAY_SEC         (0.5)
+#define MOISTURE_TASK_DELAY_SEC         (0.5)
+
+
 
 #endif /* CMN_TIMER_H_ */

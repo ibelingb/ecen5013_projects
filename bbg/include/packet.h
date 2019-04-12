@@ -52,6 +52,12 @@ typedef enum ProcessId_e
   PID_TEMP,
   PID_REMOTE,
   PID_LOGGING,
+  PID_MOISTURE,
+  PID_OBSERVER,
+  PID_SOLENOID,
+  PID_CONSOLE,
+  PID_REMOTE_CLIENT,
+  PID_SYSMON,
   PID_END
 } ProcessId_e;
 

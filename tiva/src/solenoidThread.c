@@ -37,7 +37,7 @@
 #include <task.h>
 
 
-void ledTask(void *pvParameters)
+void solenoidTask(void *pvParameters)
 {
     uint8_t enable = 0, count = 0, errCount = 0;
     LogPacket_t logMsg;
@@ -50,7 +50,7 @@ void ledTask(void *pvParameters)
     /* set portion of logMsg that does not change */
     memset(&logMsg, 0,sizeof(LogPacket_t));
     memcpy(logMsg.name, pcTaskGetName(NULL), sizeof(pcTaskGetName(NULL)));
-    logMsg.msgId = MSG_ID_LED;
+    logMsg.msgId = PID_SOLENOID;
     logMsg.temp = 0;
 
     /* get log queue handle */
@@ -73,6 +73,6 @@ void ledTask(void *pvParameters)
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & enable);
 
         /* sleep */
-        vTaskDelay(LED_TASK_DELAY_SEC * configTICK_RATE_HZ);
+        vTaskDelay(SOLENOID_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
 }

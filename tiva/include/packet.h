@@ -19,11 +19,23 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
-#define MSG_ID_TEMP             (0)
-#define MSG_ID_LED              (1)
+typedef enum ProcessId_e
+{
+  PID_LIGHT = 0,
+  PID_TEMP,
+  PID_REMOTE,
+  PID_LOGGING,
+  PID_MOISTURE,
+  PID_OBSERVER,
+  PID_SOLENOID,
+  PID_CONSOLE,
+  PID_REMOTE_CLIENT,
+  PID_SYSMON,
+  PID_END
+} ProcessId_e;
 
 typedef struct {
-    uint8_t msgId;      /* message Id */
+    ProcessId_e msgId;  /* message Id */
     uint32_t time;      /* in msec */
     float temp;         /* times 1000 */
     uint32_t count;     /* toggle count */

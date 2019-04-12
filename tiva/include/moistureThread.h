@@ -16,5 +16,6 @@
 #ifndef MOISTURETHREAD_H_
 #define MOISTURETHREAD_H_
 
+void moistureTask(void *pvParameters);
 
 #endif /* MOISTURETHREAD_H_ */

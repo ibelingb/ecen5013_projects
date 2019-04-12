@@ -1,5 +1,5 @@
 /***********************************************************************************
- * @author Joshua Malburg (joma0364)
+ * @author Joshua Malburg
  * joshua.malburg@colorado.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Feidebrecht
@@ -28,13 +28,13 @@
 
 /* app specific includes */
 #include "main.h"
-#include "uartstdio.h"
 #include "packet.h"
 
 #include "lightThread.h"
 #include "remoteThread.h"
 #include "moistureThread.h"
 #include "solenoidThread.h"
+#include "observerThread.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -51,10 +51,6 @@
 
 #define LOG_QUEUE_LENGTH        (8)
 #define LOGGER_DELAY_MS         (1000)
-
-/* private functions */
-void loggerTask(void *pvParameters);
-
 
 int main(void)
 {
@@ -77,56 +73,24 @@ int main(void)
     info.sysClock = sysClock;
     info.xStartTime = xTaskGetTickCount();
 
-    /* create tasks */
-    xTaskCreate(loggerTask, (const portCHAR *)"Logger",
+    /* create threads */
+    xTaskCreate(observerTask, (const portCHAR *)"Observer",
                 configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
 
-    xTaskCreate(ledTask, (const portCHAR *)"LEDs",
+    xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid",
                 configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
 
-    xTaskCreate(tempTask, (const portCHAR *)"Temp",
+    xTaskCreate(lightTask, (const portCHAR *)"Light",
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+
+    xTaskCreate(remoteTask, (const portCHAR *)"Remote",
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+
+    xTaskCreate(moistureTask, (const portCHAR *)"Moist",
                 configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
 
     vTaskStartScheduler();
     return EXIT_SUCCESS;
-}
-
-
-/**
- * @brief logger task
- */
-void loggerTask(void *pvParameters)
-{
-    const TickType_t xDelay = LOGGER_DELAY_MS / portTICK_PERIOD_MS;
-    LogPacket_t logMsg;
-
-    /* init UART IO */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-    GPIOPinConfigure(GPIO_PA0_U0RX);
-    GPIOPinConfigure(GPIO_PA1_U0TX);
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    /* setup UART */
-    UARTStdioConfig(0, 57600, SYSTEM_CLOCK);
-
-    /* get log queue handle */
-    ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
-
-    for (;;) {
-        /* get / wait for msg */
-        if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
-        {
-            /* print msg based on ID */
-            if(logMsg.msgId == MSG_ID_TEMP) {
-                UARTprintf("\r\n Temperature %d.%d degC at %d ms from %s",
-                           (uint16_t)logMsg.temp, ((uint16_t)(logMsg.temp * 1000)) - (((uint16_t)logMsg.temp) * 1000),
-                           logMsg.time, logMsg.name);
-            }
-            else if (logMsg.msgId == MSG_ID_LED) {
-                UARTprintf("\r\n Toggle %d count at %d ms from %s", logMsg.count, logMsg.time, logMsg.name);
-            }
-        }
-    }
 }
 
 /*  ASSERT() Error function

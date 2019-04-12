@@ -7,15 +7,15 @@
  * CCS  Version: 8.3.0.00009
  ************************************************************************************
  *
- * @file solenoidThread.h
+ * @file observerThread.h
  * @brief
  *
  ************************************************************************************
  */
 
-#ifndef SOLENOIDTHREAD_H_
-#define SOLENOIDTHREAD_H_
+#ifndef OBSERVERTHREAD_H_
+#define OBSERVERTHREAD_H_
 
-void solenoidTask(void *pvParameters);
+void observerTask(void *pvParameters);
 
-#endif /* SOLENOIDTHREAD_H_ */
+#endif /* OBSERVERTHREAD_H_ */
