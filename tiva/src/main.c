@@ -34,7 +34,6 @@
 #include "moistureThread.h"
 #include "solenoidThread.h"
 #include "observerThread.h"
-#include "tiva_packet.h"
 #include "packet.h"
 
 /* TivaWare includes */
@@ -49,13 +48,21 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 #define STATUS_QUEUE_LENGTH        (8)
 
 int main(void)
 {
     uint32_t sysClock;
-    static ThreadInfo_t info;
+    static SensorThreadInfo info;
+
+    /* Handles for the tasks create by main() */
+    static TaskHandle_t lightTaskHandle = NULL;
+    static TaskHandle_t remoteTaskHandle = NULL;
+    static TaskHandle_t moistureTaskHandle = NULL;
+    static TaskHandle_t observerTaskHandle = NULL;
+    static TaskHandle_t solenoidTaskHandle = NULL;
 
     /* init system clock */
     sysClock = SysCtlClockFreqSet((SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
@@ -68,27 +75,35 @@ int main(void)
         /* TODO - don't want to return, send msg to Control Node */
     }
 
+    /* create sensor data mutex */
+
+
     /* init thread info struct */
-    memset(&info, 0,sizeof(ThreadInfo_t));
-    info.logFd = statusQueue;
+    memset(&info, 0,sizeof(SensorThreadInfo));
+    info.statusFd = statusQueue;
     info.sysClock = sysClock;
     info.xStartTime = xTaskGetTickCount();
+    info.shmemMutex = xSemaphoreCreateMutex();
+
+    if(info.shmemMutex == NULL) {
+        /* set error */
+    }
 
     /* create threads */
     xTaskCreate(observerTask, (const portCHAR *)"Observer",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, &observerTaskHandle);
 
     xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, &solenoidTaskHandle);
 
     xTaskCreate(lightTask, (const portCHAR *)"Light",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, &lightTaskHandle);
 
     xTaskCreate(remoteTask, (const portCHAR *)"Remote",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, &remoteTaskHandle);
 
     xTaskCreate(moistureTask, (const portCHAR *)"Moist",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, NULL);
+                configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);
 
     vTaskStartScheduler();
     return EXIT_SUCCESS;

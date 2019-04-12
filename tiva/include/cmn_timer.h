@@ -21,7 +21,6 @@
 #define REMOTE_TASK_DELAY_SEC           (0.5)
 #define OBSERVER_TASK_DELAY_SEC         (0.5)
 #define MOISTURE_TASK_DELAY_SEC         (0.5)
-
-
+#define THREAD_MUTEX_DELAY              (( TickType_t ) 10)
 
 #endif /* CMN_TIMER_H_ */

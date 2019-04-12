@@ -21,13 +21,13 @@
 /* app specific includes */
 #include "tiva_i2c.h"
 #include "cmn_timer.h"
-#include "tiva_packet.h"
 
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
 #include <queue.h>
 #include <task.h>
+#include "semphr.h"
 
 #include "packet.h"
 
@@ -52,8 +52,8 @@ void lightTask(void *pvParameters)
     statusMsg.processId = PID_LIGHT;
 
 
-    /* get log queue handle */
-    ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
+    /* get status queue handle */
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     /* init i2c bus */
     initI2c(info.sysClock);
@@ -62,18 +62,27 @@ void lightTask(void *pvParameters)
     /* TODO */
 
     for (;;) {
-        /* got read temp from sensor*/
-        if(getTempC(&temperature) != EXIT_SUCCESS) {
-            temperature = -100.0f;
-        }
-
         /* update statusMsg */
         statusMsg.header = count++;
         statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
         /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
+        if(xQueueSend(info.statusFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
             ++errCount;
+        }
+
+        /* get sensor data */
+        if(getTempC(&temperature) != EXIT_SUCCESS) {
+            temperature = -100.0f;
+        }
+
+        /* try to get semaphore */
+        if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
+        {
+            /* write data to shmem */
+
+            /* release mutex */
+            xSemaphoreGive(info.shmemMutex);
         }
 
         /* sleep */

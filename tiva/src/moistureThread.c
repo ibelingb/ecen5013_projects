@@ -21,7 +21,6 @@
 
 /* app specific includes */
 #include "cmn_timer.h"
-#include "tiva_packet.h"
 #include "packet.h"
 
 /* TivaWare includes */
@@ -34,6 +33,7 @@
 #include "FreeRTOS.h"
 #include <queue.h>
 #include <task.h>
+#include "semphr.h"
 
 
 void moistureTask(void *pvParameters)
@@ -46,8 +46,8 @@ void moistureTask(void *pvParameters)
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));
     statusMsg.processId = PID_MOISTURE;
 
-    /* get log queue handle */
-    ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
+    /* get status queue handle */
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     for (;;) {
 
@@ -55,9 +55,20 @@ void moistureTask(void *pvParameters)
         statusMsg.header = count++;
         statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
-        /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
+        /* send status msg */
+        if(xQueueSend(info.statusFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
             ++errCount;
+        }
+
+        /* get sensor data */
+
+        /* try to get semaphore */
+        if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
+        {
+            /* write data to shmem */
+
+            /* release mutex */
+            xSemaphoreGive(info.shmemMutex);
         }
 
         /* sleep */

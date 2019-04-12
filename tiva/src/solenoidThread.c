@@ -22,7 +22,6 @@
 /* app specific includes */
 #include "tiva_i2c.h"
 #include "cmn_timer.h"
-#include "tiva_packet.h"
 #include "packet.h"
 
 
@@ -37,7 +36,7 @@
 #include "FreeRTOS.h"
 #include <queue.h>
 #include <task.h>
-
+#include "semphr.h"
 
 
 void solenoidTask(void *pvParameters)
@@ -54,8 +53,8 @@ void solenoidTask(void *pvParameters)
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));
     statusMsg.processId = PID_SOLENOID;
 
-    /* get log queue handle */
-    ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
+    /* get status queue handle */
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     for (;;) {
 
@@ -63,8 +62,8 @@ void solenoidTask(void *pvParameters)
         statusMsg.header = count++;
         statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
-        /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
+        /* send status msg */
+        if(xQueueSend(info.statusFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
             ++errCount;
         }
 
@@ -72,6 +71,15 @@ void solenoidTask(void *pvParameters)
         enable = enable == 0 ? 0xFF : 0x00;
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, GPIO_PIN_0 & enable);
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & enable);
+
+        /* try to get semaphore */
+        if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
+        {
+            /* write data to shmem */
+
+            /* release mutex */
+            xSemaphoreGive(info.shmemMutex);
+        }
 
         /* sleep */
         vTaskDelay(SOLENOID_TASK_DELAY_SEC * configTICK_RATE_HZ);

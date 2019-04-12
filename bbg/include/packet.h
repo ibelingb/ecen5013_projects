@@ -21,6 +21,11 @@
 
 #ifdef __linux__
 #include <pthread.h>
+#else
+/* FreeRTOS includes */
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "semphr.h"
 #endif
 #include "tempSensor.h"
 #include "lightSensor.h"
@@ -214,18 +219,37 @@ typedef struct LightDataStruct
   LightState_e lightState;
 } LightDataStruct;
 
+/* This struct will be used within shared memory to define data structure to read/write btw nodes/threads */
+typedef struct {
+    uint16_t highThreshold;
+    uint16_t lowThreshold;
+    uint16_t moistureLevel;
+} MoistureDataStruct;
+
+/* This struct will be used within shared memory to define data structure to read/write btw nodes/threads */
+typedef struct {
+    uint8_t cmd;
+    uint8_t state;
+    uint16_t remainingOnTime;
+} SolenoidDataStruct;
+
 /* ------------------------------------------------------------- */
 /*** THREAD INFO STRUCT DEFINITIONS ***/
 /* Struct defining the set of arguments passed to each thread when it's created */
 
 typedef struct SensorThreadInfo
 {
+#ifdef __linux__
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
   char sensorSharedMemoryName[IPC_NAME_SIZE];
-#ifdef __linux__
   pthread_mutex_t* sharedMemMutex;
   pthread_mutex_t* i2cBusMutex;
+#else
+  SemaphoreHandle_t shmemMutex;
+  QueueHandle_t statusFd;
+  uint32_t sysClock;
+  TickType_t xStartTime;
 #endif
   int sharedMemSize;
   int tempDataOffset;  /* Offset into SharedMemory for TempDataStruct (in bytes) */

@@ -20,8 +20,7 @@
 
 /* app specific includes */
 #include "cmn_timer.h"
-#include "tiva_packet.h"
-#include <packet.h>
+#include "packet.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -42,7 +41,7 @@ void observerTask(void *pvParameters)
     statusMsg.processId = PID_OBSERVER;
 
     /* get log queue handle */
-    ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     for (;;) {
         /* update statusMsg */
@@ -50,7 +49,7 @@ void observerTask(void *pvParameters)
         statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
         /* send msg */
-        if(xQueueSend(info.logFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
+        if(xQueueSend(info.statusFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
             ++errCount;
         }
 

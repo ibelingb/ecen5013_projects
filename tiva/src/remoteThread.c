@@ -22,7 +22,6 @@
 /* app specific includes */
 #include "cmn_timer.h"
 #include "uartstdio.h"
-#include "tiva_packet.h"
 #include "packet.h"
 
 /* TivaWare includes */
@@ -36,6 +35,7 @@
 #include "FreeRTOS.h"
 #include <queue.h>
 #include <task.h>
+#include "semphr.h"
 
 void init(void);
 
@@ -52,20 +52,27 @@ void remoteTask(void *pvParameters)
     /* initialize socket */
     /* TODO - socket stuff */
 
-    /* get log queue handle */
-    ThreadInfo_t info = *((ThreadInfo_t *)pvParameters);
+    /* get status queue handle */
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     /* send data and status msgs to Control Node */
     for (;;)
     {
-        /* read shared memory data */
-        /* TODO - read shmem method */
+        /* try to get semaphore */
+        if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
+        {
+            /* read data from shmem */
+            /* TODO - read shmem method */
+
+            /* release mutex */
+            xSemaphoreGive(info.shmemMutex);
+        }
 
         /* send read data */
         /* TODO - send via network method */
 
         /* get thread status msgs */
-        if(xQueueReceive(info.logFd, (void *)&statusMsg, xDelay) != pdFALSE)
+        if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
         {
             switch (statusMsg.processId) {
             case PID_LIGHT:
