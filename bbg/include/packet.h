@@ -223,7 +223,7 @@ typedef struct LightDataStruct
 typedef struct {
     uint16_t highThreshold;
     uint16_t lowThreshold;
-    uint16_t moistureLevel;
+    float moistureLevel;
 } MoistureDataStruct;
 
 /* This struct will be used within shared memory to define data structure to read/write btw nodes/threads */
