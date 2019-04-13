@@ -1,4 +1,4 @@
-# ecen5013_project2
+# ecen5013_project
 ECEN 5013 Project1 and Project2 Repository
 
 This repository contains the source code for Project 1 (BBG based I2C sampling application) and Project 2 (TI TIVA and BBG application).
