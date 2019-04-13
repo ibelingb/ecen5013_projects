@@ -15,22 +15,31 @@
  */
 
 #include <stdio.h>
-#include <mqueue.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>	// for write, open, etc
-#include <time.h>	// for timespec
-#include <pthread.h>
-#include <sys/syscall.h>
+
+#ifdef __linux__
+	#include <mqueue.h>
+	#include <unistd.h>	// for write, open, etc
+	#include <time.h>	// for timespec
+	#include <pthread.h>
+	#include <sys/syscall.h>
+#else
+	#include "FreeRTOS.h"
+	#include "queue.h"
+#endif
 
 #include "my_debug.h"
 #include "logger_types.h"
 #include "packet.h"
-
 #include "conversion.h"
 
 /* globals */
+#ifdef __linux__
 static mqd_t logQueue = -1;
+#else
+static QueueHandle_t statusFd = 0;
+#endif
 
 /* private functions */
 uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd);
@@ -40,6 +49,7 @@ uint8_t log_byte(uint8_t value, int fileFd);
 
 uint8_t init_queue_logger(void *pArg)
 {
+	#ifdef __linux__
 	/* re-open msg queue for read/write */
 	LogThreadInfo args = *(LogThreadInfo *)pArg;
 	logQueue = mq_open(args.logMsgQueueName, O_RDWR, 0, NULL);
@@ -48,14 +58,21 @@ uint8_t init_queue_logger(void *pArg)
         ERROR_PRINT("mq_open failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
     }
+	#else
+	SensorThreadInfo args = *(SensorThreadInfo *)pArg;
+	statusFd =  args.statusFd;
+	#endif
 	return LOG_STATUS_OK;
 }
 
 uint8_t log_queue_item(logItem_t *pLogItem)
 {
 	LogMsgPacket newItem;
-
+	#ifdef __linux__
 	if(logQueue < 0)
+	#else
+	if(logQueue <= 0)
+	#endif
 	{
         ERROR_PRINT("log msg queue not initialized\n");
         return LOG_STATUS_NOTOK;
@@ -76,7 +93,11 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 		return LOG_STATUS_NOTOK;
 
 	/* send, use 7 as priority */
+	#ifdef __linux__
 	if(mq_send(logQueue, (char *)&newItem, sizeof(LogMsgPacket), 7) < 0)
+	#else
+	if(xQueueSend(logQueue, ( void *)&statusMsg, THREAD_MUTEX_DELAY) != pdPASS)
+	#endif
 	{
         ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
@@ -86,7 +107,11 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 
 void log_queue_flush(void)
 {
+	#ifdef __linux__
 	if(logQueue < 0)
+	#else
+	if(logQueue <= 0)
+	#endif
 	{
         ERROR_PRINT("log msg queue not initialized\n");
         return;
@@ -97,11 +122,16 @@ void log_queue_flush(void)
 uint8_t log_dequeue_item(logItem_t *pLogItem)
 {
 	LogMsgPacket newItem;
-	struct timespec rxTimeout;
 	size_t bytesRead;
+
+	#ifdef __linux__
+	struct timespec rxTimeout;
 	struct mq_attr Attr;
 
 	if(logQueue < 0)
+	#else
+	if(logQueue <= 0)
+	#endif
 	{
         ERROR_PRINT("log msg queue not initialized\n");
         return LOG_STATUS_NOTOK;

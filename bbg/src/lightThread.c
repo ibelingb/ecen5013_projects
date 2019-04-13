@@ -136,7 +136,7 @@ void* lightSensorThreadHandler(void* threadInfo)
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_BIST_COMPLETE);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_INIT_ERROR);
     ERROR_PRINT("lightThread initialization failed.\n");
-    return NULL;
+    //return NULL;
   } else {
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_BIST_COMPLETE);
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_INIT_SUCCESS);

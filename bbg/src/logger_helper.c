@@ -21,12 +21,13 @@
 #include <stddef.h>
 
 #ifdef __linux__
-#include <time.h>
-#define TIMESPEC_TO_uSEC(time)	((((double)time.tv_sec) * 1.0e6) + (((double)time.tv_nsec) / 1.0e3))
-#define TIMESPEC_TO_mSEC(time)	((((double)time.tv_sec) * 1.0e3) + (((double)time.tv_nsec) / 1.0e6))
-#define TIMESPEC_TO_SEC(time)	(((double)time.tv_sec) + (((double)time.tv_nsec) / 1.0e9))
+	#include <time.h>
+	#define TIMESPEC_TO_uSEC(time)	((((double)time.tv_sec) * 1.0e6) + (((double)time.tv_nsec) / 1.0e3))
+	#define TIMESPEC_TO_mSEC(time)	((((double)time.tv_sec) * 1.0e3) + (((double)time.tv_nsec) / 1.0e6))
+	#define TIMESPEC_TO_SEC(time)	(((double)time.tv_sec) + (((double)time.tv_nsec) / 1.0e9))
 #else
-#include "rtc.h"
+	#include "FreeRTOS.h"
+	#include "task.h"
 #endif
 
 uint8_t firstCall = 1;
@@ -49,7 +50,13 @@ static struct timespec start_time, log_time;
 
 	return((uint32_t)diffTime);
 #else
-	return(rtc_get_seconds());
+	uint32_t start_time;
+	if(firstCall)
+	{
+		start_time = xTaskGetTickCount() * portTICK_PERIOD_MS * 1000;
+		firstCall = 0;
+	}
+	return xTaskGetTickCount() * portTICK_PERIOD_MS * 1000;
 #endif
 }
 

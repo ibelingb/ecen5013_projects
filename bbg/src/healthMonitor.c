@@ -214,7 +214,7 @@ int8_t threadKiller(ProcessId_e Id)
     /* set signal(s) used to kill other threads */
     if(Id == PID_END){
         MUTED_PRINT("main says kill all\n");
-        for(ind = 0; ind < PID_END; ++ind)
+        for(ind = 0; ind < NUM_THREADS; ++ind)
             sigqueue(getpid(), SIGRTMIN + ind, sigargs);
         
     }

@@ -17,16 +17,24 @@
 #ifndef HEALTHMONITOR_H_
 #define HEALTHMONITOR_H_
 
+#include "packet.h"
+#include "logger_helper.h"
+
+#ifdef __linux__
 #include <mqueue.h>
 #include <stdint.h>
 #include <syscall.h>
 
-#include "packet.h"
-#include "logger_helper.h"
+#else
+#include "FreeRTOS.h"
+#include "queue.h"
+#endif 
+
 
 //#define PRINT_NONE_ALSO             // for testing
 //#define PRINT_ALL_STATUS_FIELDS     // for testing
 
+#ifdef __linux__
 /**
  * @brief check thread status / state and take appropriate course of action
  * 
@@ -42,6 +50,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError);
  */
 void set_sig_handlers(void);
 
+
 #define SEND_STATUS_MSG(queue, Id, taskStat, errCode)({\
 	TaskStatusPacket status;\
 	status.timestamp = log_get_time();\
@@ -53,6 +62,20 @@ void set_sig_handlers(void);
     if(mq_send(queue, (char *)&status, sizeof(TaskStatusPacket), 7) < 0)\
 	{ ERRNO_PRINT("SEND_STATUS_MSG fail"); }\
 })
+#else
+#define SEND_STATUS_MSG(queue, Id, taskStat, errCode)({\
+	TaskStatusPacket status;\
+	status.timestamp = log_get_time();\
+	status.header = Id;\
+    status.taskStatus = taskStat;\
+    status.errorCode = errCode;\
+    status.processId = Id;\
+    status.taskState = STATE_RUNNING;\
+    if(xQueueSend(queue, (char *)&status, sizeof(TaskStatusPacket), 7) < 0)\
+	{ ERRNO_PRINT("SEND_STATUS_MSG fail\n"); }\
+})
+#endif
+
 
 /**
  * @brief get string of PID enum
@@ -72,6 +95,24 @@ __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procI
         break;
         case PID_LOGGING:
             return "PID_LOGGING";
+        break;
+        case PID_MOISTURE:
+            return "PID_MOISTURE";
+        break;
+        case PID_OBSERVER:
+            return "PID_OBSERVER";
+        break;
+        case PID_SOLENOID:
+            return "PID_SOLENOID";
+        break;
+        case PID_CONSOLE:
+            return "PID_COSOLE";
+        break;
+        case PID_REMOTE_CLIENT:
+            return "PID_CLIENT";
+        break;
+        case PID_SYSMON:
+            return "PID_SYSMON";
         break;
         default:
             return "PID_END";

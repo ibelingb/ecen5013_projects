@@ -68,73 +68,73 @@
 #else /* LOGging enabled */
 
 #ifdef __linux__
-#include <sys/syscall.h>
-#ifdef LOG_MSG_QUEUE
-#include "logger_queue.h"
-#define LOG_ITEM(pLogItem)				(log_queue_item(pLogItem))
-#define LOG_DEQUEUE_ITEM(pLogItem)		(log_dequeue_item(pLogItem))
-#define LOG_WRITE_ITEM(pLogItem, fd)	(log_write_item(pLogItem, fd))
-#define LOG_INIT(pArg)					(init_queue_logger(pArg))
-#define LOG_FLUSH()						(log_queue_flush())
-#define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
-#else
-#include "logger_block.h"
-#define LOG_ITEM(pLogItem)		(log_item(pLogItem))
-#define LOG_INIT(pArg)			(init_logger_block(pArg))
-#define LOG_FLUSH()				(log_flush())
-#define LOG_GET_SRC_ID()		((pid_t)syscall(SYS_gettid))
-#endif
-#else
-#ifdef LOG_BLOCKING
-#include "logger_block.h"
-#define LOG_ITEM(pLogItem)		(log_item(pLogItem))
-#define LOG_INIT()				(init_logger_block())
-#define LOG_FLUSH()				(log_flush())
-#define LOG_GET_SRC_ID()		(0)
-#else
-#include "logger_queue.h"
-#define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
-#define LOG_INIT()				(init_queue_logger())
-#define LOG_FLUSH()				(log_queue_flush())
-#define LOG_GET_SRC_ID()		(0)
-#endif
+	#include <sys/syscall.h>
+	#ifdef LOG_MSG_QUEUE
+		#include "logger_queue.h"
+		#define LOG_ITEM(pLogItem)				(log_queue_item(pLogItem))
+		#define LOG_DEQUEUE_ITEM(pLogItem)		(log_dequeue_item(pLogItem))
+		#define LOG_WRITE_ITEM(pLogItem, fd)	(log_write_item(pLogItem, fd))
+		#define LOG_INIT(pArg)					(init_queue_logger(pArg))
+		#define LOG_FLUSH()						(log_queue_flush())
+		#define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
+	#else
+		#include "logger_block.h"
+		#define LOG_ITEM(pLogItem)				(log_item(pLogItem))
+		#define LOG_INIT(pArg)					(init_logger_block(pArg))
+		#define LOG_FLUSH()						(log_flush())
+		#define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
+	#endif
+#else  // not LINUX
+	#ifdef LOG_BLOCKING
+		#include "logger_block.h"
+		#define LOG_ITEM(pLogItem)		(log_item(pLogItem))
+		#define LOG_INIT()				(init_logger_block())
+		#define LOG_FLUSH()				(log_flush())
+		#define LOG_GET_SRC_ID()		(0)
+	#else
+		#include "logger_queue.h"
+		#define LOG_ITEM(pLogItem)		(log_queue_item(pLogItem))
+		#define LOG_INIT()				(init_queue_logger())
+		#define LOG_FLUSH()				(log_queue_flush())
+		#define LOG_GET_SRC_ID()		(0)
+	#endif
 #endif
 
 #ifndef __linux__
-#define LOG_SYSTEM_ID()({\
-	logItem_t logItem;\
-	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	uint8_t numStr[32];\
-	uint16_t deviceId = (SIM->SDID & 0xFFFF0000u) >> 16;\
-	logItem.logMsgId = LOG_MSG_SYSTEM_ID;\
-	logItem.pFilename = &fileStr[0];\
-	logItem.lineNum = __LINE__;\
-	logItem.time = log_get_time();\
-	logItem.payloadLength = my_itoa(deviceId, &numStr[0], HEX_BASE);\
-	logItem.pPayload = &numStr[0];\
-	logItem.sourceId = LOG_GET_SRC_ID();\
-	log_set_checksum(&logItem);\
-	LOG_ITEM(&logItem);\
-})
+	#define LOG_SYSTEM_ID()({\
+		logItem_t logItem;\
+		uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
+		uint8_t numStr[32];\
+		uint16_t deviceId = (SIM->SDID & 0xFFFF0000u) >> 16;\
+		logItem.logMsgId = LOG_MSG_SYSTEM_ID;\
+		logItem.pFilename = &fileStr[0];\
+		logItem.lineNum = __LINE__;\
+		logItem.time = log_get_time();\
+		logItem.payloadLength = my_itoa(deviceId, &numStr[0], HEX_BASE);\
+		logItem.pPayload = &numStr[0];\
+		logItem.sourceId = LOG_GET_SRC_ID();\
+		log_set_checksum(&logItem);\
+		LOG_ITEM(&logItem);\
+	})
 
-#define LOG_SYSTEM_VERSION()({\
-	logItem_t logItem;\
-	uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-	uint8_t numStr[32];\
-	uint16_t versionId = (SIM->SDID & 0x0000FF00u) | (FW_VERSION & 0xFFu);\
-	logItem.logMsgId = LOG_MSG_SYSTEM_VERSION;\
-	logItem.pFilename = &fileStr[0];\
-	logItem.lineNum = __LINE__;\
-	logItem.time = log_get_time();\
-	logItem.payloadLength = my_itoa(versionId, &numStr[0], HEX_BASE);\
-	logItem.pPayload = &numStr[0];\
-	logItem.sourceId = LOG_GET_SRC_ID();\
-	log_set_checksum(&logItem);\
-	LOG_ITEM(&logItem);\
-})
+	#define LOG_SYSTEM_VERSION()({\
+		logItem_t logItem;\
+		uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
+		uint8_t numStr[32];\
+		uint16_t versionId = (SIM->SDID & 0x0000FF00u) | (FW_VERSION & 0xFFu);\
+		logItem.logMsgId = LOG_MSG_SYSTEM_VERSION;\
+		logItem.pFilename = &fileStr[0];\
+		logItem.lineNum = __LINE__;\
+		logItem.time = log_get_time();\
+		logItem.payloadLength = my_itoa(versionId, &numStr[0], HEX_BASE);\
+		logItem.pPayload = &numStr[0];\
+		logItem.sourceId = LOG_GET_SRC_ID();\
+		log_set_checksum(&logItem);\
+		LOG_ITEM(&logItem);\
+	})
 #else
-#define LOG_SYSTEM_ID()
-#define LOG_SYSTEM_VERSION()
+	#define LOG_SYSTEM_ID()
+	#define LOG_SYSTEM_VERSION()
 #endif
 
 #define LOG_LOGGER_INITIALIZED()({\
