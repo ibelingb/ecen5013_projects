@@ -21,6 +21,9 @@
 /* app specific includes */
 #include "cmn_timer.h"
 #include "packet.h"
+#include "my_debug.h"
+#include "healthMonitor.h"
+#include "logger_helper.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -39,9 +42,10 @@
 
 void observerTask(void *pvParameters)
 {
-    uint8_t count = 0, errCount = 0, alarm = 0, prev_alarm = 0;
+    uint8_t count = 0, alarm = 0, prev_alarm = 0;
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
+    uint8_t statusMsgCount;
 
     /* init alarm gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
@@ -59,19 +63,11 @@ void observerTask(void *pvParameters)
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     /* TODO - set BIST error in logMsg if necessary */
-    if(xQueueSend(info.logFd, ( void *)&logMsg, THREAD_MUTEX_DELAY) != pdPASS) {
-        ++errCount;
-    }
 
-    for (;;) {
-        /* update statusMsg */
-        statusMsg.header = count++;
-        statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
-        /* send status msg */
-        if(xQueueSend(info.statusFd, ( void *)&statusMsg, THREAD_MUTEX_DELAY) != pdPASS) {
-            ++errCount;
-        }
+    for (;;)
+    {
+        statusMsgCount = 0;
 
         /* try to get semaphore */
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
@@ -103,6 +99,16 @@ void observerTask(void *pvParameters)
             GPIOPinWrite(GPIO_PORTN_BASE, ALARM_GPIO_PIN, alarm != 0 ? ALARM_GPIO_PIN : 0);
         }
         prev_alarm = alarm;
+
+        /* only send OK status at rate of other threads
+        * and if we didn't send error status yet */
+        if(statusMsgCount == 0) {
+            /* update statusMsg */
+            statusMsg.header = count++;
+            statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
+            SEND_STATUS_MSG(info.statusFd, PID_OBSERVER, STATUS_OK, ERROR_CODE_USER_NONE0);
+            ++statusMsgCount;
+        }
 
         /* sleep */
         vTaskDelay(REMOTE_TASK_DELAY_SEC * configTICK_RATE_HZ);

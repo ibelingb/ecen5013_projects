@@ -24,6 +24,8 @@
 #include "uartstdio.h"
 #include "packet.h"
 #include "my_debug.h"
+#include "healthMonitor.h"
+#include "logger_helper.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"
@@ -80,33 +82,18 @@ void remoteTask(void *pvParameters)
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
         }
-        /* send read data */
+
         /* TODO - send via network method */
+//        INFO_PRINT("LuxData %d.%d \r\n ", (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
+//        INFO_PRINT("Moisture %d percent\r\n ", (int)moisture);
 
         /* get thread status msgs */
         if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
         {
-            switch (statusMsg.processId) {
-            case PID_LIGHT:
-//                INFO_PRINT("Temperature %d.%d degC\r\n ",
-//                           (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
+            /* for development (verify queue send/recv */
+            PRINT_STATUS_MSG_HEADER(&statusMsg);
 
-                INFO_PRINT("LuxData %d.%d \r\n ",
-                           (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
-            case PID_SOLENOID:
-            case PID_OBSERVER:
-            case PID_MOISTURE:
-                INFO_PRINT("Moisture %d percent\r\n ", (int)moisture);
-
-                /* send read data */
-                /* TODO - send via network method */
-
-                /* UART can go away, no requirements */
-                INFO_PRINT("Got %d count at %d ms from %d\r\n ", statusMsg.header, statusMsg.timestamp, statusMsg.processId);
-                break;
-            default:
-                break;
-            }
+            /* TODO - send via network method */
         }
 
         /* get log msgs */

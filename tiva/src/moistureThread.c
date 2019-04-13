@@ -24,6 +24,8 @@
 #include "cmn_timer.h"
 #include "packet.h"
 #include "my_debug.h"
+#include "healthMonitor.h"
+#include "logger_helper.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -52,6 +54,7 @@ void moistureTask(void *pvParameters)
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
     float moisture;
+    uint8_t statusMsgCount;
 
     /* init peripheral */
     if(ConfigureADC0() != EXIT_SUCCESS) {
@@ -73,16 +76,9 @@ void moistureTask(void *pvParameters)
         ++errCount;
     }
 
-    for (;;) {
-
-        /* update statusMsg */
-        statusMsg.header = count++;
-        statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
-
-        /* send status msg */
-        if(xQueueSend(info.statusFd, ( void *)&statusMsg, THREAD_MUTEX_DELAY) != pdPASS) {
-            ++errCount;
-        }
+    for (;;)
+    {
+        statusMsgCount = 0;
 
         /* get sensor data */
         if(getMoisture(&moisture) != EXIT_SUCCESS) {
@@ -101,6 +97,16 @@ void moistureTask(void *pvParameters)
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
+        }
+
+        /* only send OK status at rate of other threads
+        * and if we didn't send error status yet */
+        if(statusMsgCount == 0) {
+            /* update statusMsg */
+            statusMsg.header = count++;
+            statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
+            SEND_STATUS_MSG(info.statusFd, PID_MOISTURE, STATUS_OK, ERROR_CODE_USER_NONE0);
+            ++statusMsgCount;
         }
 
         /* sleep */

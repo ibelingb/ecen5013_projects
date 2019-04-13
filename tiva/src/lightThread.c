@@ -21,6 +21,9 @@
 /* app specific includes */
 #include "tiva_i2c.h"
 #include "cmn_timer.h"
+#include "my_debug.h"
+#include "healthMonitor.h"
+#include "logger_helper.h"
 
 
 /* FreeRTOS includes */
@@ -55,10 +58,10 @@ int8_t getTempC(float *pTemp);
 /*---------------------------------------------------------------------------------*/
 void lightTask(void *pvParameters)
 {
-    uint8_t errCount = 0, count = 0;
+    uint8_t count = 0;
     TaskStatusPacket statusMsg;
-    float temperature;
     float luxData = 0.0;
+    uint8_t statusMsgCount;
 
     memset(&statusMsg, 0, sizeof(TaskStatusPacket));
     statusMsg.processId = PID_LIGHT;
@@ -76,15 +79,9 @@ void lightTask(void *pvParameters)
     }
     // TODO: LOG BIST SUCCESS
 
-    for (;;) {
-        /* update statusMsg */
-        statusMsg.header = count++;
-        statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
-
-        /* send msg */
-        if(xQueueSend(info.statusFd, ( void *)&statusMsg, (TickType_t)10) != pdPASS) {
-            ++errCount;
-        }
+    for (;;)
+    {
+        statusMsgCount = 0;
 
         /* get sensor data; Write data to shared memory */
         if(apds9301_getLuxData(0, &luxData) == EXIT_SUCCESS) {
@@ -96,6 +93,16 @@ void lightTask(void *pvParameters)
 
                 /* release mutex */
                 xSemaphoreGive(info.shmemMutex);
+            }
+
+            /* only send OK status at rate of other threads
+            * and if we didn't send error status yet */
+            if(statusMsgCount == 0) {
+                /* update statusMsg */
+                statusMsg.header = count++;
+                statusMsg.timestamp = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
+                SEND_STATUS_MSG(info.statusFd, PID_LIGHT, STATUS_OK, ERROR_CODE_USER_NONE0);
+                ++statusMsgCount;
             }
         }
 

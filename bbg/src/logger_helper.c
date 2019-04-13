@@ -50,13 +50,13 @@ static struct timespec start_time, log_time;
 
 	return((uint32_t)diffTime);
 #else
-	uint32_t start_time;
+	static uint32_t start_time;
 	if(firstCall)
 	{
 		start_time = xTaskGetTickCount() * portTICK_PERIOD_MS * 1000;
 		firstCall = 0;
 	}
-	return xTaskGetTickCount() * portTICK_PERIOD_MS * 1000;
+	return (xTaskGetTickCount() * portTICK_PERIOD_MS * 1000) - start_time;
 #endif
 }
 
