@@ -86,6 +86,7 @@ void solenoidTask(void *pvParameters)
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
             /* read and update solenoid data */
+            updateSolenoidData(&info);
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
@@ -109,6 +110,7 @@ int8_t updateSolenoidData(SensorThreadInfo *pInfo)
     if(solenoidState == SOLENOID_STATE_OFF) {
         if(pInfo->pShmem->solenoidData.cmd == SOLENOID_STATE_ON) {
             next_solenoidState = SOLENOID_STATE_ON;
+            pInfo->pShmem->solenoidData.cmd = SOLENOID_STATE_OFF;
         }
     }
     /* ON State */
@@ -136,12 +138,11 @@ int8_t updateSolenoidData(SensorThreadInfo *pInfo)
             }
         }
     }
-    pInfo->pShmem->solenoidData.state = solenoidState;
 
     /* if state change occurred, set new solenoid value */
     if(prev_solenoidState != solenoidState) {
 
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & solenoidState);
+        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & (solenoidState != 0 ? 0xFF : 0x00));
     }
     prev_solenoidState = solenoidState;
     pInfo->pShmem->solenoidData.state = solenoidState;
