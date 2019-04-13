@@ -88,7 +88,10 @@ void remoteTask(void *pvParameters)
         {
             switch (statusMsg.processId) {
             case PID_LIGHT:
-                INFO_PRINT("Temperature %d.%d degC\r\n ",
+//                INFO_PRINT("Temperature %d.%d degC\r\n ",
+//                           (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
+
+                INFO_PRINT("LuxData %d.%d \r\n ",
                            (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
             case PID_SOLENOID:
             case PID_OBSERVER:
