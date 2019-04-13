@@ -108,6 +108,9 @@ void moistureTask(void *pvParameters)
     }
 }
 
+/*
+ * @brief init ADC0
+ */
 int8_t ConfigureADC0(void)
 {
     /* enable ADC0 peripheral */
@@ -175,6 +178,9 @@ int8_t getMoisture(float *pMoist)
     return EXIT_SUCCESS;
 }
 
+/*
+ * @brief go read an ADC sample
+ */
 int8_t getADC0Value(uint32_t *pValue)
 {
     uint32_t pui32ADC0Value = 0;

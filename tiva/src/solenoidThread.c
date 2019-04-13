@@ -38,10 +38,16 @@
 #include "task.h"
 #include "semphr.h"
 
+#define SOLENOID_STATE_OFF          (0)
+#define SOLENOID_STATE_ON           (1)
+#define SOLENOID_ON_TIME_DURATION   (5000)  /* MSEC */
+
+int8_t updateSolenoidData(SensorThreadInfo *pInfo);
+
 
 void solenoidTask(void *pvParameters)
 {
-    uint8_t enable = 0, count = 0, errCount = 0;
+    uint8_t count = 0, errCount = 0;
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
 
@@ -76,14 +82,10 @@ void solenoidTask(void *pvParameters)
             ++errCount;
         }
 
-        /* Turn on the LED */
-        enable = enable == 0 ? 0xFF : 0x00;
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & enable);
-
         /* try to get semaphore */
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
-            /* write data to shmem */
+            /* read and update solenoid data */
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
@@ -92,4 +94,57 @@ void solenoidTask(void *pvParameters)
         /* sleep */
         vTaskDelay(SOLENOID_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
+}
+
+int8_t updateSolenoidData(SensorThreadInfo *pInfo)
+{
+    uint8_t solenoidState;
+    static uint8_t next_solenoidState;
+    static uint8_t prev_solenoidState;
+    static uint32_t solenoidStartTime;
+    int32_t solenoidOnTime;
+
+    /* OFF State */
+    solenoidState = next_solenoidState;
+    if(solenoidState == SOLENOID_STATE_OFF) {
+        if(pInfo->pShmem->solenoidData.cmd == SOLENOID_STATE_ON) {
+            next_solenoidState = SOLENOID_STATE_ON;
+        }
+    }
+    /* ON State */
+    else {
+        /* upon entry, mark solenoid start time,
+         * and set remainingOnTime */
+        if((prev_solenoidState != solenoidState) && (solenoidState == SOLENOID_STATE_ON)) {
+            solenoidStartTime = (xTaskGetTickCount() - pInfo->xStartTime) * portTICK_PERIOD_MS;
+            pInfo->pShmem->solenoidData.remainingOnTime = SOLENOID_ON_TIME_DURATION;
+        }
+        else {
+            /* calculate on time duration */
+            solenoidOnTime = (xTaskGetTickCount() - solenoidStartTime) * portTICK_PERIOD_MS;
+
+            if(solenoidOnTime < 0) {
+                /* integer rollover occurred, calc real diff */
+            }
+
+            if(solenoidOnTime > SOLENOID_ON_TIME_DURATION) {
+                pInfo->pShmem->solenoidData.remainingOnTime = 0;
+                next_solenoidState = SOLENOID_STATE_OFF;
+            }
+            else {
+                pInfo->pShmem->solenoidData.remainingOnTime = SOLENOID_ON_TIME_DURATION - solenoidOnTime;
+            }
+        }
+    }
+    pInfo->pShmem->solenoidData.state = solenoidState;
+
+    /* if state change occurred, set new solenoid value */
+    if(prev_solenoidState != solenoidState) {
+
+        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1 & solenoidState);
+    }
+    prev_solenoidState = solenoidState;
+    pInfo->pShmem->solenoidData.state = solenoidState;
+
+    return EXIT_SUCCESS;
 }
