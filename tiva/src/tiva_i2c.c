@@ -5,6 +5,7 @@
  */
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include "hw_types.h"
 #include "hw_ints.h"
@@ -16,6 +17,8 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
 #include "uartstdio.h"
+
+#include "my_debug.h"
 
 //*****************************************************************************
 //
@@ -100,6 +103,12 @@ int8_t sendIic(uint8_t slaveAddr, uint8_t reg, uint8_t *pData, uint8_t regSize, 
 {
     uint8_t ind;
 
+    /* Validate input */
+    if(pData == NULL){
+        ERROR_PRINT("TIVA I2C sendIic() received NULL pointer for data to write.\n");
+        return -1;
+    }
+
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, false);
 
@@ -137,8 +146,14 @@ int8_t sendIic(uint8_t slaveAddr, uint8_t reg, uint8_t *pData, uint8_t regSize, 
     return 0;
 }
 
-int8_t recvIic1Byte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
+int8_t recvIic1Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
+    /* Validate input */
+    if(pData == NULL){
+        ERROR_PRINT("TIVA I2C recvIic1Byte() received NULL pointer for return data.\n");
+        return -1;
+    }
+
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, false);
 
@@ -163,6 +178,12 @@ int8_t recvIic1Byte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 
 int8_t recvIic2Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
+    /* Validate input */
+    if(pData == NULL){
+        ERROR_PRINT("TIVA I2C recvIic2Bytes() received NULL pointer for return data.\n");
+        return -1;
+    }
+
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, false);
 

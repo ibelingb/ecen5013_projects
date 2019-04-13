@@ -26,9 +26,24 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>include/lightSensor.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/lightSensor.h</locationURI>
+		</link>
+		<link>
+			<name>include/my_debug.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/my_debug.h</locationURI>
+		</link>
+		<link>
 			<name>include/packet.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/packet.h</locationURI>
+		</link>
+		<link>
+			<name>src/lightSensor.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/src/lightSensor.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

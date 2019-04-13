@@ -49,8 +49,10 @@
 #include "queue.h"
 #include "semphr.h"
 
-#define STATUS_QUEUE_LENGTH        (8)
-#define LOG_QUEUE_LENGTH        (8)
+#define STATUS_QUEUE_LENGTH         (8)
+#define LOG_QUEUE_LENGTH            (8)
+
+void initUART(void);
 
 int main(void)
 {
@@ -68,6 +70,8 @@ int main(void)
     /* init system clock */
     sysClock = SysCtlClockFreqSet((SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
                             SYSCTL_XTAL_25MHZ |SYSCTL_CFG_VCO_480), SYSTEM_CLOCK);
+
+    initUART();
 
     /* create status queue */
     QueueHandle_t statusQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct TaskStatusPacket));
@@ -119,6 +123,19 @@ int main(void)
     vQueueDelete(logQueue);
     vQueueDelete(statusQueue);
     return EXIT_SUCCESS;
+}
+
+/* initialize IO for UART */
+void initUART(void)
+{
+    /* init UART IO */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+    GPIOPinConfigure(GPIO_PA0_U0RX);
+    GPIOPinConfigure(GPIO_PA1_U0TX);
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    /* setup UART */
+    UARTStdioConfig(0, 57600, SYSTEM_CLOCK);
 }
 
 /*  ASSERT() Error function

@@ -44,14 +44,11 @@ void init(void);
 void remoteTask(void *pvParameters)
 {
     uint8_t count = 0, errCount = 0;
-    float temp;
+    float temp, moisture;
     /* TODO - timer too long? */
     const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
-
-    /* init UART IO */
-    init();
 
     /* initialize socket */
     /* TODO - socket stuff */
@@ -78,6 +75,7 @@ void remoteTask(void *pvParameters)
             /* read data from shmem */
             /* TODO - read shmem method */
             temp = info.pShmem->lightData.apds9301_luxData;
+            moisture = info.pShmem->moistData.moistureLevel;
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
@@ -90,17 +88,21 @@ void remoteTask(void *pvParameters)
         {
             switch (statusMsg.processId) {
             case PID_LIGHT:
-                INFO_PRINT("\r\n Temperature %d.%d degC",
+//                INFO_PRINT("Temperature %d.%d degC\r\n ",
+//                           (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
+
+                INFO_PRINT("LuxData %d.%d \r\n ",
                            (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
-                break;
             case PID_SOLENOID:
             case PID_OBSERVER:
             case PID_MOISTURE:
+                INFO_PRINT("Moisture %d percent\r\n ", (int)moisture);
+
                 /* send read data */
                 /* TODO - send via network method */
 
                 /* UART can go away, no requirements */
-                INFO_PRINT("\r\n Got %d count at %d ms from %d", statusMsg.header, statusMsg.timestamp, statusMsg.processId);
+                INFO_PRINT("Got %d count at %d ms from %d\r\n ", statusMsg.header, statusMsg.timestamp, statusMsg.processId);
                 break;
             default:
                 break;
@@ -114,17 +116,4 @@ void remoteTask(void *pvParameters)
             /* TODO - send via network method */
         }
     }
-}
-
-/* initialize IO for UART */
-void init(void)
-{
-    /* init UART IO */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-    GPIOPinConfigure(GPIO_PA0_U0RX);
-    GPIOPinConfigure(GPIO_PA1_U0TX);
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    /* setup UART */
-    UARTStdioConfig(0, 57600, SYSTEM_CLOCK);
 }

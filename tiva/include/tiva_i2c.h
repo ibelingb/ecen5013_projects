@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 int8_t initI2c(uint32_t sysClock);
-int8_t sendIic(void);
+int8_t sendIic(uint8_t slaveAddr, uint8_t reg, uint8_t *pData, uint8_t regSize, uint8_t len);
 int8_t recvIic1Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData);
 int8_t recvIic2Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData);
 

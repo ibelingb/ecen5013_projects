@@ -23,7 +23,11 @@
 #include <math.h>
 
 #include "lightSensor.h"
+#ifdef __linux__
 #include "lu_iic.h"
+#else
+#include "tiva_i2c.h"
+#endif
 #include "my_debug.h"
 
 #define APDS9301_I2C_ADDR           (0x39ul)
@@ -281,8 +285,13 @@ int8_t apds9301_setControl(uint8_t file, Apds9301_PowerCtrl_e control)
   }
 
   /* Write to device */
-  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+    if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
+#else
+    if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
@@ -307,8 +316,13 @@ int8_t apds9301_setTimingGain(uint8_t file, Apds9301_TimingGain_e gain)
   }
 
   /* Write to device */
-  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_TIMING_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+    if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_TIMING_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_TIMING_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
@@ -337,8 +351,13 @@ int8_t apds9301_setTimingIntegration(uint8_t file, Apds9301_TimingInt_e integrat
   }
 
   /* Write to device */
-  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_TIMING_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+    if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_TIMING_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_TIMING_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
@@ -366,15 +385,20 @@ int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect
   /* Determine Interrupt Control Persist value to set based on input */
   if(persist > APDS9301_INT_PERSIST_OUTSIDE_15P) {
     ERROR_PRINT("apds9301_setInterruptControl() received an invalid input for setting the APDS9301 "
-                "Interrupt Control reg Presist Field - write ignored.\n");
+                "Interrupt Control reg Persist Field - write ignored.\n");
     return EXIT_FAILURE;
   }
   reg &= ~(APDS9301_INT_CONTROL_PERSIST_MASK);
   reg |= persist;
 
   /* Write to device */
-  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+    if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
@@ -393,8 +417,13 @@ int8_t apds9301_clearInterrupt(uint8_t file)
   reg |= APDS9301_CMD_INT_CLEAR_BIT;
 
   /* Write to clear bit field of command register to clear any pending interrupt */
-  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+    if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
@@ -438,8 +467,14 @@ int8_t apds9301_getReg(uint8_t file, uint8_t *pReg, uint8_t REG){
 
   /* Read register value from device */
   uint32_t regValue = 0;
-  if(EXIT_FAILURE == getIicRegister(file, APDS9301_I2C_ADDR, REG, &regValue, APDS9301_REG_SIZE, APDS9301_ENDIANNESS))
+
+#ifdef __linux__
+    if(EXIT_FAILURE == getIicRegister(file, APDS9301_I2C_ADDR, REG, &regValue, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == recvIic1Bytes(APDS9301_I2C_ADDR, REG, (uint8_t *)&regValue)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   *pReg = (uint8_t)(0xFF & regValue);
   return EXIT_SUCCESS;
@@ -466,8 +501,13 @@ int8_t apds9301_getWord(uint8_t file, uint16_t *pWord, uint8_t REG)
   REG |= APDS9301_CMD_WORD_BIT;
 
   /* Read 16-bit word from device */
-  if(EXIT_FAILURE == getIicRegister(file, APDS9301_I2C_ADDR, REG, &word, APDS9301_WORD_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+  if(EXIT_FAILURE == getIicRegister(file, APDS9301_I2C_ADDR, REG, &word, APDS9301_WORD_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == recvIic2Bytes(APDS9301_I2C_ADDR, REG, (uint8_t *)&word)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   *pWord = (uint16_t)(0xFFFF & word);
   return EXIT_SUCCESS;
@@ -489,8 +529,13 @@ int8_t apds9301_writeWord(uint8_t file, uint16_t word, uint8_t REG)
   REG |= APDS9301_CMD_WORD_BIT;
 
   /* Write 16-bit word to device */
-  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, REG, word, APDS9301_WORD_SIZE, APDS9301_ENDIANNESS))
+#ifdef __linux__
+  if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, REG, word, APDS9301_WORD_SIZE, APDS9301_ENDIANNESS)) {
+#else
+  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, REG, (uint8_t *)&word, APDS9301_WORD_SIZE, APDS9301_WORD_SIZE)) {
+#endif
     return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
