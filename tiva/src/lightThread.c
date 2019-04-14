@@ -36,12 +36,9 @@
 #include "my_debug.h"
 
 /*---------------------------------------------------------------------------------*/
-#define TMP102_ADDR             (0x48ul)                    /* I2C address of sensor */
-#define TMP102_TEMP_REG         (0x00ul)
-
 #define DEFAULT_POWER_STATE         (APDS9301_CTRL_POWERUP)
-#define DEFAULT_TIMING_GAIN         (APDS9301_TIMING_GAIN_LOW)
-#define DEFAULT_TIMING_INTEGRATION  (APDS9301_TIMING_INT_101)
+#define DEFAULT_TIMING_GAIN         (APDS9301_TIMING_GAIN_HIGH)
+#define DEFAULT_TIMING_INTEGRATION  (APDS9301_TIMING_INT_402)
 #define DEFAULT_INT_SELECT          (APDS9301_INT_SELECT_LEVEL_DISABLE)
 #define DEFAULT_INT_PERSIST         (APDS9301_INT_PERSIST_OUTSIDE_CYCLE)
 #define DEFAULT_LOW_INT_THRESHOLD   (100)
