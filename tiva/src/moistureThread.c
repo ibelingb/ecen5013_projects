@@ -45,24 +45,24 @@
 #define SOIL_SAMPLE_COUNT   (10)
 #define SOIL_ADC_SCALE      (100.0f / 4096.0f)
 
+/* global to kill thread */
+static uint8_t keepAlive;
+
+
 int8_t ConfigureADC0(void);
 int8_t getMoisture(float *pMoist);
 int8_t getADC0Value(uint32_t *pValue);
 
 void moistureTask(void *pvParameters)
 {
-    uint8_t count = 0, errCount = 0;
+    uint8_t count = 0;
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
     float moisture;
     uint8_t statusMsgCount;
+    keepAlive = 1;
 
     LOG_MOISTURE_EVENT(MOIST_EVENT_STARTED);
-
-    /* init peripheral */
-    if(ConfigureADC0() != EXIT_SUCCESS) {
-        /* TODO - change status and put log event */
-    }
 
     /* set portion of statusMsg that does not change */
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));
@@ -74,18 +74,23 @@ void moistureTask(void *pvParameters)
     /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
-    /* TODO - send BIST event to log queue */
-    if(xQueueSend(info.logFd, ( void *)&logMsg, THREAD_MUTEX_DELAY) != pdPASS) {
-        ++errCount;
+    /* init peripheral and send BIST event to log queue */
+    if(ConfigureADC0() != EXIT_SUCCESS) {
+        LOG_MOISTURE_EVENT(MOIST_EVENT_BIST_FAILED);
+    }
+    else {
+        LOG_MOISTURE_EVENT(MOIST_EVENT_BIST_SUCCESS);
     }
 
-    for (;;)
+    while(keepAlive)
     {
         statusMsgCount = 0;
 
         /* get sensor data */
         if(getMoisture(&moisture) != EXIT_SUCCESS) {
-            /* TODO - change status and put log event */
+            SEND_STATUS_MSG(info.statusFd, PID_MOISTURE, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+            ++statusMsgCount;
+            LOG_MOISTURE_EVENT(MOIST_EVENT_ADC_ERROR);
             ERROR_PRINT("getMoisture fault\r\n");
         }
         else {
@@ -101,6 +106,9 @@ void moistureTask(void *pvParameters)
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
         }
+        else {
+            LOG_MOISTURE_EVENT(MOIST_EVENT_SHMEM_ERROR);
+        }
 
         /* only send OK status if we didn't send error status yet */
         if(statusMsgCount == 0) {
@@ -114,6 +122,7 @@ void moistureTask(void *pvParameters)
         /* sleep */
         vTaskDelay(MOISTURE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
+    LOG_MOISTURE_EVENT(MOIST_EVENT_EXITING);
 }
 
 /*
@@ -127,13 +136,11 @@ int8_t ConfigureADC0(void)
     /* For this example ADC0 is used with AIN0 on port E7.
      * The actual port and pins used may be different on your part, consult
      * the data sheet for more information.  GPIO port E needs to be enabled
-     * so these pins can be used.
-     * TODO: change this to whichever GPIO port you are using. */
+     * so these pins can be used. */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 
     /* Select the analog ADC function for these pins.
-     * Consult the data sheet to see which functions are allocated per pin.
-     * TODO: change this to select the port/pin you are using. */
+     * Consult the data sheet to see which functions are allocated per pin  */
     GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
 
     /* Configure ADC0 Sample Sequencer 3 for processor trigger operation */
@@ -210,4 +217,9 @@ int8_t getADC0Value(uint32_t *pValue)
     *pValue = pui32ADC0Value;
 
     return EXIT_SUCCESS;
+}
+
+void killMoistureTask(void)
+{
+    keepAlive = 0;
 }

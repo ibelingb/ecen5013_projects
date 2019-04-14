@@ -33,6 +33,7 @@ typedef enum {
 } LightEvent_e;
 
 void lightTask(void *pvParameters);
+void killLightTask(void);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* LIGHT_THREAD_H_ */

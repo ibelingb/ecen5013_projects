@@ -20,7 +20,7 @@ typedef enum {
     OBSERVE_EVENT_STARTED = 0,
     OBSERVE_EVENT_BIST_SUCCESS,
     OBSERVE_EVENT_BIST_FAILED,
-    OBSERVE_EVENT_SENSOR_GPIO_ERROR,
+    OBSERVE_EVENT_GPIO_ERROR,
     OBSERVE_EVENT_STATUS_QUEUE_ERROR,
     OBSERVE_EVENT_LOG_QUEUE_ERROR,
     OBSERVE_EVENT_SHMEM_ERROR,
@@ -29,5 +29,6 @@ typedef enum {
 } ObserverEvent_e;
 
 void observerTask(void *pvParameters);
+void killObserverTask(void);
 
 #endif /* OBSERVERTHREAD_H_ */

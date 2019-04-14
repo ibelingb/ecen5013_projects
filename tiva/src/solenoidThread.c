@@ -45,6 +45,10 @@
 #define SOLENOID_STATE_ON           (1)
 #define SOLENOID_ON_TIME_DURATION   (5000)  /* MSEC */
 
+/* global to kill thread */
+static uint8_t keepAlive;
+
+
 int8_t updateSolenoidData(SensorThreadInfo *pInfo);
 
 
@@ -54,6 +58,7 @@ void solenoidTask(void *pvParameters)
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
     uint8_t statusMsgCount;
+    keepAlive = 1;
 
     LOG_SOLENOID_EVENT(SOLE_EVENT_STARTED);
 
@@ -75,7 +80,7 @@ void solenoidTask(void *pvParameters)
     /* TODO - set BIST error in logMsg if necessary */
 
 
-    for (;;)
+    while(keepAlive)
     {
         statusMsgCount = 0;
 
@@ -101,6 +106,7 @@ void solenoidTask(void *pvParameters)
         /* sleep */
         vTaskDelay(SOLENOID_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
+    LOG_SOLENOID_EVENT(SOLE_EVENT_EXITING);
 }
 
 int8_t updateSolenoidData(SensorThreadInfo *pInfo)
@@ -154,4 +160,9 @@ int8_t updateSolenoidData(SensorThreadInfo *pInfo)
     pInfo->pShmem->solenoidData.state = solenoidState;
 
     return EXIT_SUCCESS;
+}
+
+void killSolenoidTask(void)
+{
+    keepAlive = 0;
 }

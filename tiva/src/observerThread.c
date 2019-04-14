@@ -41,12 +41,17 @@
 
 #define ALARM_GPIO_PIN      (GPIO_PIN_0)
 
+
+/* global to kill thread */
+static uint8_t keepAlive;
+
 void observerTask(void *pvParameters)
 {
     uint8_t count = 0, alarm = 0, prev_alarm = 0;
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
     uint8_t statusMsgCount;
+    keepAlive = 1;
 
     LOG_OBSERVER_EVENT(OBSERVE_EVENT_STARTED);
 
@@ -65,10 +70,15 @@ void observerTask(void *pvParameters)
     /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
-    /* TODO - set BIST error in logMsg if necessary */
+    /* send BIST results to logger */
+    if(0) {
+        LOG_OBSERVER_EVENT(OBSERVE_EVENT_BIST_FAILED);
+    }
+    else {
+        LOG_OBSERVER_EVENT(OBSERVE_EVENT_BIST_SUCCESS);
+    }
 
-
-    for (;;)
+    while(keepAlive)
     {
         statusMsgCount = 0;
 
@@ -94,6 +104,9 @@ void observerTask(void *pvParameters)
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
         }
+        else {
+            LOG_OBSERVER_EVENT(OBSERVE_EVENT_SHMEM_ERROR);
+        }
 
         /* TODO - check connection status and set alarm if LOST */
 
@@ -115,4 +128,10 @@ void observerTask(void *pvParameters)
         /* sleep */
         vTaskDelay(REMOTE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
+    LOG_OBSERVER_EVENT(OBSERVE_EVENT_EXITING);
+}
+
+void killObserverTask(void)
+{
+    keepAlive = 0;
 }

@@ -35,5 +35,6 @@ typedef enum {
 } RemoteEvent_e;
 
 void remoteTask(void *pvParameters);
+void killRemoteTask(void);
 
 #endif /* REMOTETHREAD_H_ */

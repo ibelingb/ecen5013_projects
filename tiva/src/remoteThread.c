@@ -41,17 +41,21 @@
 #include "task.h"
 #include "semphr.h"
 
+/* global to kill thread */
+static uint8_t keepAlive;
+
+
 void init(void);
 
 
 void remoteTask(void *pvParameters)
 {
-    uint8_t count = 0, errCount = 0;
+    uint8_t count = 0;
     float temp, moisture;
     const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
-
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
+    keepAlive = 1;
 
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
 
@@ -65,12 +69,16 @@ void remoteTask(void *pvParameters)
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
     /* TODO - set BIST error in logMsg if necessary */
-    if(xQueueSend(info.logFd, ( void *)&logMsg, THREAD_MUTEX_DELAY) != pdPASS) {
-        ++errCount;
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+    if(0) {
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
+    }
+    else {
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
     }
 
     /* send data, log and status msgs to Control Node */
-    for (;;)
+    while(keepAlive)
     {
         ++count;
 
@@ -87,6 +95,10 @@ void remoteTask(void *pvParameters)
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
         }
+        else {
+            /* mutex timeout occurred */
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_SHMEM_ERROR);
+        }
         /* TODO - send shmem data to Control Node */
 
         /* get thread status msgs */
@@ -97,6 +109,9 @@ void remoteTask(void *pvParameters)
 
             /* TODO - send status msgs to Control Node */
         }
+        else {
+            //LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
+        }
 
         /* get log msgs */
         if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
@@ -106,5 +121,14 @@ void remoteTask(void *pvParameters)
 
             /* TODO - send log msgs to Control Node */
         }
+        else {
+            //LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
+        }
     }
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
+}
+
+void killRemoteTask(void)
+{
+    keepAlive = 0;
 }

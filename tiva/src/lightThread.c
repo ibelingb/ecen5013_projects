@@ -51,6 +51,9 @@
 #define DEFAULT_LOW_INT_THRESHOLD   (100)
 #define DEFAULT_HIGH_INT_THRESHOLD  (9000)
 
+/* global to kill thread */
+static uint8_t keepAlive;
+
 /*---------------------------------------------------------------------------------*/
 int8_t initLightSensor();
 int8_t verifyLightSensorComm();
@@ -62,6 +65,7 @@ void lightTask(void *pvParameters)
     TaskStatusPacket statusMsg;
     float luxData = 0.0;
     uint8_t statusMsgCount;
+    keepAlive = 1;
 
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
 
@@ -81,7 +85,7 @@ void lightTask(void *pvParameters)
     }
     // TODO: LOG BIST SUCCESS
 
-    for (;;)
+    while(keepAlive)
     {
         statusMsgCount = 0;
 
@@ -221,33 +225,7 @@ int8_t verifyLightSensorComm()
 }
 
 /*---------------------------------------------------------------------------------*/
-int8_t getTempC(float *pTemp)
+void killLightTask(void)
 {
-    uint8_t data[2];
-    uint16_t tmp;
-
-    /* validate inputs */
-    if(pTemp == NULL)
-        return EXIT_FAILURE;
-
-    /* get register value */
-    recvIic2Bytes(TMP102_ADDR, TMP102_TEMP_REG, &data[0]);
-    tmp = data[1] + (data[0] << 8);
-
-    /* if extended address mode shift one less bit */
-    uint8_t shiftValue = TMP102_TEMP_START_BIT;
-    float maxTemp = 128.0f;
-
-    /* test for negative value */
-    float tmpFloat;
-    if((tmp >> 15) != 0) {
-        /* convert bits to Degrees C */
-        tmpFloat = (maxTemp * 2.0f) - TMP102_BITS_TO_TEMPC(tmp, shiftValue);
-    }
-    else {
-        /* convert bits to Degrees C */
-        tmpFloat = TMP102_BITS_TO_TEMPC(tmp, shiftValue);
-    }
-    *pTemp = tmpFloat;
-    return EXIT_SUCCESS;
+    keepAlive = 0;
 }

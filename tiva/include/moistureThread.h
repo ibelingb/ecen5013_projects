@@ -20,7 +20,7 @@ typedef enum {
     MOIST_EVENT_STARTED = 0,
     MOIST_EVENT_BIST_SUCCESS,
     MOIST_EVENT_BIST_FAILED,
-    MOIST_EVENT_SENSOR_GPIO_ERROR,
+    MOIST_EVENT_ADC_ERROR,
     MOIST_EVENT_STATUS_QUEUE_ERROR,
     MOIST_EVENT_LOG_QUEUE_ERROR,
     MOIST_EVENT_SHMEM_ERROR,
@@ -29,5 +29,6 @@ typedef enum {
 } MoistureEvent_e;
 
 void moistureTask(void *pvParameters);
+void killMostureTask(void);
 
 #endif /* MOISTURETHREAD_H_ */

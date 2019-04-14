@@ -29,5 +29,6 @@ typedef enum {
 } SolenoidEvent_e;
 
 void solenoidTask(void *pvParameters);
+void killSolenoidTask(void);
 
 #endif /* SOLENOIDTHREAD_H_ */
