@@ -288,7 +288,7 @@ int8_t apds9301_setControl(uint8_t file, Apds9301_PowerCtrl_e control)
 #ifdef __linux__
     if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
 #else
-    if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+    if(EXIT_FAILURE == sendIicByte(APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, &reg)) {
 #endif
     return EXIT_FAILURE;
   }
@@ -319,7 +319,7 @@ int8_t apds9301_setTimingGain(uint8_t file, Apds9301_TimingGain_e gain)
 #ifdef __linux__
     if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_TIMING_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
 #else
-  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_TIMING_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+  if(EXIT_FAILURE == sendIicByte(APDS9301_I2C_ADDR, APDS9301_TIMING_REG, &reg)) {
 #endif
     return EXIT_FAILURE;
   }
@@ -354,7 +354,7 @@ int8_t apds9301_setTimingIntegration(uint8_t file, Apds9301_TimingInt_e integrat
 #ifdef __linux__
     if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_TIMING_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
 #else
-  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_TIMING_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+  if(EXIT_FAILURE == sendIicByte(APDS9301_I2C_ADDR, APDS9301_TIMING_REG, &reg)) {
 #endif
     return EXIT_FAILURE;
   }
@@ -395,7 +395,7 @@ int8_t apds9301_setInterruptControl(uint8_t file, Apds9301_IntSelect_e intSelect
 #ifdef __linux__
     if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
 #else
-  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+  if(EXIT_FAILURE == sendIicByte(APDS9301_I2C_ADDR, APDS9301_INTERRUPT_CTRL_REG, &reg)) {
 #endif
     return EXIT_FAILURE;
   }
@@ -420,7 +420,7 @@ int8_t apds9301_clearInterrupt(uint8_t file)
 #ifdef __linux__
     if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, reg, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
 #else
-  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, &reg, APDS9301_REG_SIZE, APDS9301_REG_SIZE)) {
+  if(EXIT_FAILURE == sendIicByte(APDS9301_I2C_ADDR, APDS9301_CONTROL_REG, &reg)) {
 #endif
     return EXIT_FAILURE;
   }
@@ -471,7 +471,7 @@ int8_t apds9301_getReg(uint8_t file, uint8_t *pReg, uint8_t REG){
 #ifdef __linux__
     if(EXIT_FAILURE == getIicRegister(file, APDS9301_I2C_ADDR, REG, &regValue, APDS9301_REG_SIZE, APDS9301_ENDIANNESS)) {
 #else
-  if(EXIT_FAILURE == recvIic1Bytes(APDS9301_I2C_ADDR, REG, (uint8_t *)&regValue)) {
+  if(EXIT_FAILURE == recvIic1Byte(APDS9301_I2C_ADDR, REG, (uint8_t *)&regValue)) {
 #endif
     return EXIT_FAILURE;
   }
@@ -532,7 +532,7 @@ int8_t apds9301_writeWord(uint8_t file, uint16_t word, uint8_t REG)
 #ifdef __linux__
   if(EXIT_FAILURE == setIicRegister(file, APDS9301_I2C_ADDR, REG, word, APDS9301_WORD_SIZE, APDS9301_ENDIANNESS)) {
 #else
-  if(EXIT_FAILURE == sendIic(APDS9301_I2C_ADDR, REG, (uint8_t *)&word, APDS9301_WORD_SIZE, APDS9301_WORD_SIZE)) {
+  if(EXIT_FAILURE == sendIic2Bytes(APDS9301_I2C_ADDR, REG, (uint8_t *)&word)) {
 #endif
     return EXIT_FAILURE;
   }
