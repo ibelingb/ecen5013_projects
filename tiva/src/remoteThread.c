@@ -93,7 +93,7 @@ void remoteTask(void *pvParameters)
         if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
         {
             /* for development (verify queue send/recv) */
-            //PRINT_STATUS_MSG_HEADER(&statusMsg);
+            PRINT_STATUS_MSG_HEADER(&statusMsg);
 
             /* TODO - send status msgs to Control Node */
         }

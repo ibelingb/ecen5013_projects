@@ -439,9 +439,9 @@
 __attribute__((always_inline)) inline void PRINT_LOG_MSG_HEADER(LogMsgPacket *pLog)
 {
 #ifdef __linux__
-    printf("Recvd MsgId: %d, from sourceId: %d at %d usec\n",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
+    printf("Recvd LOG MsgId: %d, from sourceId: %d at %d usec\n",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
 #else
-    UARTprintf("Recvd MsgId: %d, from sourceId: %d at %d usec\n",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
+    UARTprintf("Recvd LOG MsgId: %d, from sourceId: %d at %d usec\n",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
 #endif
 }
 #endif	/* LOGGER_H */
