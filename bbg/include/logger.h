@@ -22,6 +22,7 @@
 #include "logger_types.h"
 #include "logger_helper.h"
 #include "conversion.h"
+#include "packet.h"
 
 #ifdef __linux__
     #include <stdio.h>

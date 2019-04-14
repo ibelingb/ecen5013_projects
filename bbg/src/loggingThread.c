@@ -154,9 +154,6 @@ void* logThreadHandler(void* threadInfo)
         else if ((prevLogItem.logMsgId != logItem.logMsgId) || (prevLogItem.time != logItem.time)
      || (prevLogItem.checksum != logItem.checksum))
         {
-            if(logItem.logMsgId == LOG_MSG_CORE_DUMP)
-                INFO_PRINT("core dump not implemented\n");
-
             /* if read from queue successful, right to file */
             if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
             {
