@@ -55,8 +55,20 @@
 #define STATUS_QUEUE_LENGTH         (8)
 #define LOG_QUEUE_LENGTH            (8)
 
+/* Note: FreeRTOS doesn't have an efficient way of
+ * getting the thread / task number, so main has to call
+ * its private setTaskNum method after creating the threads
+ */
+typedef struct {
+    TaskHandle_t hdl;   /* FreeRTOS handle */
+    int16_t taskNum;    /* FreeRTOS task number, used in logger */
+} TaskStruct_t;
+
+static TaskStruct_t tasks[PID_END];
+
 /*---------------------------------------------------------------------------------*/
 void initUART(void);
+int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process);
 
 /*---------------------------------------------------------------------------------*/
 int main(void)
@@ -120,25 +132,26 @@ int main(void)
     LOG_LOGGER_INITIALIZED();
 
     /* create threads */
-    xTaskCreate(observerTask, (const portCHAR *)"Observer",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, &observerTaskHandle);
+    xTaskCreate(observerTask, (const portCHAR *)"Observer", configMINIMAL_STACK_SIZE, (void *)&info, 1, &observerTaskHandle);
+    setTaskNum(observerTaskHandle, PID_OBSERVER);
 
-    xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, &solenoidTaskHandle);
+    xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid", configMINIMAL_STACK_SIZE, (void *)&info, 1, &solenoidTaskHandle);
+    setTaskNum(solenoidTaskHandle, PID_SOLENOID);
 
-    xTaskCreate(lightTask, (const portCHAR *)"Light",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, &lightTaskHandle);
+    xTaskCreate(lightTask, (const portCHAR *)"Light", configMINIMAL_STACK_SIZE, (void *)&info, 1, &lightTaskHandle);
+    setTaskNum(lightTaskHandle, PID_LIGHT);
 
-    xTaskCreate(remoteTask, (const portCHAR *)"Remote",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, &remoteTaskHandle);
+    xTaskCreate(remoteTask, (const portCHAR *)"Remote", configMINIMAL_STACK_SIZE, (void *)&info, 1, &remoteTaskHandle);
+    setTaskNum(remoteTaskHandle, PID_REMOTE);
 
-    xTaskCreate(moistureTask, (const portCHAR *)"Moist",
-                configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);
+    xTaskCreate(moistureTask, (const portCHAR *)"Moist", configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);
+    setTaskNum(moistureTaskHandle, PID_MOISTURE);
 
     vTaskStartScheduler();
 
     vQueueDelete(logQueue);
     vQueueDelete(statusQueue);
+    vSemaphoreDelete(info.shmemMutex);
     return EXIT_SUCCESS;
 }
 
@@ -168,3 +181,31 @@ void __error__(char *pcFilename, uint32_t ui32Line)
 }
 
 /*---------------------------------------------------------------------------------*/
+
+int16_t getTaskNum(void)
+{
+    int8_t ind;
+    TaskHandle_t hdl = xTaskGetCurrentTaskHandle();
+
+    /* loop through struct to find task */
+    for(ind = 0; ind < PID_END; ++ind)
+    {
+        if(hdl == tasks[ind].hdl) {
+            return tasks[ind].taskNum;
+        }
+    }
+    return 0;
+}
+
+int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process)
+{
+    TaskStatus_t xTaskDetails;
+
+    /* got get struct w/ num in it */
+    vTaskGetInfo(xHandle, &xTaskDetails, pdTRUE, eInvalid );
+
+    /* update number in our structure */
+    tasks[process].taskNum = xTaskDetails.xTaskNumber;
+    tasks[process].hdl = xHandle;
+    return EXIT_SUCCESS;
+}

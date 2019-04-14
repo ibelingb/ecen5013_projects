@@ -31,6 +31,7 @@
     #include "FreeRTOS.h"
     #include "task.h"
     #include "uartstdio.h"
+    #include "main.h"
 #endif
 
 #define SHORT_CIRCUIT_FOR_DEBUG (1)
@@ -70,14 +71,7 @@
         #include <sys/syscall.h>
         #define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
     #else  // not LINUX
-            #define LOG_GET_SRC_ID()            (0)
-//        #define LOG_GET_SRC_ID() ({\
-//            TaskHandle_t xHandle;\
-//            TaskStatus_t xTaskDetails;\
-//            xHandle = xTaskGetHandle(pcTaskGetName(NULL));\
-//            if(xHandle != NULL) { vTaskGetInfo(xHandle, &xTaskDetails, pdTRUE, eInvalid ); }\
-//            xTaskDetails.xTaskNumber;\
-//            })
+            #define LOG_GET_SRC_ID()            (getTaskNum())
     #endif
 
     #define LOG_LOGGER_INITIALIZED()({\
@@ -232,12 +226,3 @@ __attribute__((always_inline)) inline void PRINT_LOG_MSG_HEADER(LogMsgPacket *pL
 #endif
 }
 #endif	/* LOGGER_H */
-
-__attribute__((always_inline)) inline int16_t getTaskNum(void)
-{
-    TaskHandle_t xHandle;
-    TaskStatus_t xTaskDetails;
-    xHandle = xTaskGetHandle(pcTaskGetName(NULL));
-    if(xHandle != NULL) { vTaskGetInfo(xHandle, &xTaskDetails, pdTRUE, eInvalid ); }
-    return xTaskDetails.xTaskNumber;
-}
