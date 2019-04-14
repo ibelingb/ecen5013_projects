@@ -65,6 +65,7 @@ void moistureTask(void *pvParameters)
     keepAlive = 1;
 
     LOG_MOISTURE_EVENT(MOIST_EVENT_STARTED);
+    MUTED_PRINT("Moisture Task #: %d\n\r", getTaskNum());
 
     /* set portion of statusMsg that does not change */
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));

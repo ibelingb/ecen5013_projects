@@ -58,6 +58,7 @@ void remoteTask(void *pvParameters)
     keepAlive = 1;
 
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
+    MUTED_PRINT("Remote Task #: %d\n\r", getTaskNum());
 
     /* initialize socket */
     /* TODO - socket stuff */
@@ -83,6 +84,7 @@ void remoteTask(void *pvParameters)
         ++count;
 
         /* try to read sensor data from shmem */
+        /* TODO - need to restrict how offet this is sent */
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
             /* read data from shmem */

@@ -21,12 +21,15 @@
 #include <stddef.h>
 #include "logger_types.h"
 #include "logger_helper.h"
+#include "logger_queue.h"
 #include "conversion.h"
 #include "packet.h"
 
 #ifdef __linux__
     #include <stdio.h>
 #else
+    #include "FreeRTOS.h"
+    #include "task.h"
     #include "uartstdio.h"
 #endif
 
@@ -41,8 +44,6 @@
     #define LOG_INIT(threadArgs)			(LOG_STATUS_OK)
     #define LOG_DEQUEUE_ITEM(pLogItem)		(LOG_STATUS_OK)
     #define LOG_WRITE_ITEM(pLogItem, fd)	(LOG_STATUS_OK)
-    #define LOG_SYSTEM_ID()					/* implemented */
-    #define LOG_SYSTEM_VERSION()			/* implemented */
     #define LOG_LOGGER_INITIALIZED()		/* implemented */
     #define LOG_SYSTEM_INITIALIZED()		/* implemented */
     #define LOG_SYSTEM_HALTED()				/* implemented */
@@ -59,75 +60,24 @@
     #define LOG_LOG_EVENT(event_e)
     #define LOG_MAIN_EVENT(event_e)
 #else /* LOGging enabled */
+    #define LOG_ITEM(pLogItem)              (log_queue_item(pLogItem))
+    #define LOG_DEQUEUE_ITEM(pLogItem)      (log_dequeue_item(pLogItem))
+    #define LOG_INIT(pArg)                  (init_queue_logger(pArg))
+    #define LOG_FLUSH()                     (log_queue_flush())
+    #define LOG_WRITE_ITEM(pLogItem, fd)    (log_write_item(pLogItem, fd))
+
     #ifdef __linux__
         #include <sys/syscall.h>
-        #ifdef LOG_MSG_QUEUE
-            #include "logger_queue.h"
-            #define LOG_ITEM(pLogItem)				(log_queue_item(pLogItem))
-            #define LOG_DEQUEUE_ITEM(pLogItem)		(log_dequeue_item(pLogItem))
-            #define LOG_WRITE_ITEM(pLogItem, fd)	(log_write_item(pLogItem, fd))
-            #define LOG_INIT(pArg)					(init_queue_logger(pArg))
-            #define LOG_FLUSH()						(log_queue_flush())
-            #define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
-        #else
-            #include "logger_block.h"
-            #define LOG_ITEM(pLogItem)				(log_item(pLogItem))
-            #define LOG_INIT(pArg)					(init_logger_block(pArg))
-            #define LOG_FLUSH()						(log_flush())
-            #define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
-        #endif
+        #define LOG_GET_SRC_ID()				((pid_t)syscall(SYS_gettid))
     #else  // not LINUX
-        #ifdef LOG_BLOCKING
-            #include "logger_block.h"
-            #define LOG_ITEM(pLogItem)		        (log_item(pLogItem))
-            #define LOG_INIT()				        (init_logger_block())
-            #define LOG_FLUSH()				        (log_flush())
-            #define LOG_GET_SRC_ID()		        (0)
-        #else
-            #include "logger_queue.h"
-            #define LOG_ITEM(pLogItem)		        (log_queue_item(pLogItem))
-            #define LOG_DEQUEUE_ITEM(pLogItem)      (log_dequeue_item(pLogItem))
-            #define LOG_INIT(pArg)                  (init_queue_logger(pArg))
-            #define LOG_FLUSH()				        (log_queue_flush())
-            #define LOG_GET_SRC_ID()		        (0)
-        #endif
-    #endif
-
-    #ifndef __linux__
-        #define LOG_SYSTEM_ID()({\
-            logItem_t logItem;\
-            uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-            uint8_t numStr[32];\
-            uint16_t deviceId = (SIM->SDID & 0xFFFF0000u) >> 16;\
-            logItem.logMsgId = LOG_MSG_SYSTEM_ID;\
-            logItem.pFilename = &fileStr[0];\
-            logItem.lineNum = __LINE__;\
-            logItem.time = log_get_time();\
-            logItem.payloadLength = my_itoa(deviceId, &numStr[0], HEX_BASE);\
-            logItem.pPayload = &numStr[0];\
-            logItem.sourceId = LOG_GET_SRC_ID();\
-            log_set_checksum(&logItem);\
-            LOG_ITEM(&logItem);\
-        })
-
-        #define LOG_SYSTEM_VERSION()({\
-            logItem_t logItem;\
-            uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-            uint8_t numStr[32];\
-            uint16_t versionId = (SIM->SDID & 0x0000FF00u) | (FW_VERSION & 0xFFu);\
-            logItem.logMsgId = LOG_MSG_SYSTEM_VERSION;\
-            logItem.pFilename = &fileStr[0];\
-            logItem.lineNum = __LINE__;\
-            logItem.time = log_get_time();\
-            logItem.payloadLength = my_itoa(versionId, &numStr[0], HEX_BASE);\
-            logItem.pPayload = &numStr[0];\
-            logItem.sourceId = LOG_GET_SRC_ID();\
-            log_set_checksum(&logItem);\
-            LOG_ITEM(&logItem);\
-        })
-    #else
-        #define LOG_SYSTEM_ID()
-        #define LOG_SYSTEM_VERSION()
+            #define LOG_GET_SRC_ID()            (0)
+//        #define LOG_GET_SRC_ID() ({\
+//            TaskHandle_t xHandle;\
+//            TaskStatus_t xTaskDetails;\
+//            xHandle = xTaskGetHandle(pcTaskGetName(NULL));\
+//            if(xHandle != NULL) { vTaskGetInfo(xHandle, &xTaskDetails, pdTRUE, eInvalid ); }\
+//            xTaskDetails.xTaskNumber;\
+//            })
     #endif
 
     #define LOG_LOGGER_INITIALIZED()({\
@@ -228,153 +178,6 @@
         LOG_ITEM(&logItem);\
     })
 
-    #define LOG_PROFILING_STARTED()({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        logItem.logMsgId = LOG_MSG_PROFILING_STARTED;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.pPayload = NULL;\
-        logItem.payloadLength = 0;\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_PROFILING_RESULT(pArray, statPayloadLength)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        logItem.logMsgId = LOG_MSG_PROFILING_RESULT;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = statPayloadLength;\
-        logItem.pPayload = (uint8_t *)pArray;\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_PROFILING_COMPLETED()({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        logItem.logMsgId = LOG_MSG_PROFILING_COMPLETED;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.pPayload = NULL;\
-        logItem.payloadLength = 0;\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_RECEIVED(value)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        uint8_t numStr[2];\
-        numStr[0] = value;\
-        numStr[1] = '\0';\
-        logItem.logMsgId = LOG_MSG_DATA_RECEIVED;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = 2;\
-        logItem.pPayload = &numStr[0];\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_ANALYSIS_STARTED()({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        logItem.logMsgId = LOG_MSG_DATA_ANALYSIS_STARTED;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.pPayload = NULL;\
-        logItem.payloadLength = 0;\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_ALPHA_COUNT(count)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        uint8_t numStr[32];\
-        logItem.logMsgId = LOG_MSG_DATA_ALPHA_COUNT;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
-        logItem.pPayload = &numStr[0];\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_NUM_COUNT(count)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        uint8_t numStr[32];\
-        logItem.logMsgId = LOG_MSG_DATA_NUM_COUNT;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
-        logItem.pPayload = &numStr[0];\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_PUNC_COUNT(count)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        uint8_t numStr[32];\
-        logItem.logMsgId = LOG_MSG_DATA_PUNC_COUNT;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
-        logItem.pPayload = &numStr[0];\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_MISC_COUNT(count)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        uint8_t numStr[32];\
-        logItem.logMsgId = LOG_MSG_DATA_MISC_COUNT;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = my_itoa(count, &numStr[0], HEX_BASE);\
-        logItem.pPayload = &numStr[0];\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define LOG_DATA_ANALYSIS_COMPLETED()({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        logItem.logMsgId = LOG_MSG_DATA_ANALYSIS_COMPLETED;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.pPayload = NULL;\
-        logItem.payloadLength = 0;\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
     #define LOG_HEARTBEAT()({\
         logItem_t logItem;\
         uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
@@ -384,23 +187,6 @@
         logItem.time = log_get_time();\
         logItem.pPayload = NULL;\
         logItem.payloadLength = 0;\
-        logItem.sourceId = LOG_GET_SRC_ID();\
-        log_set_checksum(&logItem);\
-        LOG_ITEM(&logItem);\
-    })
-
-    #define CORE_DUMP()
-
-    #define LOG_THREAD_STATUS(status)({\
-        logItem_t logItem;\
-        uint8_t fileStr[sizeof(__FILE__)] = __FILE__;\
-        uint8_t numStr[32];\
-        logItem.logMsgId = LOG_MSG_DATA_ALPHA_COUNT;\
-        logItem.pFilename = &fileStr[0];\
-        logItem.lineNum = __LINE__;\
-        logItem.time = log_get_time();\
-        logItem.payloadLength = my_itoa((uint8_t)status, &numStr[0], HEX_BASE);\
-        logItem.pPayload = &numStr[0];\
         logItem.sourceId = LOG_GET_SRC_ID();\
         log_set_checksum(&logItem);\
         LOG_ITEM(&logItem);\
@@ -440,9 +226,18 @@
 __attribute__((always_inline)) inline void PRINT_LOG_MSG_HEADER(LogMsgPacket *pLog)
 {
 #ifdef __linux__
-    printf("Recvd LOG MsgId: %d, from sourceId: %d at %d usec\n",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
+    printf("Recvd LOG MsgId: %d, from sourceId: %d at %d usec\n\r",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
 #else
-    UARTprintf("Recvd LOG MsgId: %d, from FILE: %s at %d usec\n",pLog->logMsgId, pLog->filename, pLog->timestamp);
+    UARTprintf("Recvd LOG MsgId: %d, from sourceId: %d at %d usec\n\r",pLog->logMsgId, pLog->sourceId, pLog->timestamp);
 #endif
 }
 #endif	/* LOGGER_H */
+
+__attribute__((always_inline)) inline int16_t getTaskNum(void)
+{
+    TaskHandle_t xHandle;
+    TaskStatus_t xTaskDetails;
+    xHandle = xTaskGetHandle(pcTaskGetName(NULL));
+    if(xHandle != NULL) { vTaskGetInfo(xHandle, &xTaskDetails, pdTRUE, eInvalid ); }
+    return xTaskDetails.xTaskNumber;
+}

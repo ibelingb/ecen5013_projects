@@ -55,6 +55,7 @@ void observerTask(void *pvParameters)
     keepAlive = 1;
 
     LOG_OBSERVER_EVENT(OBSERVE_EVENT_STARTED);
+    MUTED_PRINT("Observer Task #: %d\n\r", getTaskNum());
 
     /* init alarm gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
