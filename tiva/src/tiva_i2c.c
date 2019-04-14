@@ -99,10 +99,8 @@ int8_t initI2c(uint32_t sysClock)
     return 0;
 }
 
-int8_t sendIic(uint8_t slaveAddr, uint8_t reg, uint8_t *pData, uint8_t regSize, uint8_t len)
+int8_t sendIicByte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
-    uint8_t ind;
-
     /* Validate input */
     if(pData == NULL){
         ERROR_PRINT("TIVA I2C sendIic() received NULL pointer for data to write.\n");
@@ -116,37 +114,60 @@ int8_t sendIic(uint8_t slaveAddr, uint8_t reg, uint8_t *pData, uint8_t regSize, 
     I2CMasterDataPut(I2C2_BASE, reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 
-//    int error = 0;
-//
-//    // Clear the RIS bit (master interrupt)
-//    i2c->MICR |= I2C_MICR_IC;
-//
-//    // Set the control flags.
-//    i2c->MCS = 0x3;
-//
-//    // Wait until the RIS bit is set, which indicates the next byte to transfer is being requested.
-//    while (!(i2c->MRIS & I2C_MRIS_RIS));
-
-//    // Check the error status.
-//    uint32_t mcs = i2c->MCS;
-//    error |= mcs & (I2C_MCS_ARBLST | I2C_MCS_DATACK | I2C_MCS_ADRACK | I2C_MCS_ERROR);
-
+    /* Wait for I2C to become available */
     while(!I2CMasterBusy(I2C2_BASE));
     while(I2CMasterBusy(I2C2_BASE));
 
-    /* send reg values */
-    for(ind = 0; ind < len; ++ind)
-    {
-        I2CMasterDataPut(I2C2_BASE, pData[ind]);
-        I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    /* Write data to I2C Device */
+    I2CMasterDataPut(I2C2_BASE, pData[0]);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 
-        while(!I2CMasterBusy(I2C2_BASE));
-        while(I2CMasterBusy(I2C2_BASE));
-    }
+    /* Wait for I2C to become available */
+    while(!I2CMasterBusy(I2C2_BASE));
+    while(I2CMasterBusy(I2C2_BASE));
+
     return 0;
 }
 
-int8_t recvIic1Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
+int8_t sendIic2Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
+{
+    /* Validate input */
+    if(pData == NULL){
+        ERROR_PRINT("TIVA I2C sendIic() received NULL pointer for data to write.\n");
+        return -1;
+    }
+
+    /* set slave address */
+    I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, false);
+
+    /* send reg address */
+    I2CMasterDataPut(I2C2_BASE, reg);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+
+    /* Wait for I2C to become available */
+    while(!I2CMasterBusy(I2C2_BASE));
+    while(I2CMasterBusy(I2C2_BASE));
+
+    /* Write data[0] to I2C Device */
+    I2CMasterDataPut(I2C2_BASE, pData[0]);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+
+    /* Wait for I2C to become available */
+    while(!I2CMasterBusy(I2C2_BASE));
+    while(I2CMasterBusy(I2C2_BASE));
+
+    /* Write data[1] to I2C Device */
+    I2CMasterDataPut(I2C2_BASE, pData[1]);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
+
+    /* Wait for I2C to become available */
+    while(!I2CMasterBusy(I2C2_BASE));
+    while(I2CMasterBusy(I2C2_BASE));
+
+    return 0;
+}
+
+int8_t recvIic1Byte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
     /* Validate input */
     if(pData == NULL){
@@ -161,17 +182,19 @@ int8_t recvIic1Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
     I2CMasterDataPut(I2C2_BASE, reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 
+    /* Wait for I2C to become available */
     while(!I2CMasterBusy(I2C2_BASE));
     while(I2CMasterBusy(I2C2_BASE));
 
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, true);
-
-
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
+
+    /* Wait for I2C to become available */
     while(!I2CMasterBusy(I2C2_BASE));
     while(I2CMasterBusy(I2C2_BASE));
 
+    /* Read data returned from I2C bus */
     *pData = I2CMasterDataGet(I2C2_BASE);
     return 0;
 }
@@ -179,7 +202,7 @@ int8_t recvIic1Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 int8_t recvIic2Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
     /* Validate input */
-    if(pData == NULL){
+    if(pData == NULL) {
         ERROR_PRINT("TIVA I2C recvIic2Bytes() received NULL pointer for return data.\n");
         return -1;
     }
@@ -191,15 +214,15 @@ int8_t recvIic2Bytes(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
     I2CMasterDataPut(I2C2_BASE, reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 
+    /* Wait for I2C to become available */
     while(!I2CMasterBusy(I2C2_BASE));
     while(I2CMasterBusy(I2C2_BASE));
 
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, true);
-
-    I2CMasterBurstLengthSet(I2C2_BASE, 2);
-
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+
+    /* Wait for I2C to become available */
     while(!I2CMasterBusy(I2C2_BASE));
     while(I2CMasterBusy(I2C2_BASE));
 
