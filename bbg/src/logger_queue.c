@@ -35,6 +35,7 @@
 #include "packet.h"
 #include "conversion.h"
 
+/*---------------------------------------------------------------------------------*/
 /* globals */
 #ifdef __linux__
     static mqd_t logQueue = -1;
@@ -42,12 +43,14 @@
     static QueueHandle_t logFd = 0;
 #endif
 
+/*---------------------------------------------------------------------------------*/
 /* private functions */
 uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd);
 uint8_t log_string(uint8_t *pStr, int fileFd);
 uint8_t log_integer(int32_t num, int fileFd);
 uint8_t log_byte(uint8_t value, int fileFd);
 
+/*---------------------------------------------------------------------------------*/
 uint8_t init_queue_logger(void *pArg)
 {
 	#ifdef __linux__
@@ -66,6 +69,7 @@ uint8_t init_queue_logger(void *pArg)
 	return LOG_STATUS_OK;
 }
 
+/*---------------------------------------------------------------------------------*/
 uint8_t log_queue_item(logItem_t *pLogItem)
 {
 	LogMsgPacket newItem;
@@ -106,6 +110,7 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	return LOG_STATUS_OK;
 }
 
+/*---------------------------------------------------------------------------------*/
 uint8_t log_queue_flush(void)
 {
 	#ifdef __linux__
@@ -120,6 +125,7 @@ uint8_t log_queue_flush(void)
 	return LOG_STATUS_OK;
 }
 
+/*---------------------------------------------------------------------------------*/
 uint8_t log_dequeue_item(logItem_t *pLogItem)
 {
 	LogMsgPacket newItem;
@@ -195,6 +201,7 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 	return LOG_STATUS_NOTOK;
 }
 
+/*---------------------------------------------------------------------------------*/
 uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
 {
     #ifdef __linux__
@@ -228,7 +235,7 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
     #endif
 }
 
-/***** private functions *****/
+/*---------------------------------------------------------------------------------*/
 #ifdef __linux__
     uint8_t log_data(uint8_t *pData, uint32_t len, int fileFd)
     {
@@ -241,6 +248,7 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
         return LOG_STATUS_OK;
     }
 
+/*---------------------------------------------------------------------------------*/
     uint8_t log_byte(uint8_t value, int fileFd)
     {
         if(write(fileFd, &value, 1) < 1) {
@@ -249,6 +257,7 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
         return LOG_STATUS_OK;
     }
 
+/*---------------------------------------------------------------------------------*/
     uint8_t log_string(uint8_t *pStr, int fileFd)
     {
         uint8_t *pChar = pStr;
@@ -266,6 +275,7 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
         return LOG_STATUS_OK;
     }
 
+/*---------------------------------------------------------------------------------*/
     uint8_t log_integer(int32_t num, int fileFd)
     {
         uint8_t numStr[MAX_INT_STRING_SIZE];
@@ -286,3 +296,5 @@ uint8_t log_write_item(logItem_t *pLogItem, int fileFd)
         return LOG_STATUS_OK;
     }
 #endif
+
+/*---------------------------------------------------------------------------------*/

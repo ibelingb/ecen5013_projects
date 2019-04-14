@@ -39,12 +39,13 @@
 #include "task.h"
 #include "semphr.h"
 
+/*---------------------------------------------------------------------------------*/
 #define ALARM_GPIO_PIN      (GPIO_PIN_0)
 
+/*---------------------------------------------------------------------------------*/
+static uint8_t keepAlive;   /* global to kill thread */
 
-/* global to kill thread */
-static uint8_t keepAlive;
-
+/*---------------------------------------------------------------------------------*/
 void observerTask(void *pvParameters)
 {
     uint8_t count = 0, alarm = 0, prev_alarm = 0;
@@ -131,7 +132,10 @@ void observerTask(void *pvParameters)
     LOG_OBSERVER_EVENT(OBSERVE_EVENT_EXITING);
 }
 
+/*---------------------------------------------------------------------------------*/
 void killObserverTask(void)
 {
     keepAlive = 0;
 }
+
+/*---------------------------------------------------------------------------------*/

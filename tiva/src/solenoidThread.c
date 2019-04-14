@@ -41,17 +41,18 @@
 #include "task.h"
 #include "semphr.h"
 
+/*---------------------------------------------------------------------------------*/
 #define SOLENOID_STATE_OFF          (0)
 #define SOLENOID_STATE_ON           (1)
 #define SOLENOID_ON_TIME_DURATION   (5000)  /* MSEC */
 
-/* global to kill thread */
-static uint8_t keepAlive;
+/*---------------------------------------------------------------------------------*/
+static uint8_t keepAlive;   /* global to kill thread */
 
-
+/*---------------------------------------------------------------------------------*/
 int8_t updateSolenoidData(SensorThreadInfo *pInfo);
 
-
+/*---------------------------------------------------------------------------------*/
 void solenoidTask(void *pvParameters)
 {
     uint8_t count = 0;
@@ -109,6 +110,7 @@ void solenoidTask(void *pvParameters)
     LOG_SOLENOID_EVENT(SOLE_EVENT_EXITING);
 }
 
+/*---------------------------------------------------------------------------------*/
 int8_t updateSolenoidData(SensorThreadInfo *pInfo)
 {
     uint8_t solenoidState;
@@ -162,7 +164,9 @@ int8_t updateSolenoidData(SensorThreadInfo *pInfo)
     return EXIT_SUCCESS;
 }
 
+/*---------------------------------------------------------------------------------*/
 void killSolenoidTask(void)
 {
     keepAlive = 0;
 }
+/*---------------------------------------------------------------------------------*/

@@ -20,6 +20,7 @@
 #include "my_debug.h"
 #include <stddef.h>
 
+/*---------------------------------------------------------------------------------*/
 #ifdef __linux__
 	#include <time.h>
 	#define TIMESPEC_TO_uSEC(time)	((((double)time.tv_sec) * 1.0e6) + (((double)time.tv_nsec) / 1.0e3))
@@ -30,8 +31,10 @@
 	#include "task.h"
 #endif
 
+/*---------------------------------------------------------------------------------*/
 uint8_t firstCall = 1;
 
+/*---------------------------------------------------------------------------------*/
 uint32_t log_get_time(void)
 {
 #ifdef __linux__
@@ -60,6 +63,7 @@ static struct timespec start_time, log_time;
 #endif
 }
 
+/*---------------------------------------------------------------------------------*/
 void log_set_checksum(logItem_t *pLogItem)
 {
 	uint32_t sum = pLogItem->logMsgId + pLogItem->lineNum
@@ -88,6 +92,7 @@ void log_set_checksum(logItem_t *pLogItem)
 	return;
 }
 
+/*---------------------------------------------------------------------------------*/
 uint32_t log_strlen(uint8_t *pStr)
 {
 	if(pStr == NULL)		/* check pointer */
@@ -99,3 +104,5 @@ uint32_t log_strlen(uint8_t *pStr)
 
 	return length;
 }
+
+/*---------------------------------------------------------------------------------*/

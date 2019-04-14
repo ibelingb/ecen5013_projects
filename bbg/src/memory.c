@@ -17,13 +17,17 @@
 
 #include "memory.h"
 
-/* assumes a word is 4 bytes, where 1 byte = sizeof(char) */
-#define SIZE_OF_WORD_BYTES 4
+/*---------------------------------------------------------------------------------*/
 
+#define SIZE_OF_WORD_BYTES 4    /* assumes a word is 4 bytes, where 1 byte = sizeof(char) */
+
+/*---------------------------------------------------------------------------------*/
 int null_ptr_check(uint8_t * src, uint8_t * dst)
 {
 	return((src == NULL) || (dst == NULL));
 }
+
+/*---------------------------------------------------------------------------------*/
 uint8_t * my_memcpy(uint8_t * src, uint8_t * dst, size_t length)
 {
    /* verify appropriate input provided */
@@ -43,6 +47,8 @@ uint8_t * my_memcpy(uint8_t * src, uint8_t * dst, size_t length)
    /* return head of dst */
 	return(dhead);
 }
+
+/*---------------------------------------------------------------------------------*/
 uint8_t * my_memmove(uint8_t * src, uint8_t * dst, size_t length)
 {
 	/* verify appropriate input provided */
@@ -70,6 +76,8 @@ uint8_t * my_memmove(uint8_t * src, uint8_t * dst, size_t length)
     /* don't duplicate code, call non-overlapping copy function */
 	return (my_memcpy(src,dst,length));
 }
+
+/*---------------------------------------------------------------------------------*/
 uint8_t * my_memset(uint8_t * src, size_t length, uint8_t value)
 {
    /* verify appropriate input provided */
@@ -88,11 +96,15 @@ uint8_t * my_memset(uint8_t * src, size_t length, uint8_t value)
    /* return head of src */
 	return(head);
 }
+
+/*---------------------------------------------------------------------------------*/
 uint8_t * my_memzero(uint8_t * src, size_t length)
 {
 	/* don't duplicate code, call memset instead */
    return(my_memset(src,length,0));
 }
+
+/*---------------------------------------------------------------------------------*/
 uint8_t * my_reverse(uint8_t * src, size_t length)
 {
    /* verify appropriate input provided */
@@ -118,6 +130,8 @@ uint8_t * my_reverse(uint8_t * src, size_t length)
 	}
 	return(src);
 }
+
+/*---------------------------------------------------------------------------------*/
 void * reserve_words(size_t length)
 {
    void * pTemp = NULL;
@@ -131,6 +145,8 @@ void * reserve_words(size_t length)
 
 	return(pTemp);
 }
+
+/*---------------------------------------------------------------------------------*/
 void * free_words(uint32_t * src)
 {
    /* verify appropriate input provided */
@@ -141,3 +157,5 @@ void * free_words(uint32_t * src)
 
 	return((void *)src);
 }
+
+/*---------------------------------------------------------------------------------*/

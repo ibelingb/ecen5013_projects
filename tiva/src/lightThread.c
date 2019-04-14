@@ -39,10 +39,6 @@
 #define TMP102_ADDR             (0x48ul)                    /* I2C address of sensor */
 #define TMP102_TEMP_REG         (0x00ul)
 
-#define TMP102_TEMP_SCALEFACTOR (0.0625f)                   /* LSB weight of temp and threshold registers */
-#define TMP102_TEMP_START_BIT   (4)                         /* offset for temperature data in register */
-#define TMP102_BITS_TO_TEMPC(BITS, SHIFT) (((float)((0xFFFF & (BITS)) >> SHIFT)) * TMP102_TEMP_SCALEFACTOR)
-
 #define DEFAULT_POWER_STATE         (APDS9301_CTRL_POWERUP)
 #define DEFAULT_TIMING_GAIN         (APDS9301_TIMING_GAIN_LOW)
 #define DEFAULT_TIMING_INTEGRATION  (APDS9301_TIMING_INT_101)
@@ -57,7 +53,6 @@ static uint8_t keepAlive;
 /*---------------------------------------------------------------------------------*/
 int8_t initLightSensor();
 int8_t verifyLightSensorComm();
-int8_t getTempC(float *pTemp);
 /*---------------------------------------------------------------------------------*/
 void lightTask(void *pvParameters)
 {
@@ -80,10 +75,14 @@ void lightTask(void *pvParameters)
 
     /* init sensor */
     if(initLightSensor() == EXIT_FAILURE) {
-        // TODO: LOG BIST FAILURE
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_BIST_COMPLETE);
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_INIT_ERROR);
         ERROR_PRINT("lightThread initialization failed.\n");
     }
-    // TODO: LOG BIST SUCCESS
+    else {
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_BIST_COMPLETE);
+        LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_INIT_SUCCESS);
+    }
 
     while(keepAlive)
     {
@@ -100,6 +99,9 @@ void lightTask(void *pvParameters)
                 /* release mutex */
                 xSemaphoreGive(info.shmemMutex);
             }
+            else { /* mutex timeout */
+                LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SHMEM_ERROR);
+            }
 
             /* only send OK status if we didn't send error status yet */
             if(statusMsgCount == 0) {
@@ -110,12 +112,14 @@ void lightTask(void *pvParameters)
                 ++statusMsgCount;
             }
         }
+        else {
+            LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_READ_ERROR);
+        }
 
         /* sleep */
         vTaskDelay(LIGHT_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
 }
-
 
 /*---------------------------------------------------------------------------------*/
 /**

@@ -42,17 +42,19 @@
 #include "task.h"
 #include "semphr.h"
 
+/*---------------------------------------------------------------------------------*/
 #define SOIL_SAMPLE_COUNT   (10)
 #define SOIL_ADC_SCALE      (100.0f / 4096.0f)
 
-/* global to kill thread */
-static uint8_t keepAlive;
+/*---------------------------------------------------------------------------------*/
+static uint8_t keepAlive;       /* global to kill thread */
 
-
+/*---------------------------------------------------------------------------------*/
 int8_t ConfigureADC0(void);
 int8_t getMoisture(float *pMoist);
 int8_t getADC0Value(uint32_t *pValue);
 
+/*---------------------------------------------------------------------------------*/
 void moistureTask(void *pvParameters)
 {
     uint8_t count = 0;
@@ -125,6 +127,7 @@ void moistureTask(void *pvParameters)
     LOG_MOISTURE_EVENT(MOIST_EVENT_EXITING);
 }
 
+/*---------------------------------------------------------------------------------*/
 /*
  * @brief init ADC0
  */
@@ -167,6 +170,7 @@ int8_t ConfigureADC0(void)
     return EXIT_SUCCESS;
 }
 
+/*---------------------------------------------------------------------------------*/
 /**
  * @brief calculate soil moisture
  */
@@ -193,6 +197,7 @@ int8_t getMoisture(float *pMoist)
     return EXIT_SUCCESS;
 }
 
+/*---------------------------------------------------------------------------------*/
 /*
  * @brief go read an ADC sample
  */
@@ -223,3 +228,5 @@ void killMoistureTask(void)
 {
     keepAlive = 0;
 }
+
+/*---------------------------------------------------------------------------------*/

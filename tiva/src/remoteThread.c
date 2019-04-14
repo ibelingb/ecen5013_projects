@@ -41,13 +41,13 @@
 #include "task.h"
 #include "semphr.h"
 
-/* global to kill thread */
-static uint8_t keepAlive;
+/*---------------------------------------------------------------------------------*/
+static uint8_t keepAlive;   /* global to kill thread */
 
-
+/*---------------------------------------------------------------------------------*/
 void init(void);
 
-
+/*---------------------------------------------------------------------------------*/
 void remoteTask(void *pvParameters)
 {
     uint8_t count = 0;
@@ -128,7 +128,10 @@ void remoteTask(void *pvParameters)
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
 }
 
+/*---------------------------------------------------------------------------------*/
 void killRemoteTask(void)
 {
     keepAlive = 0;
 }
+
+/*---------------------------------------------------------------------------------*/
