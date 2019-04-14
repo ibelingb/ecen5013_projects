@@ -29,6 +29,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "uartstdio.h"
+#define QUEUE_WAIT_DELAY  ((( TickType_t ) 10))
 #endif 
 
 
@@ -64,7 +65,6 @@ void set_sig_handlers(void);
 	{ ERRNO_PRINT("SEND_STATUS_MSG fail"); }\
 })
 #else
-#define QUEUE_WAIT_DELAY  ((( TickType_t ) 10))
 #define SEND_STATUS_MSG(queue, Id, taskStat, errCode)({\
 	TaskStatusPacket status;\
 	status.timestamp = log_get_time();\

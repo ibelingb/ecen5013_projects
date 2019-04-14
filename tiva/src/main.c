@@ -34,6 +34,8 @@
 #include "solenoidThread.h"
 #include "observerThread.h"
 #include "packet.h"
+#include "logger.h"
+#include "my_debug.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -58,7 +60,6 @@ int main(void)
 {
     uint32_t sysClock;
     static SensorThreadInfo info;
-    LogMsgPacket logMsg;
 
     /* Handles for the tasks create by main() */
     static TaskHandle_t lightTaskHandle = NULL;
@@ -101,6 +102,19 @@ int main(void)
     info.xStartTime = xTaskGetTickCount();
     info.shmemMutex = xSemaphoreCreateMutex();
     info.pShmem = &shmem;
+
+    /* initialize the logger (i.e. queue & writeability)
+      * main should probably do this before creating
+      * other threads to ensure logger is working before
+      * main or other threads start send msgs to mog queue */
+    if(LOG_INIT(&info) != LOG_STATUS_OK)
+    {
+      ERROR_PRINT("failed to init logger\n");
+      return EXIT_FAILURE;
+    }
+
+    /* logger (i.e. queue writer) init complete */
+    LOG_LOGGER_INITIALIZED();
 
     /* create threads */
     xTaskCreate(observerTask, (const portCHAR *)"Observer",

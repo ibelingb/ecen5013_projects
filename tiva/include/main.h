@@ -11,5 +11,4 @@
 
 #define SYSTEM_CLOCK            (25000000U)
 
-
 #endif /* MAIN_H_ */

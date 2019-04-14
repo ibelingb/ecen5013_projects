@@ -19,11 +19,12 @@
 #include <string.h>
 
 /* app specific includes */
+#include "observerThread.h"
 #include "cmn_timer.h"
 #include "packet.h"
 #include "my_debug.h"
 #include "healthMonitor.h"
-#include "logger_helper.h"
+#include "logger.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -46,6 +47,8 @@ void observerTask(void *pvParameters)
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
     uint8_t statusMsgCount;
+
+    LOG_OBSERVER_EVENT(OBSERVE_EVENT_STARTED);
 
     /* init alarm gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
@@ -100,8 +103,7 @@ void observerTask(void *pvParameters)
         }
         prev_alarm = alarm;
 
-        /* only send OK status at rate of other threads
-        * and if we didn't send error status yet */
+        /* only send OK status if we didn't send error status yet */
         if(statusMsgCount == 0) {
             /* update statusMsg */
             statusMsg.header = count++;

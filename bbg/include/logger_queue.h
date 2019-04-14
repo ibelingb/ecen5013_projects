@@ -20,7 +20,12 @@
 #define	LOGGER_QUEUE_H
 
 #include "logger_types.h"
-#include <mqueue.h>
+
+#ifndef __linux__
+#include "task.h"
+#define LOG_QUEUE_SEND_WAIT_DELAY   ((TickType_t) (10  / portTICK_PERIOD_MS))
+#define LOG_QUEUE_RECV_WAIT_DELAY   ((TickType_t) (500  / portTICK_PERIOD_MS))
+#endif
 
 /**
  * @brief initialize the posix queue logger

@@ -20,12 +20,13 @@
 #include <string.h>
 
 /* app specific includes */
+#include "remoteThread.h"
 #include "cmn_timer.h"
 #include "uartstdio.h"
 #include "packet.h"
 #include "my_debug.h"
 #include "healthMonitor.h"
-#include "logger_helper.h"
+#include "logger.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"
@@ -47,10 +48,12 @@ void remoteTask(void *pvParameters)
 {
     uint8_t count = 0, errCount = 0;
     float temp, moisture;
-    /* TODO - timer too long? */
-    const TickType_t xDelay = OBSERVER_TASK_DELAY_SEC / portTICK_PERIOD_MS;
+    const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
+
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
+
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
 
     /* initialize socket */
     /* TODO - socket stuff */
@@ -66,41 +69,42 @@ void remoteTask(void *pvParameters)
         ++errCount;
     }
 
-    /* send data and status msgs to Control Node */
+    /* send data, log and status msgs to Control Node */
     for (;;)
     {
         ++count;
 
-        /* try to get semaphore */
+        /* try to read sensor data from shmem */
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
             /* read data from shmem */
             /* TODO - read shmem method */
             temp = info.pShmem->lightData.apds9301_luxData;
             moisture = info.pShmem->moistData.moistureLevel;
+            temp = temp *= 1.0f;
+            moisture *= 1.0f;
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);
         }
-
-        /* TODO - send via network method */
-//        INFO_PRINT("LuxData %d.%d \r\n ", (uint16_t)temp, ((uint16_t)(temp * 1000)) - (((uint16_t)temp) * 1000));
-//        INFO_PRINT("Moisture %d percent\r\n ", (int)moisture);
+        /* TODO - send shmem data to Control Node */
 
         /* get thread status msgs */
         if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
         {
-            /* for development (verify queue send/recv */
-            PRINT_STATUS_MSG_HEADER(&statusMsg);
+            /* for development (verify queue send/recv) */
+            //PRINT_STATUS_MSG_HEADER(&statusMsg);
 
-            /* TODO - send via network method */
+            /* TODO - send status msgs to Control Node */
         }
 
         /* get log msgs */
         if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
         {
-            /* send read log msg */
-            /* TODO - send via network method */
+            /* for development (verify queue send/recv) */
+            PRINT_LOG_MSG_HEADER(&logMsg);
+
+            /* TODO - send log msgs to Control Node */
         }
     }
 }

@@ -36,6 +36,26 @@
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/lightSensor.h</locationURI>
 		</link>
 		<link>
+			<name>include/logger.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/logger.h</locationURI>
+		</link>
+		<link>
+			<name>include/logger_helper.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/logger_helper.h</locationURI>
+		</link>
+		<link>
+			<name>include/logger_queue.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/logger_queue.h</locationURI>
+		</link>
+		<link>
+			<name>include/logger_types.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/logger_types.h</locationURI>
+		</link>
+		<link>
 			<name>include/my_debug.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/my_debug.h</locationURI>
@@ -46,19 +66,29 @@
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/packet.h</locationURI>
 		</link>
 		<link>
+			<name>src/conversion.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/src/conversion.c</locationURI>
+		</link>
+		<link>
 			<name>src/lightSensor.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/src/lightSensor.c</locationURI>
 		</link>
 		<link>
-			<name>src/src</name>
-			<type>2</type>
-			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
-			<name>src/src/logger_helper.c</name>
+			<name>src/logger_helper.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/src/logger_helper.c</locationURI>
+		</link>
+		<link>
+			<name>src/logger_queue.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/src/logger_queue.c</locationURI>
+		</link>
+		<link>
+			<name>src/memory.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/src/memory.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

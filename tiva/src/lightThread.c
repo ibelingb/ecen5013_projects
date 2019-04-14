@@ -23,8 +23,8 @@
 #include "cmn_timer.h"
 #include "my_debug.h"
 #include "healthMonitor.h"
-#include "logger_helper.h"
-
+#include "logger.h"
+#include "lightThread.h"
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
@@ -63,6 +63,8 @@ void lightTask(void *pvParameters)
     float luxData = 0.0;
     uint8_t statusMsgCount;
 
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
+
     memset(&statusMsg, 0, sizeof(TaskStatusPacket));
     statusMsg.processId = PID_LIGHT;
 
@@ -95,8 +97,7 @@ void lightTask(void *pvParameters)
                 xSemaphoreGive(info.shmemMutex);
             }
 
-            /* only send OK status at rate of other threads
-            * and if we didn't send error status yet */
+            /* only send OK status if we didn't send error status yet */
             if(statusMsgCount == 0) {
                 /* update statusMsg */
                 statusMsg.header = count++;

@@ -25,7 +25,8 @@
 #include "packet.h"
 #include "my_debug.h"
 #include "healthMonitor.h"
-#include "logger_helper.h"
+#include "logger.h"
+#include "moistureThread.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -55,6 +56,8 @@ void moistureTask(void *pvParameters)
     LogMsgPacket logMsg;
     float moisture;
     uint8_t statusMsgCount;
+
+    LOG_MOISTURE_EVENT(MOIST_EVENT_STARTED);
 
     /* init peripheral */
     if(ConfigureADC0() != EXIT_SUCCESS) {
@@ -99,8 +102,7 @@ void moistureTask(void *pvParameters)
             xSemaphoreGive(info.shmemMutex);
         }
 
-        /* only send OK status at rate of other threads
-        * and if we didn't send error status yet */
+        /* only send OK status if we didn't send error status yet */
         if(statusMsgCount == 0) {
             /* update statusMsg */
             statusMsg.header = count++;

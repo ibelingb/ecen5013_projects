@@ -20,12 +20,12 @@
 #include <string.h>
 
 /* app specific includes */
-#include "tiva_i2c.h"
+#include "solenoidThread.h"
 #include "cmn_timer.h"
 #include "packet.h"
 #include "my_debug.h"
 #include "healthMonitor.h"
-#include "logger_helper.h"
+#include "logger.h"
 
 
 /* TivaWare includes */
@@ -54,6 +54,8 @@ void solenoidTask(void *pvParameters)
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
     uint8_t statusMsgCount;
+
+    LOG_SOLENOID_EVENT(SOLE_EVENT_STARTED);
 
     /* init LED gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
@@ -87,8 +89,7 @@ void solenoidTask(void *pvParameters)
             xSemaphoreGive(info.shmemMutex);
         }
 
-        /* only send OK status at rate of other threads
-        * and if we didn't send error status yet */
+        /* only send OK status if we didn't send error status yet */
         if(statusMsgCount == 0) {
             /* update statusMsg */
             statusMsg.header = count++;
