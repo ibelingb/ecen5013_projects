@@ -8,7 +8,10 @@
  ************************************************************************************
  *
  * @file remoteThread.c
- * @brief
+ * @brief TODO
+ *
+ * Resources Utilized:
+ *   - https://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/TCP_Networking_Tutorial_TCP_Client_and_Server.html
  *
  ************************************************************************************
  */
@@ -37,6 +40,7 @@
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
+#include "FreeRTOS_Sockets.h"
 #include "queue.h"
 #include "task.h"
 #include "semphr.h"
@@ -51,7 +55,7 @@ void init(void);
 void remoteTask(void *pvParameters)
 {
     uint8_t count = 0;
-    float temp, moisture;
+    float luxData, moisture;
     const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
     TaskStatusPacket statusMsg;
     LogMsgPacket logMsg;
@@ -60,8 +64,10 @@ void remoteTask(void *pvParameters)
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
     MUTED_PRINT("Remote Task #: %d\n\r", getTaskNum());
 
-    /* initialize socket */
-    /* TODO - socket stuff */
+    /* initialize sockets for sensor, status, and logging data channels */
+    Socket_t xSensorSocket, xStatusSocket, xLoggingSocket;
+//    socklen_t xSize = sizeof( freertos_sockaddr );
+    static const TickType_t xTimeOut = pdMS_TO_TICKS( 2000 );
 
     /* set portion of statusMsg that does not change */
     memset(&logMsg, 0,sizeof(LogMsgPacket));
@@ -89,9 +95,9 @@ void remoteTask(void *pvParameters)
         {
             /* read data from shmem */
             /* TODO - read shmem method */
-            temp = info.pShmem->lightData.apds9301_luxData;
+            luxData = info.pShmem->lightData.apds9301_luxData;
             moisture = info.pShmem->moistData.moistureLevel;
-            temp = temp *= 1.0f;
+            luxData = luxData *= 1.0f;
             moisture *= 1.0f;
 
             /* release mutex */
@@ -102,6 +108,8 @@ void remoteTask(void *pvParameters)
             LOG_REMOTE_CLIENT_EVENT(REMOTE_SHMEM_ERROR);
         }
         /* TODO - send shmem data to Control Node */
+
+
 
         /* get thread status msgs */
         if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
