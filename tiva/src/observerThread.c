@@ -41,6 +41,8 @@
 
 /*---------------------------------------------------------------------------------*/
 #define ALARM_GPIO_PIN      (GPIO_PIN_0)
+#define DEFAULT_HIGH_MOIST_THRESHOLD    (40)
+#define DEFAULT_LOW_MOIST_THRESHOLD     (20)
 
 /*---------------------------------------------------------------------------------*/
 static uint8_t keepAlive;   /* global to kill thread */
@@ -72,6 +74,9 @@ void observerTask(void *pvParameters)
     /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
+    info.pShmem->moistData.highThreshold = DEFAULT_HIGH_MOIST_THRESHOLD;
+    info.pShmem->moistData.lowThreshold = DEFAULT_LOW_MOIST_THRESHOLD;
+
     /* send BIST results to logger */
     if(0) {
         LOG_OBSERVER_EVENT(OBSERVE_EVENT_BIST_FAILED);
@@ -94,8 +99,9 @@ void observerTask(void *pvParameters)
                 alarm = 1;
 
                 /* verify water value is on */
-                if(info.pShmem->solenoidData.state == 1) {
+                if(info.pShmem->solenoidData.state == 0) {
                     /* if not turn on */
+                    LOG_OBSERVER_EVENT(OBSERVE_EVENT_CMD_OVERRIDE_ASSERTED);
                     info.pShmem->solenoidData.cmd = 1;
                 }
             }

@@ -125,7 +125,6 @@ int8_t updateSolenoidData(SensorThreadInfo *pInfo)
     if(solenoidState == SOLENOID_STATE_OFF) {
         if(pInfo->pShmem->solenoidData.cmd == SOLENOID_STATE_ON) {
             next_solenoidState = SOLENOID_STATE_ON;
-            pInfo->pShmem->solenoidData.cmd = SOLENOID_STATE_OFF;
         }
     }
     /* ON State */
@@ -135,6 +134,7 @@ int8_t updateSolenoidData(SensorThreadInfo *pInfo)
         if((prev_solenoidState != solenoidState) && (solenoidState == SOLENOID_STATE_ON)) {
             solenoidStartTime = (xTaskGetTickCount() - pInfo->xStartTime) * portTICK_PERIOD_MS;
             pInfo->pShmem->solenoidData.remainingOnTime = SOLENOID_ON_TIME_DURATION;
+            pInfo->pShmem->solenoidData.cmd = 0;
         }
         else {
             /* calculate on time duration */

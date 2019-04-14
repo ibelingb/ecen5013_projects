@@ -63,7 +63,7 @@ void lightTask(void *pvParameters)
     keepAlive = 1;
 
     LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_STARTED);
-    INFO_PRINT("Light Task #: %d\n\r", getTaskNum());
+    MUTED_PRINT("Light Task #: %d\n\r", getTaskNum());
 
     memset(&statusMsg, 0, sizeof(TaskStatusPacket));
     statusMsg.processId = PID_LIGHT;
