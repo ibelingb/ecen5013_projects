@@ -20,15 +20,17 @@
 
 #include <stdint.h>
 
-#define LOG_STATUS_OK 			(1)
-#define LOG_STATUS_NOTOK		(0)
-#define LOG_UNINITIALIZED		(2)
-#define LOG_STATUS_BUF_FULL 	(3)
+typedef enum {
+    LOG_STATUS_NOTOK = 0,
+    LOG_STATUS_OK,
+    LOG_STATUS_UNINITIALIZED,
+    LOG_STATUS_BUF_FULL,
+    LOG_STATUS_END
+} LogStatus_e;
 
 #define MAX_INT_STRING_SIZE		(12)
-
-#define FRAME_START_BYTE 	('<')
-#define FRAME_STOP_BYTE		('>')
+//#define FRAME_START_BYTE 	('<')
+//#define FRAME_STOP_BYTE		('>')
 
 typedef enum {
 	LOG_MSG_NONE = 0,

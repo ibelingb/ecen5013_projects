@@ -119,52 +119,52 @@ __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPac
 {
 #ifdef __linux__
     if((pStatus->errorCode >= ERROR_CODE_USER_NOTIFY0) && (pStatus->errorCode <= ERROR_CODE_USER_NOTIFY7))
-        printf("recvd error(%d) w/ CoA = NOTIFY from %s at %d usec\n", pStatus->errorCode, 
+        printf("recvd error(%d) w/ CoA = NOTIFY from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_TERMTHREAD0) && (pStatus->errorCode <= ERROR_CODE_USER_TERMTHREAD7))
-        printf("recvd error(%d) w/ CoA = TERMTHREAD from %s at %d usec\n", pStatus->errorCode, 
+        printf("recvd error(%d) w/ CoA = TERMTHREAD from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_TERMALL0) && (pStatus->errorCode <= ERROR_CODE_USER_TERMALL7))
-        printf("recvd error(%d) w/ CoA = TERMALL from %s at %d usec\n", pStatus->errorCode, 
+        printf("recvd error(%d) w/ CoA = TERMALL from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_RESTARTTHREAD0) && (pStatus->errorCode <= ERROR_CODE_USER_RESTARTTHREAD7))
-        printf("recvd error(%d) w/ CoA = RESTARTTHREAD from %s at %d usec\n", pStatus->errorCode, 
+        printf("recvd error(%d) w/ CoA = RESTARTTHREAD from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_NONE0) && (pStatus->errorCode <= ERROR_CODE_USER_NONE7))
     #ifdef PRINT_NONE_ALSO
-        printf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n", pStatus->errorCode, 
+        printf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     #else
         ;
     #endif
     else if (pStatus->errorCode == ERROR_CODE_TIMEOUT)
-        printf("recvd TIMEOUT error(%d) from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
+        printf("recvd TIMEOUT error(%d) from %s at %d usec\n\r", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
     else
-        printf("recvd error(%d) w/ CoA = OTHER from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
+        printf("recvd error(%d) w/ CoA = OTHER from %s at %d usec\n\r", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
 #else
     if((pStatus->errorCode >= ERROR_CODE_USER_NOTIFY0) && (pStatus->errorCode <= ERROR_CODE_USER_NOTIFY7))
-        UARTprintf("recvd error(%d) w/ CoA = NOTIFY from %s at %d usec\n", pStatus->errorCode,
+        UARTprintf("recvd error(%d) w/ CoA = NOTIFY from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_TERMTHREAD0) && (pStatus->errorCode <= ERROR_CODE_USER_TERMTHREAD7))
-        UARTprintf("recvd error(%d) w/ CoA = TERMTHREAD from %s at %d usec\n", pStatus->errorCode,
+        UARTprintf("recvd error(%d) w/ CoA = TERMTHREAD from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_TERMALL0) && (pStatus->errorCode <= ERROR_CODE_USER_TERMALL7))
-        UARTprintf("recvd error(%d) w/ CoA = TERMALL from %s at %d usec\n", pStatus->errorCode,
+        UARTprintf("recvd error(%d) w/ CoA = TERMALL from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_RESTARTTHREAD0) && (pStatus->errorCode <= ERROR_CODE_USER_RESTARTTHREAD7))
-        UARTprintf("recvd error(%d) w/ CoA = RESTARTTHREAD from %s at %d usec\n", pStatus->errorCode,
+        UARTprintf("recvd error(%d) w/ CoA = RESTARTTHREAD from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_NONE0) && (pStatus->errorCode <= ERROR_CODE_USER_NONE7))
     #ifdef PRINT_NONE_ALSO
-        UARTprintf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n", pStatus->errorCode,
+        UARTprintf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     #else
         ;
     #endif
     else if (pStatus->errorCode == ERROR_CODE_TIMEOUT)
-        UARTprintf("recvd TIMEOUT error(%d) from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
+        UARTprintf("recvd TIMEOUT error(%d) from %s at %d usec\n\r", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
     else
-        UARTprintf("recvd error(%d) w/ CoA = OTHER from %s at %d usec\n", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
+        UARTprintf("recvd error(%d) w/ CoA = OTHER from %s at %d usec\n\r", pStatus->errorCode, getPidString(pStatus->processId), pStatus->timestamp);
 #endif
 }
 
@@ -182,14 +182,14 @@ __attribute__((always_inline)) inline void PRINT_STATUS_MSG(TaskStatusPacket *pS
     printf("processId(%d)\t", pStatus->processId);
     printf("taskState(%d)\t", pStatus->taskState);
     printf("taskStatus(%d)\t", pStatus->taskStatus);
-    printf("errorCode(%d)\n", pStatus->errorCode);
+    printf("errorCode(%d)\n\r", pStatus->errorCode);
 #else
     UARTprintf("header(%d)\t", pStatus->header);
     UARTprintf("timestamp(%d)\t", pStatus->timestamp);
     UARTprintf("processId(%d)\t", pStatus->processId);
     UARTprintf("taskState(%d)\t", pStatus->taskState);
     UARTprintf("taskStatus(%d)\t", pStatus->taskStatus);
-    UARTprintf("errorCode(%d)\n", pStatus->errorCode);
+    UARTprintf("errorCode(%d)\n\r", pStatus->errorCode);
 #endif
     #endif
 }

@@ -62,6 +62,7 @@ void solenoidTask(void *pvParameters)
     keepAlive = 1;
 
     LOG_SOLENOID_EVENT(SOLE_EVENT_STARTED);
+    MUTED_PRINT("Solenoid Task #: %d\n\r", getTaskNum());
 
     /* init LED gpio */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
