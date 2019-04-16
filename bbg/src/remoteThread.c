@@ -63,7 +63,9 @@ void* remoteThreadHandler(void* threadInfo)
   struct mq_attr mqAttr;
   void* sharedMemPtr = NULL;
   int sharedMemFd;
-  int sockfdServer, sockfdClient, socketFlags;
+  int sockfdSensorServer, sockfdSensorClient, socketSensorFlags;
+  int sockfdCmdServer, sockfdCmdClient, socketCmdFlags;
+  int sockfdLogServer, sockfdLogClient, socketLogFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
   size_t cmdPacketSize = sizeof(struct RemoteCmdPacket);
@@ -126,41 +128,80 @@ void* remoteThreadHandler(void* threadInfo)
   }
 
   /** Establish connection on remote socket **/
-  /* Create Socket */
-  sockfdServer = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfdServer == -1){
-    ERROR_PRINT("remoteThread failed to create socket - exiting.\n");
+  /* Create Server Socket Interfaces */
+  sockfdSensorServer = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfdSensorServer == -1){
+    ERROR_PRINT("remoteThread failed to create Data Socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    return NULL;
+  }
+  sockfdCmdServer = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfdCmdServer == -1){
+    ERROR_PRINT("remoteThread failed to create Data Socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    return NULL;
+  }
+  sockfdLogServer = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfdLogServer == -1){
+    ERROR_PRINT("remoteThread failed to create Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Update Socket Server connections to be non-blocking */
-  socketFlags = fcntl(sockfdServer, F_GETFL);
-  fcntl(sockfdServer, F_SETFL, socketFlags | O_NONBLOCK);
+  socketSensorFlags = fcntl(sockfdSensorServer, F_GETFL);
+  fcntl(sockfdSensorServer, F_SETFL, socketSensorFlags | O_NONBLOCK);
+  socketCmdFlags = fcntl(sockfdCmdServer, F_GETFL);
+  fcntl(sockfdCmdServer, F_SETFL, socketCmdFlags | O_NONBLOCK);
+  socketLogFlags = fcntl(sockfdLogServer, F_GETFL);
+  fcntl(sockfdLogServer, F_SETFL, socketLogFlags | O_NONBLOCK);
+
   /* Update Socket Client connections to be non-blocking */
   struct timeval timeout;
   timeout.tv_usec = REMOTE_CLIENT_TIMEOUT_USEC;
-  timeout.tv_sec = LIGHT_LOOP_TIME_SEC;
+  timeout.tv_sec = 0;
 
   /* Set properties and bind socket */
   servAddr.sin_family = AF_INET;
   servAddr.sin_addr.s_addr = INADDR_ANY;
-  servAddr.sin_port = htons((int)PORT);
-  if(bind(sockfdServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
-    ERROR_PRINT("remoteThread failed to bind socket - exiting.\n");
+  servAddr.sin_port = htons((int)SENSOR_PORT);
+  if(bind(sockfdSensorServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
+    ERROR_PRINT("remoteThread failed to bind Data Socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    return NULL;
+  }
+  servAddr.sin_port = htons((int)CMD_PORT);
+  if(bind(sockfdCmdServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
+    ERROR_PRINT("remoteThread failed to bind Cmd Socket - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    return NULL;
+  }
+  servAddr.sin_port = htons((int)LOG_PORT);
+  if(bind(sockfdLogServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
+    ERROR_PRINT("remoteThread failed to bind Log Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
-  if(listen(sockfdServer, MAX_CLIENTS) == -1) {
-    ERROR_PRINT("remoteThread failed to successfully listen for client connection - exiting.\n");
+  if(listen(sockfdSensorServer, MAX_CLIENTS) == -1) {
+    ERROR_PRINT("remoteThread failed to successfully listen for Sensor Client connection - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    return NULL;
+  }
+  if(listen(sockfdCmdServer, MAX_CLIENTS) == -1) {
+    ERROR_PRINT("remoteThread failed to successfully listen for Cmd Client connection - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    return NULL;
+  }
+  if(listen(sockfdLogServer, MAX_CLIENTS) == -1) {
+    ERROR_PRINT("remoteThread failed to successfully listen for Log Client connection - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Log RemoteThread successfully created */
-  INFO_PRINT("Created remoteThread to listen on port %d.\n", PORT);
+  INFO_PRINT("Created remoteThread to listen on the following ports | Sensor:{%d} | Cmd:{%d} | Log:{%d} |\n", SENSOR_PORT, CMD_PORT, LOG_PORT);
   MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE);
 
   /* BIST/Power-on Test 
@@ -168,6 +209,7 @@ void* remoteThreadHandler(void* threadInfo)
    *    - Verify able to lock mutex and communicate with Shared Memory.
    */
   /* Write invalid/inaccurate values to tempData and lightData - verify overwritten by reading SHMEM */
+  /*
   tempData.tmp102_temp = 5;
   tempData.overTempState = 5;
   lightData.apds9301_luxData = 5;
@@ -184,12 +226,15 @@ void* remoteThreadHandler(void* threadInfo)
     LOG_REMOTE_HANDLING_EVENT(REMOTE_BIST_COMPLETE);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_INIT_SUCCESS);
   } else {
+  */
     /* Failed to read SHMEM and overwrite local objects */
+  /*
     LOG_REMOTE_HANDLING_EVENT(REMOTE_BIST_COMPLETE);
     LOG_REMOTE_HANDLING_EVENT(REMOTE_INIT_ERROR);
     ERROR_PRINT("remoteThread initialization failed.\n");
     return NULL;
   }
+  */
   /* Reset values to 0 */
   tempData.tmp102_temp = 0;
   tempData.overTempState = 0;
@@ -201,10 +246,11 @@ void* remoteThreadHandler(void* threadInfo)
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
-    /* Accept Client Connection */
-    if(clientResponse == 0){
-      sockfdClient = accept(sockfdServer, (struct sockaddr*)&cliAddr, &cliLen);
-      if(sockfdClient == -1){
+    /* Accept Client Connection for Sensor data */
+    if(clientResponse == 0)
+    {
+      sockfdSensorClient = accept(sockfdSensorServer, (struct sockaddr*)&cliAddr, &cliLen);
+      if(sockfdSensorClient == -1){
         /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
           continue;
@@ -214,19 +260,66 @@ void* remoteThreadHandler(void* threadInfo)
         ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
         LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
         continue;
-      } else if(sockfdClient > 0) {
+      } else if(sockfdSensorClient > 0) {
         /* Log RemoteThread successfully Connected to client */
-        printf("Connected remoteThread to external Client on port %d.\n", PORT);
+        printf("Connected remoteThread to external Client on port %d.\n", SENSOR_PORT);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
         /* Update Socket Client connections to be non-blocking */
-        setsockopt(sockfdClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
+        setsockopt(sockfdSensorClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
+      }
+    }
+    /* Accept Client Connection for Cmd Data */
+    if(clientResponse == 0)
+    {
+      sockfdCmdClient = accept(sockfdCmdServer, (struct sockaddr*)&cliAddr, &cliLen);
+      if(sockfdCmdClient == -1){
+        /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
+        if(errno == EWOULDBLOCK) {
+          continue;
+        }
+
+        /* Report error if client fails to connect to server */
+        ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
+        continue;
+      } else if(sockfdCmdClient > 0) {
+        /* Log RemoteThread successfully Connected to client */
+        printf("Connected remoteThread to external Client on port %d.\n", SENSOR_PORT);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+
+        /* Update Socket Client connections to be non-blocking */
+        setsockopt(sockfdCmdClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
+      }
+    }
+    /* Accept Client Connection Log Data */
+    if(clientResponse == 0)
+    {
+      sockfdLogClient = accept(sockfdLogServer, (struct sockaddr*)&cliAddr, &cliLen);
+      if(sockfdLogClient == -1){
+        /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
+        if(errno == EWOULDBLOCK) {
+          continue;
+        }
+
+        /* Report error if client fails to connect to server */
+        ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
+        continue;
+      } else if(sockfdLogClient > 0) {
+        /* Log RemoteThread successfully Connected to client */
+        printf("Connected remoteThread to external Client on port %d.\n", SENSOR_PORT);
+        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+
+        /* Update Socket Client connections to be non-blocking */
+        setsockopt(sockfdLogClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
       }
     }
 
     /* Check for incoming commands from remote clients on socket port */
-    clientResponse = recv(sockfdClient, &cmdPacket, cmdPacketSize, 0);
-    if (clientResponse == -1) { 
+    clientResponse = recv(sockfdSensorClient, &cmdPacket, cmdPacketSize, 0);
+    if (clientResponse == -1) 
+    {
       /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
         continue;
@@ -238,7 +331,7 @@ void* remoteThreadHandler(void* threadInfo)
       continue;
     } else if(clientResponse == 0) { 
       /* Handle disconnect from client socket */
-      printf("remoteThread connection lost with client on port %d.\n", PORT);
+      printf("remoteThread connection lost with client on port %d.\n", SENSOR_PORT);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
       continue;
     }
@@ -261,7 +354,7 @@ void* remoteThreadHandler(void* threadInfo)
     getCmdResponse(&cmdPacket);
 
     /* Transmit data packet back to remote client requesting data */
-    if(send(sockfdClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
+    if(send(sockfdSensorClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
       ERROR_PRINT("remoteThread failed to handle outgoing requested data to remote client.\n");
       LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       continue;
@@ -275,8 +368,12 @@ void* remoteThreadHandler(void* threadInfo)
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
   close(sharedMemFd);
-  close(sockfdClient);
-  close(sockfdServer);
+  close(sockfdSensorClient);
+  close(sockfdSensorServer);
+  close(sockfdCmdClient);
+  close(sockfdCmdServer);
+  close(sockfdLogClient);
+  close(sockfdLogServer);
 
   return NULL;
 }

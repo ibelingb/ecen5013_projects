@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 
   /* Establish Connection with Server */
   servAddr.sin_family = AF_INET;
-  servAddr.sin_port = htons((int)PORT);
+  servAddr.sin_port = htons((int)SENSOR_PORT);
   if(inet_pton(AF_INET, ipAddress, &servAddr.sin_addr) != 1){
     printf("ERROR: remoteClient Application IP address provided of {%s} is invalid - exiting.\n", ipAddress);
     return -1;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
   }
 
   /* Log SensorThread successfully created */
-  printf("Successfully connected remoteClient on port %d.\n", PORT);
+  printf("Successfully connected remoteClient on port %d.\n", SENSOR_PORT);
 
   while(1) {
     /* Display usage info and wait for user input */

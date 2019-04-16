@@ -23,7 +23,9 @@
 #include <stdint.h>
 #include <signal.h>
 
-#define PORT (5001)
+#define SENSOR_PORT (5001)
+#define CMD_PORT (5002)
+#define LOG_PORT (5003)
 
 typedef union StatusData {
   uint32_t status_uint32;
