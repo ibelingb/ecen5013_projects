@@ -44,7 +44,7 @@ static void getCmdResponse(RemoteCmdPacket* packet);
 /* Define static and global variables */
 static SensorThreadInfo sensorInfo;
 static LightDataStruct lightData; /* Used to read data from Shared Memory */
-static TempDataStruct tempData;  /* Used to read data from Shared Memory */
+//static TempDataStruct tempData;  /* Used to read data from Shared Memory */
 static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
@@ -61,8 +61,8 @@ void* remoteThreadHandler(void* threadInfo)
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
   struct mq_attr mqAttr;
-  void* sharedMemPtr = NULL;
-  int sharedMemFd;
+  //void* sharedMemPtr = NULL;
+  //int sharedMemFd;
   int sockfdSensorServer, sockfdSensorClient, socketSensorFlags;
   int sockfdCmdServer, sockfdCmdClient, socketCmdFlags;
   int sockfdLogServer, sockfdLogClient, socketLogFlags;
@@ -112,20 +112,24 @@ void* remoteThreadHandler(void* threadInfo)
   }
 
   /* Setup Shared memory for thread */
+  /*
   sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
   if(sharedMemFd == -1) {
     ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SHMEM_ERROR);
     return NULL;
   }
+  */
 
   /* Memory map the shared memory */
+  /*
   sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
   if(*(int *)sharedMemPtr == -1) {
     ERROR_PRINT("remoteThread Failed to complete memory mapping of shared memory - exiting\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SHMEM_ERROR);
     return NULL;
   }
+  */
 
   /** Establish connection on remote socket **/
   /* Create Server Socket Interfaces */
@@ -236,8 +240,8 @@ void* remoteThreadHandler(void* threadInfo)
   }
   */
   /* Reset values to 0 */
-  tempData.tmp102_temp = 0;
-  tempData.overTempState = 0;
+  //tempData.tmp102_temp = 0;
+  //tempData.overTempState = 0;
   lightData.apds9301_luxData = 0;
   lightData.lightState = 0;
   /* BIST/Power-on Test Complete */
@@ -345,10 +349,12 @@ void* remoteThreadHandler(void* threadInfo)
     }
 
     /* Read from Shared Memory and pass requested data back to client */
+    /*
     pthread_mutex_lock(sensorInfo.sharedMemMutex);
     memcpy(&tempData, (sharedMemPtr+sensorInfo.tempDataOffset), sizeof(struct TempDataStruct));
     memcpy(&lightData, (sharedMemPtr+sensorInfo.lightDataOffset), sizeof(struct LightDataStruct));
     pthread_mutex_unlock(sensorInfo.sharedMemMutex);
+    */
 
     /* Populate Cmd Response data based on received cmd */
     getCmdResponse(&cmdPacket);
@@ -367,7 +373,7 @@ void* remoteThreadHandler(void* threadInfo)
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
-  close(sharedMemFd);
+  //close(sharedMemFd);
   close(sockfdSensorClient);
   close(sockfdSensorServer);
   close(sockfdCmdClient);
@@ -415,6 +421,7 @@ static void getCmdResponse(RemoteCmdPacket* packet){
 
   /* Based on received command, populate response to provide back to client */
   switch(packet->cmd) {
+    /*
     case TEMPCMD_GETTEMP :
       packet->data.status_float = tempData.tmp102_temp;
       INFO_PRINT("TEMPCMD_GETTEMP cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
@@ -459,6 +466,7 @@ static void getCmdResponse(RemoteCmdPacket* packet){
       packet->data.status_uint32 = tempData.overTempState;
       INFO_PRINT("TEMPCMD_GETOVERTEMPSTATE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
       break;
+      */
     case LIGHTCMD_GETLUXDATA :
       packet->data.status_float = lightData.apds9301_luxData;
       INFO_PRINT("LIGHTCMD_GETLUXDATA cmd received | Transmitting data: {%f}\n", packet->data.status_float);

@@ -29,8 +29,8 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-#include "tempThread.h"
-#include "lightThread.h"
+//#include "tempThread.h"
+//#include "lightThread.h"
 #include "remoteThread.h"
 #include "loggingThread.h"
 #include "packet.h"
@@ -52,15 +52,15 @@ void sigintHandler(int sig);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
-pthread_mutex_t gSharedMemMutex;
-pthread_mutex_t gI2cBusMutex; 
+//pthread_mutex_t gSharedMemMutex;
+//pthread_mutex_t gI2cBusMutex; 
 
 static uint8_t gExit = 1;
 
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName        = "/logging_mq";
-  char *sensorSharedMemoryName = "/sensor_sm";
+  //char *sensorSharedMemoryName = "/sensor_sm";
   char *logFile = "/usr/bin/log.bin";
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
@@ -68,8 +68,8 @@ int main(int argc, char *argv[]){
   struct mq_attr mqAttr;
   mqd_t logMsgQueue;
   mqd_t heartbeatMsgQueue;
-  int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
-  int sharedMemFd = 0;
+  //int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
+  //int sharedMemFd = 0;
   char ind;
   uint8_t newError;
 
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]){
 
   /* Ensure MQs and Shared Memory properly cleaned up before starting */
   mq_unlink(heartbeatMsgQueueName);
-  shm_unlink(sensorSharedMemoryName);
+  //shm_unlink(sensorSharedMemoryName);
 
   if(remove(heartbeatMsgQueueName) == -1 && errno != ENOENT)
   { ERRNO_PRINT("main() couldn't delete log queue path"); return EXIT_FAILURE; }
@@ -167,38 +167,44 @@ int main(int argc, char *argv[]){
   }
 
   /* Create Shared Memory for data sharing between SensorThreads and RemoteThread */
+  /*
   sharedMemFd = shm_open(sensorSharedMemoryName, O_CREAT | O_RDWR, 0666);
   if(sharedMemFd == -1)
   {
     ERROR_PRINT("ERROR: main() failed to create shared memory for sensor and remote threads - exiting.\n");
     return EXIT_FAILURE;
   }
+  */
 
   /* Configure size of SensorSharedMemory */
+  /*
   if(ftruncate(sharedMemFd, sharedMemSize) == -1)
   {
     ERROR_PRINT("ERROR: main() failed to configure size of shared memory - exiting.\n");
     return EXIT_FAILURE;
   }
+  */
 
   /* MemoryMap shared memory */
+  /*
   if(*(int*)mmap(0, sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0) == -1)
   {
     ERROR_PRINT("ERROR: main() failed to complete memory mapping for shared memory - exiting.\n");
     return EXIT_FAILURE;
   }
+  */
 
   /* Populate ThreadInfo objects to pass names for created IPC pieces to threads */
   strcpy(sensorThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
   strcpy(sensorThreadInfo.logMsgQueueName, logMsgQueueName);
-  strcpy(sensorThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
-  sensorThreadInfo.sharedMemSize = sharedMemSize;
-  sensorThreadInfo.lightDataOffset = sizeof(TempDataStruct);
-  sensorThreadInfo.sharedMemMutex = &gSharedMemMutex;
-  sensorThreadInfo.i2cBusMutex = &gI2cBusMutex;
+  //strcpy(sensorThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
+  //sensorThreadInfo.sharedMemSize = sharedMemSize;
+  //sensorThreadInfo.lightDataOffset = sizeof(TempDataStruct);
+  //sensorThreadInfo.sharedMemMutex = &gSharedMemMutex;
+  //sensorThreadInfo.i2cBusMutex = &gI2cBusMutex;
 
-  pthread_mutex_init(&gSharedMemMutex, NULL);
-  pthread_mutex_init(&gI2cBusMutex, NULL);
+  //pthread_mutex_init(&gSharedMemMutex, NULL);
+  //pthread_mutex_init(&gI2cBusMutex, NULL);
 
   /* Create other threads */
   if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
@@ -206,7 +212,8 @@ int main(int argc, char *argv[]){
     ERROR_PRINT("ERROR: Failed to create Remote Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
-  
+ 
+  /*
   if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
   {
     ERROR_PRINT("ERROR: Failed to create TempSensor Thread - exiting main().\n");
@@ -218,6 +225,7 @@ int main(int argc, char *argv[]){
     ERROR_PRINT("ERROR: Failed to create LightSensor Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
+  */
   
   LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
 
@@ -269,12 +277,12 @@ int main(int argc, char *argv[]){
   timer_delete(timerid);
   mq_unlink(heartbeatMsgQueueName);
   mq_unlink(logMsgQueueName);
-  shm_unlink(sensorSharedMemoryName);
+  //shm_unlink(sensorSharedMemoryName);
   mq_close(heartbeatMsgQueue);
   mq_close(logMsgQueue);
-  pthread_mutex_destroy(&gSharedMemMutex);
-  pthread_mutex_destroy(&gI2cBusMutex);
-  close(sharedMemFd);
+  //pthread_mutex_destroy(&gSharedMemMutex);
+  //pthread_mutex_destroy(&gI2cBusMutex);
+  //close(sharedMemFd);
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -291,8 +299,8 @@ int main(int argc, char *argv[]){
 void sigintHandler(int sig){
   /* Send signal to all children threads to terminate */
   pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE);
-  pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);
-  pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_LIGHT);
+  //pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);
+  //pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_LIGHT);
   printf("\nDelay to allow threads to terminate gracefully and log exit events...\n\n");
   sleep(3);
 

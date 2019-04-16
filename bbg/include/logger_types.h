@@ -29,8 +29,10 @@ typedef enum {
 } LogStatus_e;
 
 #define MAX_INT_STRING_SIZE		(12)
-//#define FRAME_START_BYTE 	('<')
-//#define FRAME_STOP_BYTE		('>')
+#ifdef __linux__
+#define FRAME_START_BYTE 	('<')
+#define FRAME_STOP_BYTE		('>')
+#endif
 
 typedef enum {
 	LOG_MSG_NONE = 0,
