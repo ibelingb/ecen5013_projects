@@ -46,9 +46,13 @@
 #define MAIN_LOG_EXIT_DELAY   (100 * 1000)
 #define USR_LED_53            (53)
 
+#define BUFFER_SIZE (3)
+
 /* private functions */
 void set_sig_handlers(void);
 void sigintHandler(int sig);
+void displayControlMenu();
+int8_t handleConsoleCmd(uint8_t cmd);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
@@ -72,6 +76,9 @@ int main(int argc, char *argv[]){
   //int sharedMemFd = 0;
   char ind;
   uint8_t newError;
+ 
+  char inputCmdBuffer[BUFFER_SIZE];
+  int inputCmd = 0;
 
   /* parse cmdline args */
   if(argc >= 2) {
@@ -248,6 +255,20 @@ int main(int argc, char *argv[]){
   /* Periodically get thread status, send to logging thread */
   while(gExit) 
   {
+    /* Display menu to UART console; Receive cmd from user */
+    displayControlMenu();
+    if(scanf("%s", inputCmdBuffer) == 1) {
+      /* Convert received input and verify cmd is valid */
+      inputCmd = atoi(inputCmdBuffer);
+      if((inputCmd >= CMD_MAX_CMDS) || (inputCmd <= 0)) {
+        printf("Invalid command received of {%s} - ignoring cmd\n", inputCmdBuffer);
+        continue;
+      }
+    }
+
+    /* Process received cmd from user */
+    handleConsoleCmd(inputCmd);
+
     /* wait on signal timer */
     sigwait(&set, &signum);
 
@@ -306,4 +327,65 @@ void sigintHandler(int sig){
 
   /* Trigger while-loop in main to exit; cleanup allocated resources */
   gExit = 0;
+}
+
+/*---------------------------------------------------------------------------------*/
+/**
+ * @brief Prints a menu of actions to the user to send to the BBG Control Node via
+ *        the serial interface.
+ * 
+ * @return void
+ */
+void displayControlMenu()
+{
+  printf("\nEnter a value to specify a command to send to the Sensor Application:\n"
+         "\t1 = Water Plant\n"
+         "\t2 = Schedule Periodic Watering Cycle\n"
+         "\t3 = Schedule One-Shot Watering Event\n"
+         "\t4 = Get Latest Sensor Data\n"
+         "\t5 = Get Device/Actuator State\n"
+         //"\t6 = \n"
+         //"\t7 = \n"
+         //"\t8 = \n"
+         //"\t9 = \n"
+         //"\t10 = \n"
+         //"\t11 = \n"
+  );
+}
+
+/**
+ * @brief Handle command received from user via UART console 
+ * 
+ * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
+ */
+int8_t handleConsoleCmd(uint8_t cmd) {
+  switch((ConsoleCmd_e)cmd)
+  {
+    case CMD_WATER_PLANT :
+      // TODO
+      break;
+    case CMD_SCHED_PERIODIC :
+      // TODO
+      break;
+    case CMD_SCHED_ONESHOT :
+      // TODO
+      break;
+    case CMD_GET_SENSOR_DATA :
+      // TODO
+      break;
+    case CMD_GET_DEVICE_STATE :
+      // TODO
+      break;
+    /*
+    case CMD_ :
+      // TODO
+      break;
+    */
+
+    default:
+      printf("Unrecognized command received. Request ignored.\n");
+      return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
