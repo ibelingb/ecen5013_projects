@@ -165,7 +165,7 @@ void* remoteThreadHandler(void* threadInfo)
   }
 
   /* Log RemoteThread successfully created */
-  INFO_PRINT("Created remoteThread to listen on the following ports | Sensor:{%d} | Cmd:{%d} | Log:{%d} |\n", SENSOR_PORT, CMD_PORT, LOG_PORT);
+  INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", SENSOR_PORT);
   MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE);
 
   /* BIST/Power-on Test 
@@ -280,6 +280,7 @@ void* remoteThreadHandler(void* threadInfo)
       continue;
     }
   }
+
 
   /* Thread Cleanup */
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);

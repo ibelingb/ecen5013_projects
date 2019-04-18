@@ -53,6 +53,7 @@ void set_sig_handlers(void);
 void sigintHandler(int sig);
 void displayControlMenu();
 int8_t handleConsoleCmd(uint8_t cmd);
+int readInputNonBlock();
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
@@ -251,23 +252,23 @@ int main(int argc, char *argv[]){
   LOG_SYSTEM_INITIALIZED();
   MUTED_PRINT("main started successfully, pid: %d\n",(pid_t)syscall(SYS_gettid));
 
+  /* Display menu to UART console; Receive cmd from user */
+  displayControlMenu();
+
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
   while(gExit) 
   {
-    /* Display menu to UART console; Receive cmd from user */
-    displayControlMenu();
-    if(scanf("%s", inputCmdBuffer) == 1) {
-      /* Convert received input and verify cmd is valid */
+    /* Determine if input has been received by user */
+    if(readInputNonBlock() == 1) {
+      /* Convert received input from ascii to int */
+      scanf("%s", inputCmdBuffer);
       inputCmd = atoi(inputCmdBuffer);
-      if((inputCmd >= CMD_MAX_CMDS) || (inputCmd <= 0)) {
-        printf("Invalid command received of {%s} - ignoring cmd\n", inputCmdBuffer);
-        continue;
-      }
-    }
 
-    /* Process received cmd from user */
-    handleConsoleCmd(inputCmd);
+      /* Process received cmd from user; display cmd menu again */
+      handleConsoleCmd((inputCmd));
+      displayControlMenu();
+    }
 
     /* wait on signal timer */
     sigwait(&set, &signum);
@@ -353,27 +354,39 @@ void displayControlMenu()
   );
 }
 
+/*---------------------------------------------------------------------------------*/
 /**
  * @brief Handle command received from user via UART console 
  * 
  * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
  */
 int8_t handleConsoleCmd(uint8_t cmd) {
+  /* Verify received cmd is valid */
+  if((cmd >= CMD_MAX_CMDS)) {
+    printf("Invalid command received of {%d} - ignoring cmd\n", cmd);
+    return EXIT_FAILURE;
+  }
+
   switch((ConsoleCmd_e)cmd)
   {
     case CMD_WATER_PLANT :
+      printf("CMD_WATER_PLANT\n");
       // TODO
       break;
     case CMD_SCHED_PERIODIC :
+      printf("CMD_SCHED_PERIODIC\n");
       // TODO
       break;
     case CMD_SCHED_ONESHOT :
+      printf("CMD_SCHED_ONESHOT\n");
       // TODO
       break;
     case CMD_GET_SENSOR_DATA :
+      printf("CMD_GET_SENSOR_DATA\n");
       // TODO
       break;
     case CMD_GET_DEVICE_STATE :
+      printf("CMD_GET_DEVICE_STATE\n");
       // TODO
       break;
     /*
@@ -388,4 +401,20 @@ int8_t handleConsoleCmd(uint8_t cmd) {
   }
 
   return EXIT_SUCCESS;
+}
+
+/*---------------------------------------------------------------------------------*/
+/**
+ * @brief Read input from UART console in non-blocking manner
+ *
+ * @return value 1 if user input received; otherwise 0
+ */
+int readInputNonBlock()
+{
+  struct timeval tv = { 0L, 0L };
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(STDIN_FILENO, &fds);
+  select(STDIN_FILENO+1, &fds, NULL, NULL, &tv);
+  return (FD_ISSET(0, &fds));
 }
