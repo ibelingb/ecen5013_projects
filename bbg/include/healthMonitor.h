@@ -86,14 +86,14 @@ void set_sig_handlers(void);
 __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procId)
 {
     switch (procId) {
+        case PID_LOGGING:
+            return "PID_LOGGING";
+        case PID_REMOTE:
+            return "PID_REMOTE";
         case PID_LIGHT:
             return "PID_LIGHT";
         case PID_TEMP:
             return "PID_TEMP";
-        case PID_REMOTE:
-            return "PID_REMOTE";
-        case PID_LOGGING:
-            return "PID_LOGGING";
         case PID_MOISTURE:
             return "PID_MOISTURE";
         case PID_OBSERVER:

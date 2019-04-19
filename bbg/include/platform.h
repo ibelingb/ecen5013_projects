@@ -18,5 +18,6 @@
 #define PLATFORM_H_
 
 #define NUM_THREADS (2)
+//#define NUM_THREADS (1)
 
 #endif /* PLATFORM_H_ */

@@ -166,17 +166,14 @@ typedef enum LogLevel_e
 
 typedef enum ConsoleCmd_e
 {
-  CMD_WATER_PLANT = 1,
-  CMD_SCHED_PERIODIC,
-  CMD_SCHED_ONESHOT,
-  CMD_GET_SENSOR_DATA,
-  CMD_GET_DEVICE_STATE,
+  CMD_WATER_PLANT = 1, /* Cmd RemoteTask to trigger watering cycle */
+  CMD_SCHED_PERIODIC, /* Update Control Loop to schedule periodic watering */
+  CMD_SCHED_ONESHOT, /* Update Control Loop to schedule watering event at later time */
+  CMD_GET_SENSOR_DATA, /* Request sensor data */
+  CMD_GET_APP_STATE, /* Request system state (threads running, remoteNode connected, etc) */
+  CMD_EN_DEV2, /* Enable TIVA Device 2 (LED) */
+  CMD_DS_DEV2, /* Disable TIVA Device 2 (LED) */
   CMD_MAX_CMDS
-  //CMD_,
-  //CMD_,
-  //CMD_,
-  //CMD_,
-  //CMD_,
 } ConsoleCmd_e;
 
 /* ------------------------------------------------------------- */

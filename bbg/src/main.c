@@ -9,7 +9,8 @@
  ************************************************************************************
  *
  * @file main.c
- * @brief main for project 1 - Multithreaded sensor sampling application
+ * @brief main for project 2 - Multithreaded sensor sampling application with connected 
+                               TIVA Board
  *
  * NOTE: Main process will create and destory all IPC mechanisms. Children threads will
  *       open()/close() resources as needed.
@@ -29,8 +30,6 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-//#include "tempThread.h"
-//#include "lightThread.h"
 #include "remoteThread.h"
 #include "loggingThread.h"
 #include "packet.h"
@@ -40,13 +39,11 @@
 #include "cmn_timer.h"
 #include "platform.h"
 #include "healthMonitor.h"
+
 #define FOUND_GPIO_LIB
-
-
-#define MAIN_LOG_EXIT_DELAY   (100 * 1000)
-#define USR_LED_53            (53)
-
-#define BUFFER_SIZE (3)
+#define MAIN_LOG_EXIT_DELAY (100 * 1000)
+#define USR_LED_53          (53)
+#define BUFFER_SIZE         (3)
 
 /* private functions */
 void set_sig_handlers(void);
@@ -57,15 +54,12 @@ int readInputNonBlock();
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
-//pthread_mutex_t gSharedMemMutex;
-//pthread_mutex_t gI2cBusMutex; 
 
 static uint8_t gExit = 1;
 
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
-  char *logMsgQueueName        = "/logging_mq";
-  //char *sensorSharedMemoryName = "/sensor_sm";
+  char *logMsgQueueName = "/logging_mq";
   char *logFile = "/usr/bin/log.bin";
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
@@ -73,8 +67,6 @@ int main(int argc, char *argv[]){
   struct mq_attr mqAttr;
   mqd_t logMsgQueue;
   mqd_t heartbeatMsgQueue;
-  //int sharedMemSize = (sizeof(struct TempDataStruct) + sizeof(struct LightDataStruct));
-  //int sharedMemFd = 0;
   char ind;
   uint8_t newError;
  
@@ -174,45 +166,9 @@ int main(int argc, char *argv[]){
     return EXIT_FAILURE;
   }
 
-  /* Create Shared Memory for data sharing between SensorThreads and RemoteThread */
-  /*
-  sharedMemFd = shm_open(sensorSharedMemoryName, O_CREAT | O_RDWR, 0666);
-  if(sharedMemFd == -1)
-  {
-    ERROR_PRINT("ERROR: main() failed to create shared memory for sensor and remote threads - exiting.\n");
-    return EXIT_FAILURE;
-  }
-  */
-
-  /* Configure size of SensorSharedMemory */
-  /*
-  if(ftruncate(sharedMemFd, sharedMemSize) == -1)
-  {
-    ERROR_PRINT("ERROR: main() failed to configure size of shared memory - exiting.\n");
-    return EXIT_FAILURE;
-  }
-  */
-
-  /* MemoryMap shared memory */
-  /*
-  if(*(int*)mmap(0, sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0) == -1)
-  {
-    ERROR_PRINT("ERROR: main() failed to complete memory mapping for shared memory - exiting.\n");
-    return EXIT_FAILURE;
-  }
-  */
-
   /* Populate ThreadInfo objects to pass names for created IPC pieces to threads */
   strcpy(sensorThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
   strcpy(sensorThreadInfo.logMsgQueueName, logMsgQueueName);
-  //strcpy(sensorThreadInfo.sensorSharedMemoryName, sensorSharedMemoryName);
-  //sensorThreadInfo.sharedMemSize = sharedMemSize;
-  //sensorThreadInfo.lightDataOffset = sizeof(TempDataStruct);
-  //sensorThreadInfo.sharedMemMutex = &gSharedMemMutex;
-  //sensorThreadInfo.i2cBusMutex = &gI2cBusMutex;
-
-  //pthread_mutex_init(&gSharedMemMutex, NULL);
-  //pthread_mutex_init(&gI2cBusMutex, NULL);
 
   /* Create other threads */
   if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
@@ -277,7 +233,7 @@ int main(int argc, char *argv[]){
     //LOG_HEARTBEAT();
 
     newError = 0;
-    monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
+    //monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
     MUTED_PRINT("newError: %d\n", newError);
     setStatusLed(newError);
   }
@@ -299,12 +255,8 @@ int main(int argc, char *argv[]){
   timer_delete(timerid);
   mq_unlink(heartbeatMsgQueueName);
   mq_unlink(logMsgQueueName);
-  //shm_unlink(sensorSharedMemoryName);
   mq_close(heartbeatMsgQueue);
   mq_close(logMsgQueue);
-  //pthread_mutex_destroy(&gSharedMemMutex);
-  //pthread_mutex_destroy(&gI2cBusMutex);
-  //close(sharedMemFd);
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -345,8 +297,8 @@ void displayControlMenu()
          "\t3 = Schedule One-Shot Watering Event\n"
          "\t4 = Get Latest Sensor Data\n"
          "\t5 = Get Device/Actuator State\n"
-         //"\t6 = \n"
-         //"\t7 = \n"
+         "\t6 = Enable TIVA Device2 (LED2 On)\n"
+         "\t7 = Disable TIVA Device2 (LED2 Off)\n"
          //"\t8 = \n"
          //"\t9 = \n"
          //"\t10 = \n"
@@ -385,8 +337,16 @@ int8_t handleConsoleCmd(uint8_t cmd) {
       printf("CMD_GET_SENSOR_DATA\n");
       // TODO
       break;
-    case CMD_GET_DEVICE_STATE :
-      printf("CMD_GET_DEVICE_STATE\n");
+    case CMD_GET_APP_STATE :
+      printf("CMD_GET_APP_STATE\n");
+      // TODO
+      break;
+    case CMD_EN_DEV2 :
+      printf("CMD_EN_DEV2\n");
+      // TODO
+      break;
+    case CMD_DS_DEV2 :
+      printf("CMD_DS_DEV2\n");
       // TODO
       break;
     /*

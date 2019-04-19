@@ -39,12 +39,9 @@
 #define MAX_CLIENTS (5)
 
 /* Prototypes for private/helper functions */
-static void getCmdResponse(RemoteCmdPacket* packet);
 
 /* Define static and global variables */
 static SensorThreadInfo sensorInfo;
-static LightDataStruct lightData; /* Used to read data from Shared Memory */
-//static TempDataStruct tempData;  /* Used to read data from Shared Memory */
 static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
@@ -61,8 +58,6 @@ void* remoteThreadHandler(void* threadInfo)
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
   struct mq_attr mqAttr;
-  //void* sharedMemPtr = NULL;
-  //int sharedMemFd;
   int sockfdSensorServer, sockfdSensorClient, socketSensorFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
@@ -109,26 +104,6 @@ void* remoteThreadHandler(void* threadInfo)
     return NULL;
   }
 
-  /* Setup Shared memory for thread */
-  /*
-  sharedMemFd = shm_open(sensorInfo.sensorSharedMemoryName, O_RDWR, 0666);
-  if(sharedMemFd == -1) {
-    ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_SHMEM_ERROR);
-    return NULL;
-  }
-  */
-
-  /* Memory map the shared memory */
-  /*
-  sharedMemPtr = mmap(0, sensorInfo.sharedMemSize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemFd, 0);
-  if(*(int *)sharedMemPtr == -1) {
-    ERROR_PRINT("remoteThread Failed to complete memory mapping of shared memory - exiting\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_SHMEM_ERROR);
-    return NULL;
-  }
-  */
-
   /** Establish connection on remote socket **/
   /* Create Server Socket Interfaces */
   sockfdSensorServer = socket(AF_INET, SOCK_STREAM, 0);
@@ -172,39 +147,7 @@ void* remoteThreadHandler(void* threadInfo)
    *    - Waiting for client connection at this point;
    *    - Verify able to lock mutex and communicate with Shared Memory.
    */
-  /* Write invalid/inaccurate values to tempData and lightData - verify overwritten by reading SHMEM */
-  /*
-  tempData.tmp102_temp = 5;
-  tempData.overTempState = 5;
-  lightData.apds9301_luxData = 5;
-  lightData.lightState = 5;
-  pthread_mutex_lock(sensorInfo.sharedMemMutex);
-  memcpy(&tempData, (sharedMemPtr+sensorInfo.tempDataOffset), sizeof(struct TempDataStruct));
-  memcpy(&lightData, (sharedMemPtr+sensorInfo.lightDataOffset), sizeof(struct LightDataStruct));
-  pthread_mutex_unlock(sensorInfo.sharedMemMutex);
-  if((tempData.tmp102_temp != 5) &&
-     (tempData.overTempState != 5) &&
-     (lightData.apds9301_luxData != 5) &&
-     (lightData.lightState != 5))
-  {
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_BIST_COMPLETE);
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_INIT_SUCCESS);
-  } else {
-  */
-    /* Failed to read SHMEM and overwrite local objects */
-  /*
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_BIST_COMPLETE);
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_INIT_ERROR);
-    ERROR_PRINT("remoteThread initialization failed.\n");
-    return NULL;
-  }
-  */
-  /* Reset values to 0 */
-  //tempData.tmp102_temp = 0;
-  //tempData.overTempState = 0;
-  lightData.apds9301_luxData = 0;
-  lightData.lightState = 0;
-  /* BIST/Power-on Test Complete */
+  // TODO: TBD
 
   while(aliveFlag) {
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_OK, ERROR_CODE_USER_NONE0);
@@ -261,26 +204,7 @@ void* remoteThreadHandler(void* threadInfo)
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
-
-    /* Read from Shared Memory and pass requested data back to client */
-    /*
-    pthread_mutex_lock(sensorInfo.sharedMemMutex);
-    memcpy(&tempData, (sharedMemPtr+sensorInfo.tempDataOffset), sizeof(struct TempDataStruct));
-    memcpy(&lightData, (sharedMemPtr+sensorInfo.lightDataOffset), sizeof(struct LightDataStruct));
-    pthread_mutex_unlock(sensorInfo.sharedMemMutex);
-    */
-
-    /* Populate Cmd Response data based on received cmd */
-    getCmdResponse(&cmdPacket);
-
-    /* Transmit data packet back to remote client requesting data */
-    if(send(sockfdSensorClient, &cmdPacket, sizeof(struct RemoteCmdPacket), 0) == -1) {
-      ERROR_PRINT("remoteThread failed to handle outgoing requested data to remote client.\n");
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
-      continue;
-    }
   }
-
 
   /* Thread Cleanup */
   LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
@@ -288,7 +212,6 @@ void* remoteThreadHandler(void* threadInfo)
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
-  //close(sharedMemFd);
   close(sockfdSensorClient);
   close(sockfdSensorServer);
 
@@ -315,123 +238,5 @@ void remoteGetAliveFlag(uint8_t *pAlive)
 /*---------------------------------------------------------------------------------*/
 /* HELPER METHODS */
 /*---------------------------------------------------------------------------------*/
-/**
- * @brief - Populate provided packet with requested command data from data read from SharedMemory.
- *
- * @param packet - Pointer to packet to populate and return to caller.
- * @return void
- */
-static void getCmdResponse(RemoteCmdPacket* packet){
-  if(packet == NULL){
-    ERROR_PRINT("getCmdResponse() received NULL pointer for packet parameter - Process Cmd Response failed.\n");
-    return;
-  }
-
-  /* Log cmd received */
-  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CMD_RECV);
-
-  /* Based on received command, populate response to provide back to client */
-  switch(packet->cmd) {
-    /*
-    case TEMPCMD_GETTEMP :
-      packet->data.status_float = tempData.tmp102_temp;
-      INFO_PRINT("TEMPCMD_GETTEMP cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
-      break;
-    case TEMPCMD_GETLOWTHRES :
-      packet->data.status_float = tempData.tmp102_lowThreshold;
-      INFO_PRINT("TEMPCMD_GETLOWTHRES cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
-      break;
-    case TEMPCMD_GETHIGHTHRES :
-      packet->data.status_float = tempData.tmp102_highThreshold;
-      INFO_PRINT("TEMPCMD_GETHIGHTHRES cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
-      break;
-    case TEMPCMD_GETCONFIG :
-      packet->data.status_float = tempData.tmp102_config;
-      INFO_PRINT("TEMPCMD_GETCONFIG cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
-      break;
-    case TEMPCMD_GETRESOLUTION :
-      packet->data.status_float = tempData.tmp102_tempResolution;
-      INFO_PRINT("TEMPCMD_GETRESOLUTION cmd received | Transmitting data: {%.3f}\n", packet->data.status_float);
-      break;
-    case TEMPCMD_GETFAULT :
-      packet->data.status_uint32 = tempData.tmp102_fault;
-      INFO_PRINT("TEMPCMD_GETFAULT case cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
-      break;
-    case TEMPCMD_GETEXTMODE :
-      packet->data.status_uint32 = tempData.tmp102_extendedMode;
-      INFO_PRINT("TEMPCMD_GETEXTMODE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
-      break;
-    case TEMPCMD_GETSHUTDOWNMODE :
-      packet->data.status_uint32 = tempData.tmp102_shutdownMode;
-      INFO_PRINT("TEMPCMD_GETSHUTDOWNMODE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
-      break;
-    case TEMPCMD_GETALERT :
-      packet->data.status_uint32 = tempData.tmp102_alert;
-      INFO_PRINT("TEMPCMD_GETALERT cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
-      break;
-    case TEMPCMD_GETCONVRATE :
-      packet->data.status_uint32 = tempData.tmp102_convRate;
-      INFO_PRINT("TEMPCMD_GETCONVRATE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
-      break;
-    case TEMPCMD_GETOVERTEMPSTATE:
-      packet->data.status_uint32 = tempData.overTempState;
-      INFO_PRINT("TEMPCMD_GETOVERTEMPSTATE cmd received | Transmitting data: {%d}\n", packet->data.status_uint32);
-      break;
-      */
-    case LIGHTCMD_GETLUXDATA :
-      packet->data.status_float = lightData.apds9301_luxData;
-      INFO_PRINT("LIGHTCMD_GETLUXDATA cmd received | Transmitting data: {%f}\n", packet->data.status_float);
-      break;
-    case LIGHTCMD_GETDEVPARTNO :
-      packet->data.status_uint32 = lightData.apds9301_devicePartNo;
-      INFO_PRINT("LIGHTCMD_GETDEVPARTNO cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETDEVREVNO :
-      packet->data.status_uint32 = lightData.apds9301_deviceRevNo;
-      INFO_PRINT("LIGHTCMD_GETDEVREVNO cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETPOWERCTRL :
-      packet->data.status_uint32 = lightData.apds9301_powerControl;
-      INFO_PRINT("LIGHTCMD_GETPOWERCTRL cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETTIMINGGAIN :
-      packet->data.status_uint32 = lightData.apds9301_timingGain;
-      INFO_PRINT("LIGHTCMD_GETTIMINGGAIN cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETTIMINGINTEGRATION :
-      packet->data.status_uint32 = lightData.apds9301_timingIntegration;
-      INFO_PRINT("LIGHTCMD_GETTIMINGINTEGRATION cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETINTSELECT :
-      packet->data.status_uint32 = lightData.apds9301_intSelect;
-      INFO_PRINT("LIGHTCMD_GETINTSELECT cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETINTPERSIST :
-      packet->data.status_uint32 = lightData.apds9301_intPersist;
-      INFO_PRINT("LIGHTCMD_GETINTPERSIST cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETLOWTHRES :
-      packet->data.status_uint32 = lightData.apds9301_intThresLow;
-      INFO_PRINT("LIGHTCMD_GETLOWTHRES cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETHIGHTHRES :
-      packet->data.status_uint32 = lightData.apds9301_intThresHigh;
-      INFO_PRINT("LIGHTCMD_GETHIGHTHRES cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    case LIGHTCMD_GETLIGHTSTATE:
-      packet->data.status_uint32 = lightData.lightState;
-      INFO_PRINT("LIGHTCMD_GETLIGHTSTATE cmd received | Transmitting data: {0x%x}\n", packet->data.status_uint32);
-      break;
-    default:
-      ERROR_PRINT("cmd received with value {%d} not recognized - cmd ignored\n", packet->cmd);
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
-      return;
-  }
-
-  /* Log which command was received */
-  LOG_REMOTE_CMD_EVENT(packet->cmd);
-
-  return;
-}
 
 /*---------------------------------------------------------------------------------*/
