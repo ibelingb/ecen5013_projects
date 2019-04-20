@@ -40,7 +40,7 @@
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
-//#include "FreeRTOS_Sockets.h"
+#include "FreeRTOS_Sockets.h"
 #include "queue.h"
 #include "task.h"
 #include "semphr.h"
@@ -65,9 +65,9 @@ void remoteTask(void *pvParameters)
     MUTED_PRINT("Remote Task #: %d\n\r", getTaskNum());
 
     /* initialize sockets for sensor, status, and logging data channels */
-//    Socket_t xSensorSocket, xStatusSocket, xLoggingSocket;
-//    socklen_t xSize = sizeof( freertos_sockaddr );
-//    static const TickType_t xTimeOut = pdMS_TO_TICKS( 2000 );
+    Socket_t xSensorSocket, xStatusSocket, xLoggingSocket;
+    socklen_t xSize = sizeof( struct freertos_sockaddr );
+    static const TickType_t xTimeOut = pdMS_TO_TICKS( 2000 );
 
     /* set portion of statusMsg that does not change */
     memset(&logMsg, 0,sizeof(LogMsgPacket));
