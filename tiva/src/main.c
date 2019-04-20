@@ -38,7 +38,7 @@
 #include "my_debug.h"
 
 /* TivaWare includes */
-#include "driverlib/sysctl.h"   /* for clk */
+#include "driverlib/sysctl.h"       /* for clk */
 #include "driverlib/debug.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
@@ -50,6 +50,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "lwip/netif.h"
 
 /*---------------------------------------------------------------------------------*/
 #define STATUS_QUEUE_LENGTH         (8)
@@ -69,6 +70,8 @@ static TaskStruct_t tasks[PID_END];
 /*---------------------------------------------------------------------------------*/
 void initUART(void);
 int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process);
+void IPInit(uint32_t ui32SysClkHz, const uint8_t *pui8MAC, uint32_t ui32IPAddr,
+         uint32_t ui32NetMask, uint32_t ui32GWAddr, uint32_t ui32IPMode);
 
 /*---------------------------------------------------------------------------------*/
 int main(void)
@@ -209,3 +212,5 @@ int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process)
     tasks[process].hdl = xHandle;
     return EXIT_SUCCESS;
 }
+
+
