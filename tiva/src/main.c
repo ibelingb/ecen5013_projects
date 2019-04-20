@@ -66,6 +66,7 @@ typedef struct {
 } TaskStruct_t;
 
 static TaskStruct_t tasks[PID_END];
+uint32_t g_sysClk;
 
 /*---------------------------------------------------------------------------------*/
 void initUART(void);
@@ -89,7 +90,7 @@ int main(void)
     /* init system clock */
     sysClock = SysCtlClockFreqSet((SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
                             SYSCTL_XTAL_25MHZ |SYSCTL_CFG_VCO_480), SYSTEM_CLOCK);
-
+    g_sysClk = sysClock;
     initUART();
 
     /* create status queue */
