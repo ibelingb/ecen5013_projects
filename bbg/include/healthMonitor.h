@@ -88,8 +88,14 @@ __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procI
     switch (procId) {
         case PID_LOGGING:
             return "PID_LOGGING";
-        case PID_REMOTE:
-            return "PID_REMOTE";
+        case PID_REMOTE_LOG:
+            return "PID_REMOTE_LOG";
+        case PID_REMOTE_STATUS:
+            return "PID_REMOTE_STATUS";
+        case PID_REMOTE_DATA:
+            return "PID_REMOTE_DATA";
+        case PID_REMOTE_CMD:
+            return "PID_REMOTE_CMD";
         case PID_LIGHT:
             return "PID_LIGHT";
         case PID_TEMP:

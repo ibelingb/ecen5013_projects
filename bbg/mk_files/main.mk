@@ -14,9 +14,10 @@
 SRCS += src/tempSensor.c \
         src/lightSensor.c \
         src/loggingThread.c \
-        src/remoteThread.c \
-        src/tempThread.c \
-        src/lightThread.c \
+        src/remoteLogThread.c \
+        src/remoteStatusThread.c \
+        src/remoteDataThread.c \
+        src/remoteCmdThread.c \
         src/lu_iic.c \
         src/logger_queue.c \
         src/logger_helper.c \

@@ -8,8 +8,8 @@
  * gcc (Ubuntu)
  ************************************************************************************
  *
- * @file remoteThread.c
- * @brief Remote Thread Library
+ * @file remoteStatusThread.c
+ * @brief Remote Status Thread Library
  *
  ************************************************************************************
  */
@@ -39,17 +39,18 @@
 #define MAX_CLIENTS (5)
 
 /* Prototypes for private/helper functions */
+void remoteStatusGetAliveFlag(uint8_t *pAlive);
 
 /* Define static and global variables */
 static SensorThreadInfo sensorInfo;
 static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
-void* remoteThreadHandler(void* threadInfo)
+void* remoteStatusThreadHandler(void* threadInfo)
 {
   /* Validate input */
   if(threadInfo == NULL){
-    ERROR_PRINT("remoteThread Failed to initialize; NULL pointer for provided threadInfo parameter - exiting.\n");
+    ERROR_PRINT("remoteStatusThread Failed to initialize; NULL pointer for provided threadInfo parameter - exiting.\n");
     return NULL;
   }
 
@@ -83,7 +84,7 @@ void* remoteThreadHandler(void* threadInfo)
   sigemptyset(&mask);
   for(ind = 0; ind < NUM_THREADS; ++ind)
   {
-    if(ind != (uint8_t)PID_REMOTE)
+    if(ind != (uint8_t)PID_REMOTE_STATUS)
       sigaddset(&mask, SIGRTMIN + ind);
   }
   pthread_sigmask(SIG_BLOCK, &mask, NULL);
@@ -94,12 +95,12 @@ void* remoteThreadHandler(void* threadInfo)
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
   if(logMsgQueue == -1){
-    ERROR_PRINT("remoteThread Failed to Open Logging MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteStatusThread Failed to Open Logging MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_LOG_QUEUE_ERROR);
     return NULL;
   }
   if(hbMsgQueue == -1) {
-    ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteStatusThread Failed to Open heartbeat MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_STATUS_QUEUE_ERROR);
     return NULL;
   }
@@ -108,7 +109,7 @@ void* remoteThreadHandler(void* threadInfo)
   /* Create Server Socket Interfaces */
   sockfdSensorServer = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfdSensorServer == -1){
-    ERROR_PRINT("remoteThread failed to create Data Socket - exiting.\n");
+    ERROR_PRINT("remoteStatusThread failed to create Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
@@ -125,23 +126,23 @@ void* remoteThreadHandler(void* threadInfo)
   /* Set properties and bind socket */
   servAddr.sin_family = AF_INET;
   servAddr.sin_addr.s_addr = INADDR_ANY;
-  servAddr.sin_port = htons((int)SENSOR_PORT);
+  servAddr.sin_port = htons((int)STATUS_PORT);
   if(bind(sockfdSensorServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
-    ERROR_PRINT("remoteThread failed to bind Data Socket - exiting.\n");
+    ERROR_PRINT("remoteStatusThread failed to bind Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
   if(listen(sockfdSensorServer, MAX_CLIENTS) == -1) {
-    ERROR_PRINT("remoteThread failed to successfully listen for Sensor Client connection - exiting.\n");
+    ERROR_PRINT("remoteStatusThread failed to successfully listen for Sensor Client connection - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
-  /* Log RemoteThread successfully created */
-  INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", SENSOR_PORT);
-  MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE);
+  /* Log remoteStatusThread successfully created */
+  INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", STATUS_PORT);
+  MUTED_PRINT("remoteStatusThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE_STATUS);
 
   /* BIST/Power-on Test 
    *    - Waiting for client connection at this point;
@@ -150,7 +151,7 @@ void* remoteThreadHandler(void* threadInfo)
   // TODO: TBD
 
   while(aliveFlag) {
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_OK, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_STATUS, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
     /* Accept Client Connection for Sensor data */
@@ -158,18 +159,18 @@ void* remoteThreadHandler(void* threadInfo)
     {
       sockfdSensorClient = accept(sockfdSensorServer, (struct sockaddr*)&cliAddr, &cliLen);
       if(sockfdSensorClient == -1){
-        /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
+        /* Add non-blocking logic to allow remoteStatusThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
           continue;
         }
 
         /* Report error if client fails to connect to server */
-        ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
+        ERROR_PRINT("remoteStatusThread failed to accept client connection for socket - exiting.\n");
         LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
         continue;
       } else if(sockfdSensorClient > 0) {
-        /* Log RemoteThread successfully Connected to client */
-        printf("Connected remoteThread to external Client on port %d.\n", SENSOR_PORT);
+        /* Log remoteStatusThread successfully Connected to client */
+        printf("Connected remoteStatusThread to external Client on port %d.\n", STATUS_PORT);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
         /* Update Socket Client connections to be non-blocking */
@@ -181,25 +182,25 @@ void* remoteThreadHandler(void* threadInfo)
     clientResponse = recv(sockfdSensorClient, &cmdPacket, cmdPacketSize, 0);
     if (clientResponse == -1) 
     {
-      /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
+      /* Non-blocking logic to allow remoteStatusThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
         continue;
       }
 
       /* Handle error with receiving data from client socket */
-      ERROR_PRINT("remoteThread failed to handle incoming command from remote client.\n");
+      ERROR_PRINT("remoteStatusThread failed to handle incoming command from remote client.\n");
       LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       continue;
     } else if(clientResponse == 0) { 
       /* Handle disconnect from client socket */
-      printf("remoteThread connection lost with client on port %d.\n", SENSOR_PORT);
+      printf("remoteStatusThread connection lost with client on port %d.\n", STATUS_PORT);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
       continue;
     }
 
     /* Verify bytes received is the expected size for a cmdPacket */
     if(clientResponse != cmdPacketSize){
-      ERROR_PRINT("remoteThread received cmd of invalid length from remote client.\n"
+      ERROR_PRINT("remoteStatusThread received cmd of invalid length from remote client.\n"
              "Expected {%d} | Received {%d}", cmdPacketSize, clientResponse);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
@@ -222,7 +223,7 @@ void* remoteThreadHandler(void* threadInfo)
 }
 
 /*---------------------------------------------------------------------------------*/
-void remoteSigHandler(int signo, siginfo_t *info, void *extra)
+void remoteStatusSigHandler(int signo, siginfo_t *info, void *extra)
 {
   if((info != NULL) && (extra != NULL))
   {
@@ -232,7 +233,7 @@ void remoteSigHandler(int signo, siginfo_t *info, void *extra)
 }
 
 /*---------------------------------------------------------------------------------*/
-void remoteGetAliveFlag(uint8_t *pAlive)
+void remoteStatusGetAliveFlag(uint8_t *pAlive)
 {
   if(pAlive != NULL)
     *pAlive = aliveFlag;
