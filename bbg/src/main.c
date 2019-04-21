@@ -49,7 +49,7 @@
 void set_sig_handlers(void);
 void sigintHandler(int sig);
 void displayControlMenu();
-int8_t handleConsoleCmd(uint8_t cmd);
+int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue);
 int readInputNonBlock();
 
 /* Define static and global variables */
@@ -169,7 +169,11 @@ int main(int argc, char *argv[]){
   }
 
   /* Initialize Cmd MQ to send commands to RemoteNode */
-  cmdMsgQueue = mq_open(cmdMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
+  mqAttr.mq_flags   = 0;
+  mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH;
+  mqAttr.mq_msgsize = CMD_MSG_QUEUE_MSG_SIZE;
+  mqAttr.mq_curmsgs = 0;
+  cmdMsgQueue = mq_open(cmdMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
   if(cmdMsgQueue == -1)
   {
     ERROR_PRINT("ERROR: main() failed to create MessageQueue for Main Cmd handling - exiting.\n");
@@ -252,7 +256,7 @@ int main(int argc, char *argv[]){
       inputCmd = atoi(inputCmdBuffer);
 
       /* Process received cmd from user; display cmd menu again */
-      handleConsoleCmd((inputCmd));
+      handleConsoleCmd(inputCmd, cmdMsgQueue);
       displayControlMenu();
     }
 
@@ -347,7 +351,7 @@ void displayControlMenu()
  * 
  * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
  */
-int8_t handleConsoleCmd(uint8_t cmd) {
+int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue) {
   /* Verify received cmd is valid */
   if((cmd >= CMD_MAX_CMDS)) {
     printf("Invalid command received of {%d} - ignoring cmd\n", cmd);
@@ -357,8 +361,13 @@ int8_t handleConsoleCmd(uint8_t cmd) {
   switch((ConsoleCmd_e)cmd)
   {
     case CMD_WATER_PLANT :
+      /* Populate packet and push onto cmdQueue to tx to Remote Node */
       printf("CMD_WATER_PLANT\n");
-      // TODO
+
+      RemoteCmdPacket cmdPacket = {0};
+      cmdPacket.cmd = cmd;
+      mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
+
       break;
     case CMD_SCHED_PERIODIC :
       printf("CMD_SCHED_PERIODIC\n");
