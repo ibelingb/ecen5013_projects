@@ -44,6 +44,7 @@
  *
  */
 
+#include "tiva_netif.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -58,7 +59,6 @@
 //#include "lwip/tcpip.h"
 //#include "netif/etharp.h"
 //#include "netif/ppp_oe.h"
-#include "netif/tivaif.h"
 
 /**
  * Sanity Check:  This interface driver will NOT work if the following defines

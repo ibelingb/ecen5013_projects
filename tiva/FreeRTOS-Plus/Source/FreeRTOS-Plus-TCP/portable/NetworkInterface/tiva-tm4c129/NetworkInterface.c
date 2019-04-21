@@ -30,8 +30,7 @@
 #include "driverlib/debug.h"
 
 /* netif includes */
-#include "netif/tivaif.h"
-//#include "lwip/err.h"
+#include "tiva_netif.h"
 
 /*-----------------------------------------------------------*/
 #define EMAC_PHY_CONFIG (EMAC_PHY_TYPE_INTERNAL | EMAC_PHY_INT_MDIX_EN | EMAC_PHY_AN_100B_T_FULL_DUPLEX)
@@ -72,7 +71,6 @@ expansion. */
 #define EMAC_IF_ALL_EVENT       ( EMAC_IF_RX_EVENT | EMAC_IF_TX_EVENT | EMAC_IF_ERR_EVENT )
 
 /*-----------------------------------------------------------*/
-static struct netif gNetif = {{0}};
 extern uint32_t g_sysClk;
 
 /* Holds the handle of the task used as a deferred interrupt processor.  The
