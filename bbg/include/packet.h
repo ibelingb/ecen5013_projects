@@ -48,6 +48,9 @@
 #define LOG_MSG_PAYLOAD_SIZE      (128) // bytes
 #define IPC_NAME_SIZE             (30)
 
+
+#define SOIL_MOISTURE_MAX (900)
+
 /* Identifies start of a packet */
 #define PKT_HEADER (0xABCD)
 
@@ -177,6 +180,8 @@ typedef enum ConsoleCmd_e
   CMD_GET_APP_STATE, /* Request system state (threads running, remoteNode connected, etc) */
   CMD_EN_DEV2, /* Enable TIVA Device 2 (LED) */
   CMD_DS_DEV2, /* Disable TIVA Device 2 (LED) */
+  CMD_SETMOISTURE_LOWTHRES,
+  CMD_SETMOISTURE_HIGHTHRES,
   CMD_MAX_CMDS
 } ConsoleCmd_e;
 
@@ -195,6 +200,8 @@ typedef enum {
   REMOTE_WATERPLANT,
   REMOTE_ENDEV2,
   REMOTE_DSDEV2,
+  REMOTE_SETMOISTURE_LOWTHRES,
+  REMOTE_SETMOISTURE_HIGHTHRES,
   MAX_CMDS
 } RemoteCmd_e;
 
@@ -225,7 +232,7 @@ typedef struct RemoteCmdPacket
 {
   uint16_t header;
   RemoteCmd_e cmd;
-  uint32_t crc;
+  uint32_t data;
 } RemoteCmdPacket;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
