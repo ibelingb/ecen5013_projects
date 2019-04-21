@@ -50,19 +50,24 @@ void set_sig_handlers(void)
     struct sigaction action;
 
     action.sa_flags = SA_SIGINFO;
-    
-    action.sa_sigaction = lightSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_LIGHT, &action, NULL) == -1) {
+   
+    action.sa_sigaction = remoteLogSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE_LOG, &action, NULL) == -1) {
         perror("sigusr: sigaction");
         _exit(1);
     }
-    action.sa_sigaction = tempSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_TEMP, &action, NULL) == -1) {
+    action.sa_sigaction = remoteStatusSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE_STATUS, &action, NULL) == -1) {
         perror("sigusr: sigaction");
         _exit(1);
     }
-    action.sa_sigaction = remoteSigHandler;
-    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE, &action, NULL) == -1) {
+    action.sa_sigaction = remoteDataSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE_DATA, &action, NULL) == -1) {
+        perror("sigusr: sigaction");
+        _exit(1);
+    }
+    action.sa_sigaction = remoteCmdSigHandler;
+    if (sigaction(SIGRTMIN + (uint8_t)PID_REMOTE_CMD, &action, NULL) == -1) {
         perror("sigusr: sigaction");
         _exit(1);
     }
@@ -292,7 +297,16 @@ MainAction_e callArbitor(TaskStatusPacket *pStatus)
         case PID_TEMP:
             action = tempErrorArbitor(pStatus);
         break;
-        case PID_REMOTE:
+        case PID_REMOTE_LOG:
+            action = remoteErrorArbitor(pStatus);
+        break;
+        case PID_REMOTE_STATUS:
+            action = remoteErrorArbitor(pStatus);
+        break;
+        case PID_REMOTE_DATA:
+            action = remoteErrorArbitor(pStatus);
+        break;
+        case PID_REMOTE_CMD:
             action = remoteErrorArbitor(pStatus);
         break;
         case PID_LOGGING:

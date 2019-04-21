@@ -58,7 +58,10 @@ typedef enum ProcessId_e
 {
   PID_LIGHT = 0,
   PID_TEMP,
-  PID_REMOTE,
+  PID_REMOTE_CMD,
+  PID_REMOTE_LOG,
+  PID_REMOTE_STATUS,
+  PID_REMOTE_DATA,
   PID_LOGGING,
   PID_MOISTURE,
   PID_OBSERVER,
@@ -176,6 +179,24 @@ typedef enum ConsoleCmd_e
   CMD_MAX_CMDS
 } ConsoleCmd_e;
 
+typedef enum {
+  LIGHTCMD_GETLUXDATA,
+  LIGHTCMD_GETPOWERCTRL,
+  LIGHTCMD_GETDEVPARTNO,
+  LIGHTCMD_GETDEVREVNO,
+  LIGHTCMD_GETTIMINGGAIN,
+  LIGHTCMD_GETTIMINGINTEGRATION,
+  LIGHTCMD_GETINTSELECT,
+  LIGHTCMD_GETINTPERSIST,
+  LIGHTCMD_GETLOWTHRES,
+  LIGHTCMD_GETHIGHTHRES,
+  LIGHTCMD_GETLIGHTSTATE,
+  REMOTE_WATERPLANT,
+  REMOTE_ENDEV2,
+  REMOTE_DSDEV2,
+  MAX_CMDS
+} RemoteCmd_e;
+
 /* ------------------------------------------------------------- */
 /*** PACKET/STRUCT DEFINITIONS ***/
 typedef struct TaskStatusPacket {
@@ -198,6 +219,13 @@ typedef struct LogMsgPacket
   uint16_t sourceId;
 	uint32_t checksum;  
 } LogMsgPacket;
+
+typedef struct RemoteCmdPacket
+{
+  uint16_t header;
+  RemoteCmd_e cmd;
+  uint32_t crc;
+} RemoteCmdPacket;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
 typedef struct TempDataStruct
@@ -262,9 +290,8 @@ typedef struct SensorThreadInfo
 #ifdef __linux__
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
-  char sensorSharedMemoryName[IPC_NAME_SIZE];
-  pthread_mutex_t* sharedMemMutex;
-  pthread_mutex_t* i2cBusMutex;
+  char dataMsgQueueName[IPC_NAME_SIZE];
+  char cmdMsgQueueName[IPC_NAME_SIZE];
 #else
   SemaphoreHandle_t shmemMutex;
   Shmem_t *pShmem;
@@ -272,8 +299,8 @@ typedef struct SensorThreadInfo
   QueueHandle_t logFd;
   uint32_t sysClock;
   TickType_t xStartTime;
-#endif
   int sharedMemSize;
+#endif
   int tempDataOffset;  /* Offset into SharedMemory for TempDataStruct (in bytes) */
   int lightDataOffset; /* Offset into SharedMemory for LightDataStruct (in bytes) */
 } SensorThreadInfo;

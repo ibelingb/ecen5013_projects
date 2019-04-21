@@ -60,6 +60,8 @@ static uint8_t gExit = 1;
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
   char *logMsgQueueName = "/logging_mq";
+  char *dataMsgQueueName = "/data_mq";
+  char *cmdMsgQueueName = "/cmd_mq";
   char *logFile = "/usr/bin/log.bin";
   SensorThreadInfo sensorThreadInfo;
   LogThreadInfo logThreadInfo;
@@ -67,6 +69,8 @@ int main(int argc, char *argv[]){
   struct mq_attr mqAttr;
   mqd_t logMsgQueue;
   mqd_t heartbeatMsgQueue;
+  mqd_t dataMsgQueue;
+  mqd_t cmdMsgQueue;
   char ind;
   uint8_t newError;
  
@@ -98,11 +102,22 @@ int main(int argc, char *argv[]){
   memset(&logPacket,        0, sizeof(struct LogMsgPacket));
   memset(&mqAttr,           0, sizeof(struct mq_attr));
 
-  /* Ensure log MQ properly cleaned up before starting */
+  /* Ensure MQs properly cleaned up before starting */
   mq_unlink(logMsgQueueName);
-
   if(remove(logMsgQueueName) == -1 && errno != ENOENT)
-	  ERRNO_PRINT("main() couldn't delete log queue path");
+	  ERRNO_PRINT("main() couldn't delete log msg queue path");
+
+  mq_unlink(heartbeatMsgQueueName);
+  if(remove(heartbeatMsgQueueName) == -1 && errno != ENOENT)
+  { ERRNO_PRINT("main() couldn't delete heartbeat msg queue path"); return EXIT_FAILURE; }
+
+  mq_unlink(dataMsgQueueName);
+  if(remove(dataMsgQueueName) == -1 && errno != ENOENT)
+	  ERRNO_PRINT("main() couldn't delete data msg queue path");
+
+  mq_unlink(cmdMsgQueueName);
+  if(remove(cmdMsgQueueName) == -1 && errno != ENOENT)
+	  ERRNO_PRINT("main() couldn't delete cmd msg queue path");
 
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
@@ -145,18 +160,27 @@ int main(int argc, char *argv[]){
   }
 
   /*** initialize rest of IPC resources ***/
+  /* Initialize Data MQ to receive sensor data from RemoteNode */
+  dataMsgQueue = mq_open(dataMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
+  if(dataMsgQueue == -1)
+  {
+    ERROR_PRINT("ERROR: main() failed to create MessageQueue for Main Remote Data reception - exiting.\n");
+    return EXIT_FAILURE;
+  }
+
+  /* Initialize Cmd MQ to send commands to RemoteNode */
+  cmdMsgQueue = mq_open(cmdMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
+  if(cmdMsgQueue == -1)
+  {
+    ERROR_PRINT("ERROR: main() failed to create MessageQueue for Main Cmd handling - exiting.\n");
+    return EXIT_FAILURE;
+  }
+
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
   mqAttr.mq_maxmsg  = STATUS_MSG_QUEUE_DEPTH;
   mqAttr.mq_msgsize = STATUS_MSG_QUEUE_MSG_SIZE;
   mqAttr.mq_curmsgs = 0;
-
-  /* Ensure MQs and Shared Memory properly cleaned up before starting */
-  mq_unlink(heartbeatMsgQueueName);
-  //shm_unlink(sensorSharedMemoryName);
-
-  if(remove(heartbeatMsgQueueName) == -1 && errno != ENOENT)
-  { ERRNO_PRINT("main() couldn't delete log queue path"); return EXIT_FAILURE; }
 
   /* Create MessageQueue to receive thread status from all children */
   heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
@@ -169,28 +193,34 @@ int main(int argc, char *argv[]){
   /* Populate ThreadInfo objects to pass names for created IPC pieces to threads */
   strcpy(sensorThreadInfo.heartbeatMsgQueueName, heartbeatMsgQueueName);
   strcpy(sensorThreadInfo.logMsgQueueName, logMsgQueueName);
+  strcpy(sensorThreadInfo.cmdMsgQueueName, cmdMsgQueueName);
+  strcpy(sensorThreadInfo.dataMsgQueueName, dataMsgQueueName);
 
   /* Create other threads */
-  if(pthread_create(&gThreads[1], NULL, remoteThreadHandler, (void*)&sensorThreadInfo))
+  if(pthread_create(&gThreads[1], NULL, remoteLogThreadHandler, (void*)&sensorThreadInfo))
   {
-    ERROR_PRINT("ERROR: Failed to create Remote Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create Remote Log Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
  
-  /*
-  if(pthread_create(&gThreads[2], NULL, tempSensorThreadHandler, (void*)&sensorThreadInfo))
+  if(pthread_create(&gThreads[2], NULL, remoteStatusThreadHandler, (void*)&sensorThreadInfo))
   {
-    ERROR_PRINT("ERROR: Failed to create TempSensor Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create Remote Status Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
-  
-  if(pthread_create(&gThreads[3], NULL, lightSensorThreadHandler, (void*)&sensorThreadInfo))
+ 
+  if(pthread_create(&gThreads[3], NULL, remoteDataThreadHandler, (void*)&sensorThreadInfo))
   {
-    ERROR_PRINT("ERROR: Failed to create LightSensor Thread - exiting main().\n");
+    ERROR_PRINT("ERROR: Failed to create Remote Data Thread - exiting main().\n");
     return EXIT_FAILURE;
   }
-  */
-  
+
+  if(pthread_create(&gThreads[4], NULL, remoteCmdThreadHandler, (void*)&sensorThreadInfo))
+  {
+    ERROR_PRINT("ERROR: Failed to create Remote Cmd Thread - exiting main().\n");
+    return EXIT_FAILURE;
+  }
+ 
   LOG_MAIN_EVENT(MAIN_EVENT_STARTED_THREADS);
 
   /* Clear memory objects */
@@ -255,8 +285,12 @@ int main(int argc, char *argv[]){
   timer_delete(timerid);
   mq_unlink(heartbeatMsgQueueName);
   mq_unlink(logMsgQueueName);
+  mq_unlink(dataMsgQueueName);
+  mq_unlink(cmdMsgQueueName);
   mq_close(heartbeatMsgQueue);
   mq_close(logMsgQueue);
+  mq_close(dataMsgQueue);
+  mq_close(cmdMsgQueue);
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -272,9 +306,10 @@ int main(int argc, char *argv[]){
  */
 void sigintHandler(int sig){
   /* Send signal to all children threads to terminate */
-  pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE);
-  //pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_TEMP);
-  //pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_LIGHT);
+  pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE_LOG);
+  pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_REMOTE_STATUS);
+  pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_REMOTE_DATA);
+  pthread_kill(gThreads[4], SIGRTMIN + (uint8_t)PID_REMOTE_CMD);
   printf("\nDelay to allow threads to terminate gracefully and log exit events...\n\n");
   sleep(3);
 
