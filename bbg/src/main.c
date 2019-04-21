@@ -352,6 +352,8 @@ void displayControlMenu()
  * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
  */
 int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue) {
+  bool txCmd = false;
+
   /* Verify received cmd is valid */
   if((cmd >= CMD_MAX_CMDS)) {
     printf("Invalid command received of {%d} - ignoring cmd\n", cmd);
@@ -363,11 +365,7 @@ int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue) {
     case CMD_WATER_PLANT :
       /* Populate packet and push onto cmdQueue to tx to Remote Node */
       printf("CMD_WATER_PLANT\n");
-
-      RemoteCmdPacket cmdPacket = {0};
-      cmdPacket.cmd = cmd;
-      mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
-
+      txCmd = true;
       break;
     case CMD_SCHED_PERIODIC :
       printf("CMD_SCHED_PERIODIC\n");
@@ -386,13 +384,15 @@ int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue) {
       // TODO
       break;
     case CMD_EN_DEV2 :
+      /* Populate packet and push onto cmdQueue to tx to Remote Node */
       printf("CMD_EN_DEV2\n");
-      // TODO
+      txCmd = true;
       break;
     case CMD_DS_DEV2 :
       printf("CMD_DS_DEV2\n");
-      // TODO
+      txCmd = true;
       break;
+
     /*
     case CMD_ :
       // TODO
@@ -402,6 +402,13 @@ int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue) {
     default:
       printf("Unrecognized command received. Request ignored.\n");
       return EXIT_FAILURE;
+  }
+
+  /* If cmd received needs to be transmitted to the TIVA, populate packet and send */
+  if(txCmd) {
+    RemoteCmdPacket cmdPacket = {0};
+    cmdPacket.cmd = cmd;
+    mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
   }
 
   return EXIT_SUCCESS;
