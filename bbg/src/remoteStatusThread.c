@@ -55,14 +55,14 @@ void* remoteStatusThreadHandler(void* threadInfo)
   }
 
   sensorInfo = *(SensorThreadInfo *)threadInfo;
-  RemoteCmdPacket cmdPacket = {0};
+  TaskStatusPacket statusPacket = {0};
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
   struct mq_attr mqAttr;
-  int sockfdSensorServer, sockfdSensorClient, socketSensorFlags;
+  int sockfdStatusServer, sockfdStatusClient, socketStatusFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
-  size_t cmdPacketSize = sizeof(struct RemoteCmdPacket);
+  size_t statusPacketSize = sizeof(struct TaskStatusPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
@@ -107,16 +107,16 @@ void* remoteStatusThreadHandler(void* threadInfo)
 
   /** Establish connection on remote socket **/
   /* Create Server Socket Interfaces */
-  sockfdSensorServer = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfdSensorServer == -1){
+  sockfdStatusServer = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfdStatusServer == -1){
     ERROR_PRINT("remoteStatusThread failed to create Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Update Socket Server connections to be non-blocking */
-  socketSensorFlags = fcntl(sockfdSensorServer, F_GETFL);
-  fcntl(sockfdSensorServer, F_SETFL, socketSensorFlags | O_NONBLOCK);
+  socketStatusFlags = fcntl(sockfdStatusServer, F_GETFL);
+  fcntl(sockfdStatusServer, F_SETFL, socketStatusFlags | O_NONBLOCK);
 
   /* Update Socket Client connections to be non-blocking */
   struct timeval timeout;
@@ -127,14 +127,14 @@ void* remoteStatusThreadHandler(void* threadInfo)
   servAddr.sin_family = AF_INET;
   servAddr.sin_addr.s_addr = INADDR_ANY;
   servAddr.sin_port = htons((int)STATUS_PORT);
-  if(bind(sockfdSensorServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
+  if(bind(sockfdStatusServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
     ERROR_PRINT("remoteStatusThread failed to bind Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
-  if(listen(sockfdSensorServer, MAX_CLIENTS) == -1) {
+  if(listen(sockfdStatusServer, MAX_CLIENTS) == -1) {
     ERROR_PRINT("remoteStatusThread failed to successfully listen for Sensor Client connection - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
@@ -157,8 +157,8 @@ void* remoteStatusThreadHandler(void* threadInfo)
     /* Accept Client Connection for Sensor data */
     if(clientResponse == 0)
     {
-      sockfdSensorClient = accept(sockfdSensorServer, (struct sockaddr*)&cliAddr, &cliLen);
-      if(sockfdSensorClient == -1){
+      sockfdStatusClient = accept(sockfdStatusServer, (struct sockaddr*)&cliAddr, &cliLen);
+      if(sockfdStatusClient == -1){
         /* Add non-blocking logic to allow remoteStatusThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
           continue;
@@ -168,18 +168,18 @@ void* remoteStatusThreadHandler(void* threadInfo)
         ERROR_PRINT("remoteStatusThread failed to accept client connection for socket - exiting.\n");
         LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
         continue;
-      } else if(sockfdSensorClient > 0) {
+      } else if(sockfdStatusClient > 0) {
         /* Log remoteStatusThread successfully Connected to client */
         printf("Connected remoteStatusThread to external Client on port %d.\n", STATUS_PORT);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
         /* Update Socket Client connections to be non-blocking */
-        setsockopt(sockfdSensorClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
+        setsockopt(sockfdStatusClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
       }
     }
 
-    /* Check for incoming commands from remote clients on socket port */
-    clientResponse = recv(sockfdSensorClient, &cmdPacket, cmdPacketSize, 0);
+    /* Check for incoming status packets from remote clients on socket port */
+    clientResponse = recv(sockfdStatusClient, &statusPacket, statusPacketSize, 0);
     if (clientResponse == -1) 
     {
       /* Non-blocking logic to allow remoteStatusThread to report status while waiting for client cmd */
@@ -188,7 +188,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
       }
 
       /* Handle error with receiving data from client socket */
-      ERROR_PRINT("remoteStatusThread failed to handle incoming command from remote client.\n");
+      ERROR_PRINT("remoteStatusThread failed to handle incoming status packet from remote node.\n");
       LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       continue;
     } else if(clientResponse == 0) { 
@@ -198,16 +198,17 @@ void* remoteStatusThreadHandler(void* threadInfo)
       continue;
     }
 
-    /* Verify bytes received is the expected size for a cmdPacket */
-    if(clientResponse != cmdPacketSize){
+    /* Verify bytes received is the expected size for a statusPacket */
+    if(clientResponse != statusPacketSize){
       ERROR_PRINT("remoteStatusThread received cmd of invalid length from remote client.\n"
-             "Expected {%d} | Received {%d}", cmdPacketSize, clientResponse);
+             "Expected {%d} | Received {%d}", statusPacketSize, clientResponse);
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
 
-    /* Handle received packet */
-    // TODO
+    /* Receive status packets from TIVA tasks, push onto heartbeat queue */
+    // TODO: Need to handle TaskState_e?
+    SEND_STATUS_MSG(hbMsgQueue, statusPacket.processId, statusPacket.taskStatus, statusPacket.errorCode);
   }
 
   /* Thread Cleanup */
@@ -216,8 +217,8 @@ void* remoteStatusThreadHandler(void* threadInfo)
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
-  close(sockfdSensorClient);
-  close(sockfdSensorServer);
+  close(sockfdStatusClient);
+  close(sockfdStatusServer);
 
   return NULL;
 }

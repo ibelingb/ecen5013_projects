@@ -59,7 +59,7 @@ typedef enum {
 	LOG_MSG_END = 22
 } logMsg_e;
 
-typedef struct {
+typedef struct logItem_t {
 	logMsg_e logMsgId;
 	uint8_t *pFilename;
 	uint32_t lineNum;

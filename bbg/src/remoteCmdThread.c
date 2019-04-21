@@ -8,7 +8,7 @@
  * gcc (Ubuntu)
  ************************************************************************************
  *
- * @file remoteThread.c
+ * @file remoteCmdThread.c
  * @brief Remote Thread Library
  *
  ************************************************************************************
@@ -50,7 +50,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
 {
   /* Validate input */
   if(threadInfo == NULL){
-    ERROR_PRINT("remoteThread Failed to initialize; NULL pointer for provided threadInfo parameter - exiting.\n");
+    ERROR_PRINT("remoteCmdThread Failed to initialize; NULL pointer for provided threadInfo parameter - exiting.\n");
     return NULL;
   }
 
@@ -58,8 +58,9 @@ void* remoteCmdThreadHandler(void* threadInfo)
   RemoteCmdPacket cmdPacket = {0};
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
+  mqd_t cmdMsgQueue;  /* Cmd MessageQueue */
   struct mq_attr mqAttr;
-  int sockfdSensorServer, sockfdSensorClient, socketSensorFlags;
+  int sockfdCmdServer, sockfdCmdClient, socketCmdFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
   size_t cmdPacketSize = sizeof(struct RemoteCmdPacket);
@@ -94,29 +95,35 @@ void* remoteCmdThreadHandler(void* threadInfo)
   /* Open FDs for Main and Logging Message queues */
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
+  cmdMsgQueue = mq_open(sensorInfo.cmdMsgQueueName, O_RDWR, 0666, mqAttr);
   if(logMsgQueue == -1){
-    ERROR_PRINT("remoteThread Failed to Open Logging MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteCmdThread Failed to Open Logging MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_LOG_QUEUE_ERROR);
     return NULL;
   }
   if(hbMsgQueue == -1) {
-    ERROR_PRINT("remoteThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    ERROR_PRINT("remoteCmdThread Failed to Open heartbeat MessageQueue - exiting.\n");
+    LOG_REMOTE_HANDLING_EVENT(REMOTE_STATUS_QUEUE_ERROR);
+    return NULL;
+  }
+  if(cmdMsgQueue == -1) {
+    ERROR_PRINT("remoteCmdThread Failed to Open Command MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_STATUS_QUEUE_ERROR);
     return NULL;
   }
 
   /** Establish connection on remote socket **/
   /* Create Server Socket Interfaces */
-  sockfdSensorServer = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfdSensorServer == -1){
-    ERROR_PRINT("remoteThread failed to create Data Socket - exiting.\n");
+  sockfdCmdServer = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfdCmdServer == -1){
+    ERROR_PRINT("remoteCmdThread failed to create Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Update Socket Server connections to be non-blocking */
-  socketSensorFlags = fcntl(sockfdSensorServer, F_GETFL);
-  fcntl(sockfdSensorServer, F_SETFL, socketSensorFlags | O_NONBLOCK);
+  socketCmdFlags = fcntl(sockfdCmdServer, F_GETFL);
+  fcntl(sockfdCmdServer, F_SETFL, socketCmdFlags | O_NONBLOCK);
 
   /* Update Socket Client connections to be non-blocking */
   struct timeval timeout;
@@ -127,22 +134,22 @@ void* remoteCmdThreadHandler(void* threadInfo)
   servAddr.sin_family = AF_INET;
   servAddr.sin_addr.s_addr = INADDR_ANY;
   servAddr.sin_port = htons((int)CMD_PORT);
-  if(bind(sockfdSensorServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
-    ERROR_PRINT("remoteThread failed to bind Data Socket - exiting.\n");
+  if(bind(sockfdCmdServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
+    ERROR_PRINT("remoteCmdThread failed to bind Data Socket - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
-  if(listen(sockfdSensorServer, MAX_CLIENTS) == -1) {
-    ERROR_PRINT("remoteThread failed to successfully listen for Sensor Client connection - exiting.\n");
+  if(listen(sockfdCmdServer, MAX_CLIENTS) == -1) {
+    ERROR_PRINT("remoteCmdThread failed to successfully listen for Sensor Client connection - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
-  /* Log RemoteThread successfully created */
+  /* Log remoteCmdThread successfully created */
   INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", CMD_PORT);
-  MUTED_PRINT("remoteThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE_CMD);
+  MUTED_PRINT("remoteCmdThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE_CMD);
 
   /* BIST/Power-on Test 
    *    - Waiting for client connection at this point;
@@ -157,57 +164,36 @@ void* remoteCmdThreadHandler(void* threadInfo)
     /* Accept Client Connection for Sensor data */
     if(clientResponse == 0)
     {
-      sockfdSensorClient = accept(sockfdSensorServer, (struct sockaddr*)&cliAddr, &cliLen);
-      if(sockfdSensorClient == -1){
-        /* Add non-blocking logic to allow remoteThread to report status while waiting for client conn */
+      sockfdCmdClient = accept(sockfdCmdServer, (struct sockaddr*)&cliAddr, &cliLen);
+      if(sockfdCmdClient == -1){
+        /* Add non-blocking logic to allow remoteCmdThread to report status while waiting for client conn */
         if(errno == EWOULDBLOCK) {
           continue;
         }
 
         /* Report error if client fails to connect to server */
-        ERROR_PRINT("remoteThread failed to accept client connection for socket - exiting.\n");
+        ERROR_PRINT("remoteCmdThread failed to accept client connection for socket - exiting.\n");
         LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
         continue;
-      } else if(sockfdSensorClient > 0) {
-        /* Log RemoteThread successfully Connected to client */
-        printf("Connected remoteThread to external Client on port %d.\n", CMD_PORT);
+      } else if(sockfdCmdClient > 0) {
+        /* Log remoteCmdThread successfully Connected to client */
+        printf("Connected remoteCmdThread to external Client on port %d.\n", CMD_PORT);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
         /* Update Socket Client connections to be non-blocking */
-        setsockopt(sockfdSensorClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
+        setsockopt(sockfdCmdClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
       }
     }
 
-    /* Check for incoming commands from remote clients on socket port */
-    clientResponse = recv(sockfdSensorClient, &cmdPacket, cmdPacketSize, 0);
-    if (clientResponse == -1) 
+    /* If cmd received, transmit packet to Remote Node */
+    if(mq_receive(cmdMsgQueue, (char *)&cmdPacket, cmdPacketSize, NULL) == cmdPacketSize)
     {
-      /* Non-blocking logic to allow remoteThread to report status while waiting for client cmd */
-      if(errno == EWOULDBLOCK) {
-        continue;
-      }
+      send(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
 
-      /* Handle error with receiving data from client socket */
-      ERROR_PRINT("remoteThread failed to handle incoming command from remote client.\n");
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
-      continue;
-    } else if(clientResponse == 0) { 
-      /* Handle disconnect from client socket */
-      printf("remoteThread connection lost with client on port %d.\n", CMD_PORT);
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
-      continue;
+      /* Log cmd packet transmitted to remote node */
+      // TODO
     }
 
-    /* Verify bytes received is the expected size for a cmdPacket */
-    if(clientResponse != cmdPacketSize){
-      ERROR_PRINT("remoteThread received cmd of invalid length from remote client.\n"
-             "Expected {%d} | Received {%d}", cmdPacketSize, clientResponse);
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
-      continue;
-    }
-
-    /* Handle received packet */
-    // TODO
   }
 
   /* Thread Cleanup */
@@ -216,8 +202,9 @@ void* remoteCmdThreadHandler(void* threadInfo)
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
-  close(sockfdSensorClient);
-  close(sockfdSensorServer);
+  mq_close(cmdMsgQueue);
+  close(sockfdCmdClient);
+  close(sockfdCmdServer);
 
   return NULL;
 }

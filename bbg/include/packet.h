@@ -290,6 +290,8 @@ typedef struct SensorThreadInfo
 #ifdef __linux__
   char heartbeatMsgQueueName[IPC_NAME_SIZE];
   char logMsgQueueName[IPC_NAME_SIZE];
+  char dataMsgQueueName[IPC_NAME_SIZE];
+  char cmdMsgQueueName[IPC_NAME_SIZE];
 #else
   SemaphoreHandle_t shmemMutex;
   Shmem_t *pShmem;
