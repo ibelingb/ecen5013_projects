@@ -44,16 +44,20 @@
  *
  */
 
-#include "lwip/opt.h"
-#include "lwip/def.h"
-#include "lwip/mem.h"
-#include "lwip/pbuf.h"
-#include "lwip/sys.h"
-#include <lwip/stats.h>
-#include <lwip/snmp.h>
-#include "lwip/tcpip.h"
-#include "netif/etharp.h"
-#include "netif/ppp_oe.h"
+#include <stddef.h>
+#include <stdint.h>
+
+//#include "lwip/opt.h"
+//#include "lwip/def.h"
+//#include "lwip/mem.h"
+//#include "lwip/pbuf.h"
+//#include "lwip/sys.h"
+//#include "lwip/err.h"
+//#include <lwip/stats.h>
+//#include <lwip/snmp.h>
+//#include "lwip/tcpip.h"
+//#include "netif/etharp.h"
+//#include "netif/ppp_oe.h"
 #include "netif/tivaif.h"
 
 /**
@@ -67,17 +71,8 @@
 #if (ETH_PAD_SIZE != 0)
 #error "ETH_PAD_SIZE must be 0 for this interface driver!"
 #endif
-#if (!SYS_LIGHTWEIGHT_PROT)
-#error "SYS_LIGHTWEIGHT_PROT must be enabled for this interface driver!"
-#endif
 
-/**
- * Set the physical address of the PHY we will be using if this is not
- * specified in lwipopts.h.  We assume 0 for the internal PHY.
- */
-#ifndef PHY_PHYS_ADDR
-#define PHY_PHYS_ADDR 0
-#endif
+
 
 #if 0
 #ifndef EMAC_PHY_CONFIG
@@ -86,18 +81,9 @@
 #endif
 #endif
 
-/**
- * If necessary, set the defaui32t number of transmit and receive DMA descriptors
- * used by the Ethernet MAC.
- *
- */
-#ifndef NUM_RX_DESCRIPTORS
-#define NUM_RX_DESCRIPTORS 4
-#endif
 
-#ifndef NUM_TX_DESCRIPTORS
-#define NUM_TX_DESCRIPTORS 8
-#endif
+
+
 
 /**
  * Setup processing for PTP (IEEE-1588).
@@ -126,6 +112,7 @@ extern void lwIPHostGetTime(u32_t *time_s, u32_t *time_ns);
 /* Define those to better describe your network interface. */
 #define IFNAME0 't'
 #define IFNAME1 'i'
+
 
 /**
  * A structure used to keep track of driver state and error counts.
@@ -202,15 +189,9 @@ typedef struct {
  */
 tDescriptor g_pTxDescriptors[NUM_TX_DESCRIPTORS];
 tDescriptor g_pRxDescriptors[NUM_RX_DESCRIPTORS];
-tDescriptorList g_TxDescList = {
-    g_pTxDescriptors, NUM_TX_DESCRIPTORS, 0, 0
-};
-tDescriptorList g_RxDescList = {
-    g_pRxDescriptors, NUM_RX_DESCRIPTORS, 0, 0
-};
-static tStellarisIF g_StellarisIFData = {
-    0, &g_TxDescList, &g_RxDescList
-};
+tDescriptorList g_TxDescList = { g_pTxDescriptors, NUM_TX_DESCRIPTORS, 0, 0 };
+tDescriptorList g_RxDescList = { g_pRxDescriptors, NUM_RX_DESCRIPTORS, 0, 0 };
+static tStellarisIF g_StellarisIFData = { 0, &g_TxDescList, &g_RxDescList };
 
 /**
  * Interrupt counters (for debug purposes).
@@ -246,8 +227,7 @@ InitDMADescriptors(void)
        g_pTxDescriptors[ui32Loop].pBuf = (struct pbuf *)0;
        g_pTxDescriptors[ui32Loop].Desc.ui32Count = 0;
        g_pTxDescriptors[ui32Loop].Desc.pvBuffer1 = 0;
-       g_pTxDescriptors[ui32Loop].Desc.DES3.pLink =
-               ((ui32Loop == (NUM_TX_DESCRIPTORS - 1)) ?
+       g_pTxDescriptors[ui32Loop].Desc.DES3.pLink = ((ui32Loop == (NUM_TX_DESCRIPTORS - 1)) ?
                &g_pTxDescriptors[0].Desc : &g_pTxDescriptors[ui32Loop + 1].Desc);
        g_pTxDescriptors[ui32Loop].Desc.ui32CtrlStatus = DES0_TX_CTRL_INTERRUPT |
                DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_IP_ALL_CKHSUMS;
@@ -263,37 +243,32 @@ InitDMADescriptors(void)
     */
   for(ui32Loop = 0; ui32Loop < NUM_RX_DESCRIPTORS; ui32Loop++)
   {
-      g_pRxDescriptors[ui32Loop].pBuf = pbuf_alloc(PBUF_RAW, PBUF_POOL_BUFSIZE,
-                                                 PBUF_POOL);
+      /* TODO: get rid of lwip pbuf_alloc */
+      g_pRxDescriptors[ui32Loop].pBuf = 0;//todo: pbuf_alloc(PBUF_RAW, PBUF_POOL_BUFSIZE, PBUF_POOL);
       g_pRxDescriptors[ui32Loop].Desc.ui32Count = DES1_RX_CTRL_CHAINED;
+
+
       if(g_pRxDescriptors[ui32Loop].pBuf)
       {
           /* Set the DMA to write directly into the pbuf payload. */
-          g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 =
-                  g_pRxDescriptors[ui32Loop].pBuf->payload;
-          g_pRxDescriptors[ui32Loop].Desc.ui32Count |=
-             (g_pRxDescriptors[ui32Loop].pBuf->len << DES1_RX_CTRL_BUFF1_SIZE_S);
+          g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = g_pRxDescriptors[ui32Loop].pBuf->payload;
+          g_pRxDescriptors[ui32Loop].Desc.ui32Count |= (g_pRxDescriptors[ui32Loop].pBuf->len << DES1_RX_CTRL_BUFF1_SIZE_S);
           g_pRxDescriptors[ui32Loop].Desc.ui32CtrlStatus = DES0_RX_CTRL_OWN;
       }
       else
       {
-          LWIP_DEBUGF(NETIF_DEBUG, ("tivaif_init: pbuf_alloc error\n"));
-
           /* No pbuf available so leave the buffer pointer empty. */
           g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = 0;
           g_pRxDescriptors[ui32Loop].Desc.ui32CtrlStatus = 0;
       }
-      g_pRxDescriptors[ui32Loop].Desc.DES3.pLink =
-              ((ui32Loop == (NUM_RX_DESCRIPTORS - 1)) ?
+      g_pRxDescriptors[ui32Loop].Desc.DES3.pLink = ((ui32Loop == (NUM_RX_DESCRIPTORS - 1)) ?
               &g_pRxDescriptors[0].Desc : &g_pRxDescriptors[ui32Loop + 1].Desc);
   }
 
   g_TxDescList.ui32Read = 0;
   g_TxDescList.ui32Write = 0;
 
-  //
-  // Set the descriptor pointers in the hardware.
-  //
+  /* Set the descriptor pointers in the hardware */
   EMACRxDMADescriptorListSet(EMAC0_BASE, &g_pRxDescriptors[0].Desc);
   EMACTxDMADescriptorListSet(EMAC0_BASE, &g_pTxDescriptors[0].Desc);
 }
@@ -305,15 +280,10 @@ InitDMADescriptors(void)
  * @param netif the already initialized lwip network interface structure
  *        for this ethernetif
  */
-static void
-tivaif_hwinit(struct netif *psNetif)
+#ifdef USE_LWIP_LIB
+static void tivaif_hwinit(struct netif *psNetif)
 {
   uint16_t ui16Val;
-
-  /* clear the EEE Link Active flag */
-#if EEE_SUPPORT
-  g_bEEELinkActive = false;
-#endif
 
   /* Set MAC hardware address length */
   psNetif->hwaddr_len = ETHARP_HWADDR_LEN;
@@ -329,15 +299,6 @@ tivaif_hwinit(struct netif *psNetif)
 
   /* Initialize the DMA descriptors. */
   InitDMADescriptors();
-
-#if defined(EMAC_PHY_IS_EXT_MII) || defined(EMAC_PHY_IS_EXT_RMII)
-  /* If PHY is external then reset the PHY before configuring it */
-  EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR,
-          EPHY_BMCR_MIIRESET);
-
-  while((EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR) &
-          EPHY_BMCR_MIIRESET) == EPHY_BMCR_MIIRESET);
-#endif
 
   /* Clear any stray PHY interrupts that may be set. */
   ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
@@ -360,26 +321,6 @@ tivaif_hwinit(struct netif *psNetif)
   EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_HASH_AND_PERFECT |
                      EMAC_FRMFILTER_PASS_MULTICAST));
 
-#if LWIP_PTPD
-  //
-  // Enable timestamping on all received packets.
-  //
-  // We set the fine clock adjustment mode and configure the subsecond
-  // increment to half the 25MHz PTPD clock.  This will give us maximum control
-  // over the clock rate adjustment and keep the arithmetic easy later.  It
-  // should be possible to synchronize with higher accuracy than this with
-  // appropriate juggling of the subsecond increment count and the addend
-  // register value, though.
-  //
-  EMACTimestampConfigSet(EMAC0_BASE, (EMAC_TS_ALL_RX_FRAMES |
-                         EMAC_TS_DIGITAL_ROLLOVER |
-                         EMAC_TS_PROCESS_IPV4_UDP | EMAC_TS_ALL |
-                         EMAC_TS_PTP_VERSION_1 | EMAC_TS_UPDATE_FINE),
-                         (1000000000 / (25000000 / 2)));
-  EMACTimestampAddendSet(EMAC0_BASE, 0x80000000);
-  EMACTimestampEnable(EMAC0_BASE);
-#endif
-
   /* Clear any pending MAC interrupts. */
   EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
 
@@ -393,49 +334,16 @@ tivaif_hwinit(struct netif *psNetif)
                 EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
 
   /* Enable the Ethernet interrupt. */
-  IntEnable(INT_EMAC0);
+  //todo: IntEnable(INT_EMAC0);
 
   /* Enable all processor interrupts. */
-  IntMasterEnable();
+  //todo: IntMasterEnable();
 
   /* Tell the PHY to start an auto-negotiation cycle. */
-#if defined(EMAC_PHY_IS_EXT_MII) || defined(EMAC_PHY_IS_EXT_RMII)
-  EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_SPEED |
-               EPHY_BMCR_DUPLEXM | EPHY_BMCR_ANEN | EPHY_BMCR_RESTARTAN));
-#else
   EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_ANEN |
                EPHY_BMCR_RESTARTAN));
-#endif
-}
-
-#ifdef DEBUG
-/**
- * Dump the chain of pbuf pointers to the debug output.
- */
-void
-tivaif_trace_pbuf(const char *pcTitle, struct pbuf *p)
-{
-    LWIP_DEBUGF(NETIF_DEBUG, ("%s %08x (%d, %d)", pcTitle, p, p->tot_len,
-                p->len));
-
-    do
-    {
-        p = p->next;
-        if(p)
-        {
-            LWIP_DEBUGF(NETIF_DEBUG, ("->%08x(%d)", p, p->len));
-        }
-        else
-        {
-            LWIP_DEBUGF(NETIF_DEBUG, ("->%08x", p));
-        }
-
-    } while((p != NULL) && (p->tot_len != p->len));
-
-    LWIP_DEBUGF(NETIF_DEBUG, ("\n"));
 }
 #endif
-
 /**
  * This function is used to check whether a passed pbuf contains only buffers
  * resident in regions of memory that the Ethernet MAC can access.  If any
@@ -444,9 +352,10 @@ tivaif_trace_pbuf(const char *pcTitle, struct pbuf *p)
  * buffers are safe, the pbuf reference count is incremented and the original
  * pointer returned.
  */
-static struct pbuf *
-tivaif_check_pbuf(struct pbuf *p)
+#ifdef USE_LWIP_LIB
+static struct pbuf * tivaif_check_pbuf(struct pbuf *p)
 {
+
     struct pbuf *pBuf;
     err_t Err;
 
@@ -515,7 +424,7 @@ tivaif_check_pbuf(struct pbuf *p)
      */
     return(p);
 }
-
+#endif
 /**
  * This function should do the actual transmission of the packet. The packet is
  * contained in the pbuf that is passed to the function. This pbuf might be
@@ -526,6 +435,7 @@ tivaif_check_pbuf(struct pbuf *p)
  * @return ERR_OK if the packet coui32d be sent
  *         an err_t value if the packet coui32dn't be sent
  */
+#ifdef USE_LWIP_LIB
 static err_t
 tivaif_transmit(struct netif *psNetif, struct pbuf *p)
 {
@@ -683,10 +593,9 @@ tivaif_transmit(struct netif *psNetif, struct pbuf *p)
   LINK_STATS_INC(link.xmit);
 
   SYS_ARCH_UNPROTECT(lev);
-
   return(ERR_OK);
 }
-
+#endif
 /**
  * This function will process all transmit descriptors and free pbufs attached
  * to any that have been transmitted since we last checked.
@@ -696,8 +605,8 @@ tivaif_transmit(struct netif *psNetif, struct pbuf *p)
  * @param netif the lwip network interface structure for this ethernetif
  * @return None.
  */
-static void
-tivaif_process_transmit(tStellarisIF *pIF)
+#ifdef USE_LWIP_LIB
+static void tivaif_process_transmit(tStellarisIF *pIF)
 {
     tDescriptorList *pDescList;
     uint32_t ui32NumDescs;
@@ -725,7 +634,8 @@ tivaif_process_transmit(tStellarisIF *pIF)
             /* Yes - free it if it's not marked as an intermediate pbuf */
             if(!((uint32_t)(pDescList->pDescriptors[pDescList->ui32Read].pBuf) & 1))
             {
-                pbuf_free(pDescList->pDescriptors[pDescList->ui32Read].pBuf);
+                //TODO - hook up to FreeRTOS IP stack?
+                //pbuf_free(pDescList->pDescriptors[pDescList->ui32Read].pBuf);
                 DRIVER_STATS_INC(TXBufFreedCount);
             }
             pDescList->pDescriptors[pDescList->ui32Read].pBuf = NULL;
@@ -744,7 +654,7 @@ tivaif_process_transmit(tStellarisIF *pIF)
         }
     }
 }
-
+#endif
 /**
  * This function will process all receive descriptors that contain newly read
  * data and pass complete frames up the lwIP stack as they are found.  The
@@ -756,9 +666,10 @@ tivaif_process_transmit(tStellarisIF *pIF)
  * @param psNetif the lwip network interface structure for this ethernetif
  * @return None.
  */
-static void
-tivaif_receive(struct netif *psNetif)
+#ifdef USE_LWIP_LIB
+static void tivaif_receive(struct netif *psNetif)
 {
+
   tDescriptorList *pDescList;
   tStellarisIF *pIF;
   static struct pbuf *pBuf = NULL;
@@ -925,8 +836,9 @@ tivaif_receive(struct netif *psNetif)
           pDescList->ui32Read = 0;
       }
   }
-}
 
+}
+#endif
 /**
  * should be called at the beginning of the program to set up the
  * network interface. It calls the function tivaif_hwinit() to do the
@@ -939,9 +851,10 @@ tivaif_receive(struct netif *psNetif)
  *         ERR_MEM if private data coui32dn't be allocated
  *         any other err_t on error
  */
-err_t
-tivaif_init(struct netif *psNetif)
+#ifdef USE_LWIP_LIB
+err_t tivaif_init(struct netif *psNetif)
 {
+
   LWIP_ASSERT("psNetif != NULL", (psNetif != NULL));
 
 #if LWIP_NETIF_HOSTNAME
@@ -974,7 +887,7 @@ tivaif_init(struct netif *psNetif)
 
   return ERR_OK;
 }
-
+#endif
 /**
  * Process interrupts from the PHY.
  *
@@ -985,8 +898,8 @@ tivaif_init(struct netif *psNetif)
  * transmitter.
  *
  */
-void
-tivaif_process_phy_interrupt(struct netif *psNetif)
+#ifdef USE_LWIP_LIB
+void tivaif_process_phy_interrupt(struct netif *psNetif)
 {
     uint16_t ui16Val, ui16Status;
 #if EEE_SUPPORT
@@ -1017,11 +930,9 @@ tivaif_process_phy_interrupt(struct netif *psNetif)
         if(ui16Status & EPHY_STS_LINK)
         {
             /* Tell lwIP the link is up. */
-#if NO_SYS
-            netif_set_link_up(psNetif);
-#else
-            tcpip_callback((tcpip_callback_fn)netif_set_link_up, psNetif);
-#endif
+            //TODO - hook up to FreeRTOS IP stack?
+            //netif_set_link_up(psNetif);
+            //tcpip_callback((tcpip_callback_fn)netif_set_link_up, psNetif);
 
             /* if the link has been advertised as EEE capable then configure
              * the MAC register for LPI timers and manually set the PHY link
@@ -1043,11 +954,9 @@ tivaif_process_phy_interrupt(struct netif *psNetif)
         else
         {
             /* Tell lwIP the link is down */
-#if NO_SYS
-            netif_set_link_down(psNetif);
-#else
-            tcpip_callback((tcpip_callback_fn)netif_set_link_down, psNetif);
-#endif
+            //TODO - hook up to FreeRTOS IP stack?
+            //netif_set_link_down(psNetif);
+            //tcpip_callback((tcpip_callback_fn)netif_set_link_down, psNetif);
 
             /* if the link has been advertised as EEE capable then clear the
              * MAC register LPI timers and manually clear the PHY link status
@@ -1097,7 +1006,7 @@ tivaif_process_phy_interrupt(struct netif *psNetif)
         EMACConfigSet(EMAC0_BASE, ui32Config, ui32Mode, ui32RxMaxFrameSize);
     }
 }
-
+#endif
 /**
  * Process tx and rx packets at the low-level interrupt.
  *
@@ -1108,8 +1017,8 @@ tivaif_process_phy_interrupt(struct netif *psNetif)
  * transmitter.
  *
  */
-void
-tivaif_interrupt(struct netif *psNetif, uint32_t ui32Status)
+#ifdef USE_LWIP_LIB
+void tivaif_interrupt(struct netif *psNetif, uint32_t ui32Status)
 {
   tStellarisIF *tivaif;
 
@@ -1138,12 +1047,6 @@ tivaif_interrupt(struct netif *psNetif, uint32_t ui32Status)
    */
   if(ui32Status & EMAC_INT_TRANSMIT)
   {
-#if EEE_SUPPORT
-      if(g_bEEELinkActive)
-      {
-          EMACLPIEnter(EMAC0_BASE);
-      }
-#endif
       tivaif_process_transmit(tivaif);
   }
 
@@ -1159,33 +1062,4 @@ tivaif_interrupt(struct netif *psNetif, uint32_t ui32Status)
       tivaif_receive(psNetif);
   }
 }
-
-#if NETIF_DEBUG
-/* Print an IP header by using LWIP_DEBUGF
- * @param p an IP packet, p->payload pointing to the IP header
- */
-void
-tivaif_debug_print(struct pbuf *p)
-{
-  struct eth_hdr *ethhdr = (struct eth_hdr *)p->payload;
-  u16_t *plen = (u16_t *)p->payload;
-
-  LWIP_DEBUGF(NETIF_DEBUG, ("ETH header:\n"));
-  LWIP_DEBUGF(NETIF_DEBUG, ("Packet Length:%5"U16_F" \n",*plen));
-  LWIP_DEBUGF(NETIF_DEBUG, ("Destination: %02"X8_F"-%02"X8_F"-%02"X8_F"-%02"X8_F"-%02"X8_F"-%02"X8_F"\n",
-    ethhdr->dest.addr[0],
-    ethhdr->dest.addr[1],
-    ethhdr->dest.addr[2],
-    ethhdr->dest.addr[3],
-    ethhdr->dest.addr[4],
-    ethhdr->dest.addr[5]));
-  LWIP_DEBUGF(NETIF_DEBUG, ("Source: %02"X8_F"-%02"X8_F"-%02"X8_F"-%02"X8_F"-%02"X8_F"-%02"X8_F"\n",
-    ethhdr->src.addr[0],
-    ethhdr->src.addr[1],
-    ethhdr->src.addr[2],
-    ethhdr->src.addr[3],
-    ethhdr->src.addr[4],
-    ethhdr->src.addr[5]));
-  LWIP_DEBUGF(NETIF_DEBUG, ("Packet Type:0x%04"U16_F" \n", ethhdr->type));
-}
-#endif /* NETIF_DEBUG */
+#endif

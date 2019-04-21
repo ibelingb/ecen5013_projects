@@ -32,6 +32,7 @@ extern "C" {
 
 /* Standard includes. */
 #include <string.h>
+#include <stdio.h>
 
 /* Application level configuration options. */
 #include "FreeRTOSIPConfig.h"

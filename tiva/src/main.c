@@ -45,12 +45,14 @@
 #include "inc/hw_memmap.h"
 
 /* FreeRTOS includes */
-#include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
+#include "FreeRTOS_IP.h"
+#include "FreeRTOS_Sockets.h"
+#include "FreeRTOSConfig.h"
+#include "FreeRTOSIPConfig.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
-#include "lwip/netif.h"
 
 /*---------------------------------------------------------------------------------*/
 #define STATUS_QUEUE_LENGTH         (8)
@@ -71,8 +73,7 @@ uint32_t g_sysClk;
 /*---------------------------------------------------------------------------------*/
 void initUART(void);
 int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process);
-void IPInit(uint32_t ui32SysClkHz, const uint8_t *pui8MAC, uint32_t ui32IPAddr,
-         uint32_t ui32NetMask, uint32_t ui32GWAddr, uint32_t ui32IPMode);
+
 
 /*---------------------------------------------------------------------------------*/
 int main(void)
@@ -92,6 +93,7 @@ int main(void)
                             SYSCTL_XTAL_25MHZ |SYSCTL_CFG_VCO_480), SYSTEM_CLOCK);
     g_sysClk = sysClock;
     initUART();
+    //InitIP();
 
     /* create status queue */
     QueueHandle_t statusQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct TaskStatusPacket));
@@ -146,7 +148,7 @@ int main(void)
     setTaskNum(lightTaskHandle, PID_LIGHT);
 
     xTaskCreate(remoteTask, (const portCHAR *)"Remote", configMINIMAL_STACK_SIZE, (void *)&info, 1, &remoteTaskHandle);
-    setTaskNum(remoteTaskHandle, PID_REMOTE);
+    setTaskNum(remoteTaskHandle, PID_REMOTE_CLIENT);
 
     xTaskCreate(moistureTask, (const portCHAR *)"Moist", configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);
     setTaskNum(moistureTaskHandle, PID_MOISTURE);
@@ -200,6 +202,7 @@ int16_t getTaskNum(void)
     }
     return 0;
 }
+/*----------------------------------------------------------------------------------*/
 
 int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process)
 {
@@ -214,4 +217,92 @@ int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process)
     return EXIT_SUCCESS;
 }
 
+/*-----------------------------------------------------------------------------------*/
+
+/* Called by FreeRTOS+TCP when the network connects or disconnects.  Disconnect
+events are only received if implemented in the MAC driver. */
+void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
+{
+uint32_t ulIPAddress, ulNetMask, ulGatewayAddress, ulDNSServerAddress;
+char cBuffer[ 16 ];
+static BaseType_t xTasksAlreadyCreated = pdFALSE;
+
+    /* If the network has just come up...*/
+    if( eNetworkEvent == eNetworkUp )
+    {
+        /* Create the tasks that use the IP stack if they have not already been
+        created. */
+        if( xTasksAlreadyCreated == pdFALSE )
+        {
+            /* See the comments above the definitions of these pre-processor
+            macros at the top of this file for a description of the individual
+            demo tasks. */
+            #if( mainCREATE_TCP_ECHO_TASKS_SINGLE == 1 )
+            {
+                vStartTCPEchoClientTasks_SingleTasks( mainECHO_CLIENT_TASK_STACK_SIZE, mainECHO_CLIENT_TASK_PRIORITY );
+            }
+            #endif /* mainCREATE_TCP_ECHO_TASKS_SINGLE */
+
+            #if( mainCREATE_TCP_ECHO_SERVER_TASK == 1 )
+            {
+                vStartSimpleTCPServerTasks( mainECHO_SERVER_TASK_STACK_SIZE, mainECHO_SERVER_TASK_PRIORITY );
+            }
+            #endif
+
+            xTasksAlreadyCreated = pdTRUE;
+        }
+
+        /* Print out the network configuration, which may have come from a DHCP
+        server. */
+        FreeRTOS_GetAddressConfiguration( &ulIPAddress, &ulNetMask, &ulGatewayAddress, &ulDNSServerAddress );
+        FreeRTOS_inet_ntoa( ulIPAddress, cBuffer );
+        INFO_PRINT( "\r\n\r\nIP Address: %s\r\n", cBuffer);
+
+        FreeRTOS_inet_ntoa( ulNetMask, cBuffer );
+        INFO_PRINT("Subnet Mask: %s\r\n", cBuffer);
+
+        FreeRTOS_inet_ntoa( ulGatewayAddress, cBuffer );
+        INFO_PRINT("Gateway Address: %s\r\n", cBuffer);
+
+        FreeRTOS_inet_ntoa( ulDNSServerAddress, cBuffer );
+        INFO_PRINT("DNS Server Address: %s\r\n\r\n\r\n", cBuffer);
+    }
+}
+/*-----------------------------------------------------------------------------------*/
+
+uint32_t ulApplicationGetNextSequenceNumber( uint32_t ulSourceAddress,
+                                                    uint16_t usSourcePort,
+                                                    uint32_t ulDestinationAddress,
+                                                    uint16_t usDestinationPort )
+{
+     ( void ) ulSourceAddress;
+     ( void ) usSourcePort;
+     ( void ) ulDestinationAddress;
+     ( void ) usDestinationPort;
+
+     return uxRand();
+}
+
+UBaseType_t uxRand()
+{
+    //TODO: add random number generator
+    return 1;
+}
+
+
+void vLoggingPrintf(const char *pcFormatString, ...)
+{
+    va_list vaArgP;
+
+    //
+    // Start the varargs processing.
+    //
+    va_start(vaArgP, pcFormatString);
+    UARTprintf(pcFormatString, vaArgP);
+
+    //
+    // We're finished with the varargs now.
+    //
+    va_end(vaArgP);
+}
 
