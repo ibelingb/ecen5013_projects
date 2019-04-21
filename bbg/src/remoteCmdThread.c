@@ -65,6 +65,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
   unsigned int cliLen = sizeof(cliAddr);
   size_t cmdPacketSize = sizeof(struct RemoteCmdPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
+  uint8_t cliConn = 0;
   uint8_t ind;
 	sigset_t mask;
 
@@ -77,6 +78,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));
   memset(&timerid, 0, sizeof(timer_t));
+  // TODO - update
   timer_interval.tv_nsec = LIGHT_LOOP_TIME_NSEC;
   timer_interval.tv_sec = LIGHT_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
@@ -95,7 +97,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
   /* Open FDs for Main and Logging Message queues */
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
-  cmdMsgQueue = mq_open(sensorInfo.cmdMsgQueueName, O_RDWR, 0666, mqAttr);
+  cmdMsgQueue = mq_open(sensorInfo.cmdMsgQueueName, O_RDWR | O_NONBLOCK, 0666, mqAttr);
   if(logMsgQueue == -1){
     ERROR_PRINT("remoteCmdThread Failed to Open Logging MessageQueue - exiting.\n");
     LOG_REMOTE_HANDLING_EVENT(REMOTE_LOG_QUEUE_ERROR);
@@ -157,9 +159,28 @@ void* remoteCmdThreadHandler(void* threadInfo)
    */
   // TODO: TBD
 
+  int status = 0;
+
   while(aliveFlag) {
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_CMD, STATUS_OK, ERROR_CODE_USER_NONE0);
+    //SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_CMD, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
+
+    /* If cmd received, transmit packet to Remote Node */
+    status = mq_receive(cmdMsgQueue, (char *)&cmdPacket, cmdPacketSize, NULL);
+    if(status == cmdPacketSize)
+    {
+      printf("remoteCmd received\n");
+      if(cliConn != 0) {
+        send(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
+      }
+      else {
+        ERROR_PRINT("Failed to send CmdPacket to Remote Node - client socket connection unavailable\n");
+        // TODO LOG failed to send cmd
+      }
+
+      /* Log cmd packet transmitted to remote node */
+      // TODO
+    }
 
     /* Accept Client Connection for Sensor data */
     if(clientResponse == 0)
@@ -179,21 +200,12 @@ void* remoteCmdThreadHandler(void* threadInfo)
         /* Log remoteCmdThread successfully Connected to client */
         printf("Connected remoteCmdThread to external Client on port %d.\n", CMD_PORT);
         LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+        cliConn = 1;
 
         /* Update Socket Client connections to be non-blocking */
         setsockopt(sockfdCmdClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
       }
     }
-
-    /* If cmd received, transmit packet to Remote Node */
-    if(mq_receive(cmdMsgQueue, (char *)&cmdPacket, cmdPacketSize, NULL) == cmdPacketSize)
-    {
-      send(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
-
-      /* Log cmd packet transmitted to remote node */
-      // TODO
-    }
-
   }
 
   /* Thread Cleanup */

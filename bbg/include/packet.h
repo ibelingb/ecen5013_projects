@@ -42,6 +42,7 @@
 #define STATUS_MSG_QUEUE_DEPTH      ((NUM_THREADS * 2) * (100 / 50)) // total messages
 
 #define MSG_QUEUE_MSG_SIZE        (sizeof(LogMsgPacket)) // bytes
+#define CMD_MSG_QUEUE_MSG_SIZE    (sizeof(RemoteCmdPacket)) // bytes
 #define MSG_QUEUE_DEPTH           (20) // total messages
 #define LOG_MSG_FILENAME_SIZE     (32) // bytes
 #define LOG_MSG_PAYLOAD_SIZE      (128) // bytes
