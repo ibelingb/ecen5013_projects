@@ -77,7 +77,7 @@ void remoteTask(void *pvParameters)
     /* set up UDP socket for testing */
     /*-------------------------------------------------------------------------------------*/
 //#define CONFIGURE_IP_STACK
-#ifdef CONFIGURE_IP_STACK
+//#ifdef CONFIGURE_IP_STACK
     Socket_t xListeningSocket;
     struct freertos_sockaddr xBindAddress;
     const TickType_t xSendTimeOut = 200 / portTICK_PERIOD_MS;
@@ -101,12 +101,14 @@ void remoteTask(void *pvParameters)
     obtained within 200ms. */
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_SNDTIMEO,
                          &xSendTimeOut, sizeof( xSendTimeOut ) );
+    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
+                         &xSendTimeOut, sizeof( xSendTimeOut ) );
 
     /* Bind the socket to port 0x1234. */
     xBindAddress.sin_port = FreeRTOS_htons( 0x1234 );
     FreeRTOS_bind( xListeningSocket, &xBindAddress, sizeof( xBindAddress ) );
     /*-------------------------------------------------------------------------------------*/
-#endif
+//#endif
     /* set portion of statusMsg that does not change */
     memset(&logMsg, 0,sizeof(LogMsgPacket));
 

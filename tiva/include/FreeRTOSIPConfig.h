@@ -90,11 +90,6 @@ messages. */
 on).  Valid options are pdFREERTOS_BIG_ENDIAN and pdFREERTOS_LITTLE_ENDIAN. */
 #define ipconfigBYTE_ORDER pdFREERTOS_LITTLE_ENDIAN
 
-/* If the network card/driver includes checksum offloading (IP/TCP/UDP checksums)
-then set ipconfigDRIVER_INCLUDED_RX_IP_CHECKSUM to 1 to prevent the software
-stack repeating the checksum calculations. */
-#define ipconfigDRIVER_INCLUDED_RX_IP_CHECKSUM   1
-
 /* Several API's will block until the result is known, or the action has been
 performed, for example FreeRTOS_send() and FreeRTOS_recv().  The timeouts can be
 set per socket, using setsockopt().  If not set, the times below will be
@@ -118,7 +113,7 @@ a socket. */
 #define ipconfigUSE_DNS_CACHE               ( 1 )
 #define ipconfigDNS_CACHE_NAME_LENGTH       ( 16 )
 #define ipconfigDNS_CACHE_ENTRIES           ( 4 )
-#define ipconfigDNS_REQUEST_ATTEMPTS        ( 2 )
+#define ipconfigDNS_REQUEST_ATTEMPTS        ( 4 )
 
 /* The IP stack executes it its own task (although any application task can make
 use of its services through the published sockets API). ipconfigUDP_TASK_PRIORITY
@@ -183,7 +178,7 @@ ipconfigMAXIMUM_DISCOVER_TX_PERIOD.  The IP stack will revert to using the
 static IP address passed as a parameter to FreeRTOS_IPInit() if the
 re-transmission time interval reaches ipconfigMAXIMUM_DISCOVER_TX_PERIOD without
 a DHCP reply being received. */
-#define ipconfigMAXIMUM_DISCOVER_TX_PERIOD      ( 120000 / portTICK_PERIOD_MS )
+#define ipconfigMAXIMUM_DISCOVER_TX_PERIOD      ( pdMS_TO_TICKS( 30000 ) )
 
 /* The ARP cache is a table that maps IP addresses to MAC addresses.  The IP
 stack can only send a UDP message to a remove IP address if it knows the MAC
@@ -224,7 +219,7 @@ not set to 1 then only FreeRTOS_indet_addr_quick() is available. */
 are available to the IP stack.  The total number of network buffers is limited
 to ensure the total amount of RAM that can be consumed by the IP stack is capped
 to a pre-determinable value. */
-#define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS      12
+#define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS      28
 
 /* A FreeRTOS queue is used to send events from application tasks to the IP
 stack.  ipconfigEVENT_QUEUE_LENGTH sets the maximum number of events that can
@@ -319,10 +314,10 @@ simultaneously, one could define TCP_WIN_SEG_COUNT as 120. */
  * have a fixed maximum size.
  * The defaults for these size are defined here, although
  * they can be overridden at runtime by using the setsockopt() call */
-#define ipconfigTCP_RX_BUFFER_LENGTH    ( 4u * ipconfigTCP_MSS )
+#define ipconfigTCP_RX_BUFFER_LENGTH    ( 3u * ipconfigTCP_MSS )
 
 /* Define the size of Tx stream buffer for TCP sockets */
-#define ipconfigTCP_TX_BUFFER_LENGTH    ( 4u * ipconfigTCP_MSS )
+#define ipconfigTCP_TX_BUFFER_LENGTH    ( 2u * ipconfigTCP_MSS )
 
 /* When using call-back handlers, the driver may check if the handler points to
 real program memory (RAM or flash) or just has a random non-zero value. */
@@ -338,7 +333,14 @@ disconnecting stage will timeout after a period of non-activity. */
 #define ipconfigTCP_KEEP_ALIVE_INTERVAL     (20) /* in seconds */
 
 /* this does something to FreRTOS */
-#define ipconfigZERO_COPY_TX_DRIVER         (1)
+#define ipconfigZERO_COPY_TX_DRIVER         (0)
+#define ipconfigZERO_COPY_RX_DRIVER         (0)
+
+/* If the network card/driver includes checksum offloading (IP/TCP/UDP checksums)
+then set ipconfigDRIVER_INCLUDED_RX_IP_CHECKSUM to 1 to prevent the software
+stack repeating the checksum calculations. */
+#define ipconfigDRIVER_INCLUDED_RX_IP_CHECKSUM      (1)
+#define ipconfigDRIVER_INCLUDED_TX_IP_CHECKSUM      (1)
 
 /* Often DHCP servers can show the names of devices that have leased
  * IP addresses. When ipconfigDHCP_REGISTER_HOSTNAME is set to 1 the

@@ -42,9 +42,6 @@ typedef int8_t err_t;
 
 #define ERR_IF         -15   /* Low-level netif error    */
 
-/*------------------------------------------------------------------------------*/
-/* from lwip's opt.h */
-
 /** ETH_PAD_SIZE: number of bytes added before the ethernet header to ensure
  * alignment of payload after that header. Since the header is 14 bytes long,
  * without this padding e.g. addresses in the IP header will not be aligned
@@ -80,7 +77,7 @@ typedef int8_t err_t;
  * an upper limit on the MSS advertised by the remote host.
  */
 #ifndef TCP_MSS
-#define TCP_MSS                         536
+#define TCP_MSS                         ipconfigTCP_MSS
 #endif
 
 /**
@@ -102,75 +99,9 @@ typedef int8_t err_t;
 
 /*------------------------------------------------------------------------------------*/
 
-/* From lwip's netif.h or opt.h or pbuf.h ------------------------------------------*/
-
-/** Whether the network interface is 'up'. This is
- * a software flag used to control whether this network
- * interface is enabled and processes traffic.
- * It is set by the startup code (for static IP configuration) or
- * by dhcp/autoip when an address has been assigned.
- */
-#define NETIF_FLAG_UP           0x01U
-/** If set, the netif has broadcast capability.
- * Set by the netif driver in its init function. */
-#define NETIF_FLAG_BROADCAST    0x02U
-/** If set, the netif is one end of a point-to-point connection.
- * Set by the netif driver in its init function. */
-#define NETIF_FLAG_POINTTOPOINT 0x04U
-/** If set, the interface is configured using DHCP.
- * Set by the DHCP code when starting or stopping DHCP. */
-#define NETIF_FLAG_DHCP         0x08U
-/** If set, the interface has an active link
- *  (set by the network interface driver).
- * Either set by the netif driver in its init function (if the link
- * is up at that time) or at a later point once the link comes up
- * (if link detection is supported by the hardware). */
-#define NETIF_FLAG_LINK_UP      0x10U
-/** If set, the netif is an ethernet device using ARP.
- * Set by the netif driver in its init function.
- * Used to check input packet types and use of DHCP. */
-#define NETIF_FLAG_ETHARP       0x20U
-/** If set, the netif is an ethernet device. It might not use
- * ARP or TCP/IP if it is used for PPPoE only.
- */
-#define NETIF_FLAG_ETHERNET     0x40U
-/** If set, the netif has IGMP capability.
- * Set by the netif driver in its init function. */
-#define NETIF_FLAG_IGMP         0x80U
-
 #ifndef ETHARP_HWADDR_LEN
 #define ETHARP_HWADDR_LEN     6
 #endif
-
-/* This is the aligned version of ip_addr_t,
-   used as local variable, on the stack, etc. */
-/** ip_addr_t uses a struct for convenience only, so that the same defines can
- * operate both on ip_addr_t as well as on ip_addr_p_t. */
-typedef struct
-{
-  uint32_t addr;
-} ip_addr_t;
-
-struct pbuf
-{
-  /** next pbuf in singly linked pbuf chain */
-  struct pbuf *next;
-  void *payload;                        /** pointer to the actual data in the buffer */
-  uint16_t tot_len;                        /** total length of this buffer and all next buffers in chain
-                                         * belonging to the same packet.
-                                         *
-                                         * For non-queue packet chains this is the invariant:
-                                         * p->tot_len == p->len + (p->next? p->next->tot_len: 0)
-                                         */
-  uint16_t len;                            /** length of this buffer */
-  uint8_t type;                            /** pbuf_type as u8_t instead of enum to save space */
-  uint8_t flags;                           /** misc flags */
-  uint16_t ref;                            /**
-                                         * the reference count always equals the number of pointers
-                                         * that refer to this pbuf. This can be pointers from an application,
-                                         * the stack itself, or pbuf->next pointers from a chain.
-                                         */
-};
 
 /*------------------------------------------------------------------------------------------------*/
 
@@ -187,7 +118,7 @@ struct pbuf
 #endif
 
 #ifndef NUM_RX_DESCRIPTORS
-#define NUM_RX_DESCRIPTORS      (8)
+#define NUM_RX_DESCRIPTORS      (20)
 #endif
 
 #ifndef NUM_TX_DESCRIPTORS

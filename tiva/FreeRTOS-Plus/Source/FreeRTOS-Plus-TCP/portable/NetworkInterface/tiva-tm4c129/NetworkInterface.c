@@ -62,11 +62,6 @@
 /* define PHY configuration */
 #define EMAC_PHY_CONFIG (EMAC_PHY_TYPE_INTERNAL | EMAC_PHY_INT_MDIX_EN | EMAC_PHY_AN_100B_T_FULL_DUPLEX)
 
-/* IP Address Acquisition Modes */
-#define IPADDR_USE_STATIC       0
-#define IPADDR_USE_DHCP         1
-#define IPADDR_USE_AUTOIP       2
-
 
 /* Netif interrupt handling task */
 #ifndef configEMAC_TASK_STACK_SIZE
@@ -139,15 +134,6 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
 {
     uint32_t ulTransmitSize;
 
-    /* Simple network interfaces (as opposed to more efficient zero copy network
-    interfaces) just use Ethernet peripheral driver library functions to copy
-    data from the FreeRTOS+TCP buffer into the peripheral driver's own buffer.
-    This example assumes SendData() is a peripheral driver library function that
-    takes a pointer to the start of the data to be sent and the length of the
-    data to be sent as two separate parameters.  The start of the data is located
-    by pxDescriptor->pucEthernetBuffer.  The length of the data is located
-    by pxDescriptor->xDataLength. */
-
     /* Get bytes in current buffer  */
     ulTransmitSize = pxNetworkBuffer->xDataLength;
 
@@ -157,17 +143,6 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
     }
 
     PacketTransmit(pxNetworkBuffer->pucEthernetBuffer, ulTransmitSize);
-//    #if(ipconfigZERO_COPY_TX_DRIVER == 0) {
-//        /* Copy the bytes. */
-//        memcpy( ( void * ) pxDmaTxDesc->Buffer1Addr, pxNetworkBuffer->pucEthernetBuffer, ulTransmitSize);
-//    }
-//    #else {
-//        /* Move the buffer. */
-//        pxDmaTxDesc->Buffer1Addr = ( uint32_t )pxNetworkBuffer->pucEthernetBuffer;
-//        /* The Network Buffer has been passed to DMA, no need to release it. */
-//        bReleaseAfterSend = pdFALSE_UNSIGNED;
-//    }
-//    #endif /* ipconfigZERO_COPY_TX_DRIVER */
 
     /* Call the standard trace macro to log the send event. */
     iptraceNETWORK_INTERFACE_TRANSMIT();
@@ -193,7 +168,7 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     /* Lower the priority of the Ethernet interrupt handler.  This is required
      * so that the interrupt handler can safely call the interrupt-safe
      * FreeRTOS functions (specifically to send messages to the queue) */
-    IntPrioritySet(INT_EMAC0_TM4C129, 0xC0);
+    IntPrioritySet(INT_EMAC0_TM4C129, 0xE0);
 
     /*----------------------------------------------------------------------------*/
     /* Enable Peripherals & Initialize EMAC */
