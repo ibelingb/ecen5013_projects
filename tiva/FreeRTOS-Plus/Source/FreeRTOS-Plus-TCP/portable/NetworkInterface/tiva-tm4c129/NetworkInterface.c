@@ -140,9 +140,7 @@ BaseType_t xNetworkInterfaceInitialise( void )
 
 BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkBuffer, BaseType_t bReleaseAfterSend )
 {
-    uint32_t errCode = ERR_OK;
     uint32_t ulTransmitSize;
-    struct pbuf macBuff;
 
     /* Simple network interfaces (as opposed to more efficient zero copy network
     interfaces) just use Ethernet peripheral driver library functions to copy
@@ -152,9 +150,6 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
     data to be sent as two separate parameters.  The start of the data is located
     by pxDescriptor->pucEthernetBuffer.  The length of the data is located
     by pxDescriptor->xDataLength. */
-    macBuff.payload = pxNetworkBuffer->pucEthernetBuffer;
-    macBuff.len = pxNetworkBuffer->xDataLength;
-    macBuff.tot_len = pxNetworkBuffer->xDataLength;
 
     /* Get bytes in current buffer  */
     ulTransmitSize = pxNetworkBuffer->xDataLength;
@@ -164,23 +159,18 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
         ulTransmitSize = PBUF_POOL_BUFSIZE;
     }
 
-    #if( ipconfigZERO_COPY_TX_DRIVER == 0 )
-    {
-        /* Copy the bytes. */
-        //memcpy( ( void * ) pxDmaTxDesc->Buffer1Addr, pxNetworkBuffer->pucEthernetBuffer, ulTransmitSize);
-    }
-    #else
-    {
-        /* Move the buffer. */
-        pxDmaTxDesc->Buffer1Addr = ( uint32_t )pxNetworkBuffer->pucEthernetBuffer;
-        /* The Network Buffer has been passed to DMA, no need to release it. */
-        bReleaseAfterSend = pdFALSE_UNSIGNED;
-    }
-    #endif /* ipconfigZERO_COPY_TX_DRIVER */
-    //todo: errCode = gNetif.linkoutput(&gNetif, &macBuff);
-    if(errCode != ERR_OK) {
-        return pdFAIL;
-    }
+    PacketTransmit(pxNetworkBuffer->pucEthernetBuffer, ulTransmitSize);
+//    #if(ipconfigZERO_COPY_TX_DRIVER == 0) {
+//        /* Copy the bytes. */
+//        memcpy( ( void * ) pxDmaTxDesc->Buffer1Addr, pxNetworkBuffer->pucEthernetBuffer, ulTransmitSize);
+//    }
+//    #else {
+//        /* Move the buffer. */
+//        pxDmaTxDesc->Buffer1Addr = ( uint32_t )pxNetworkBuffer->pucEthernetBuffer;
+//        /* The Network Buffer has been passed to DMA, no need to release it. */
+//        bReleaseAfterSend = pdFALSE_UNSIGNED;
+//    }
+//    #endif /* ipconfigZERO_COPY_TX_DRIVER */
 
     /* Call the standard trace macro to log the send event. */
     iptraceNETWORK_INTERFACE_TRANSMIT();
@@ -201,6 +191,7 @@ BaseType_t InitMACPHY(uint32_t sysClk)
 {
     uint32_t ui32User0, ui32User1;
     uint8_t pui8MAC[6];
+    uint16_t ui16Val;
 
     /* Get the MAC address from the user registers */
     FlashUserGet(&ui32User0, &ui32User1);
@@ -219,16 +210,14 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     pui8MAC[4] = ((ui32User1 >>  8) & 0xff);
     pui8MAC[5] = ((ui32User1 >> 16) & 0xff);
 
-
-#if (ipconfigZERO_COPY_TX_DRIVER == 1)
     /* Lower the priority of the Ethernet interrupt handler.  This is required
      * so that the interrupt handler can safely call the interrupt-safe
      * FreeRTOS functions (specifically to send messages to the queue) */
     IntPrioritySet(INT_EMAC0_TM4C129, 0xC0);
-#endif
-    /*----------------------------------------------------------------------------*
-     * Initialize EMAC & PHY
-     *----------------------------------------------------------------------------*/
+
+    /*----------------------------------------------------------------------------*/
+    /* Enable Peripherals & Initialize EMAC */
+    /*----------------------------------------------------------------------------*/
 
     /* Enable the ethernet peripheral */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_EMAC0);
@@ -247,7 +236,7 @@ BaseType_t InitMACPHY(uint32_t sysClk)
         }
         else
         {
-            /* Internal PHY is not present on this part so hang here. */
+            /* Internal PHY is not present on this part so hang here */
             while(1) {}
         }
     }
@@ -264,23 +253,30 @@ BaseType_t InitMACPHY(uint32_t sysClk)
                  4, 4, 0);
 
     /* Set MAC configuration options */
-    EMACConfigSet(EMAC0_BASE, (EMAC_CONFIG_FULL_DUPLEX | EMAC_CONFIG_CHECKSUM_OFFLOAD |
-                                   EMAC_CONFIG_7BYTE_PREAMBLE | EMAC_CONFIG_IF_GAP_96BITS |
-                                   EMAC_CONFIG_USE_MACADDR0 | EMAC_CONFIG_SA_FROM_DESCRIPTOR |
-                                   EMAC_CONFIG_BO_LIMIT_1024),
-                      (EMAC_MODE_RX_STORE_FORWARD | EMAC_MODE_TX_STORE_FORWARD |
-                       EMAC_MODE_TX_THRESHOLD_64_BYTES | EMAC_MODE_RX_THRESHOLD_64_BYTES), 0);
+    EMACConfigSet(EMAC0_BASE, ( EMAC_CONFIG_FULL_DUPLEX |
+                                EMAC_CONFIG_CHECKSUM_OFFLOAD | /* could remove to make simpler */
+                                EMAC_CONFIG_7BYTE_PREAMBLE |
+                                EMAC_CONFIG_IF_GAP_96BITS |
+                                EMAC_CONFIG_USE_MACADDR0 |
+                                EMAC_CONFIG_SA_FROM_DESCRIPTOR | /*todo: make sure desc has correct SA */
+                                EMAC_CONFIG_BO_LIMIT_1024),
+                                          (EMAC_MODE_RX_STORE_FORWARD |
+                                           EMAC_MODE_TX_STORE_FORWARD |
+                                           EMAC_MODE_TX_THRESHOLD_64_BYTES |
+                                           EMAC_MODE_RX_THRESHOLD_64_BYTES),
+                                               0);
 
     /* Program the hardware with its MAC address (for filtering) */
     EMACAddrSet(EMAC0_BASE, 0, (uint8_t *)pui8MAC);
 
     /*------------------------------------------------------------------------------------------*/
-    /* from tivaif_init (tiva-tm4c129.c) */
+    /* Initialize the DMA descriptors */
     /*------------------------------------------------------------------------------------------*/
-    uint16_t ui16Val;
-
-    /* Initialize the DMA descriptors. */
     InitDMADescriptors();
+
+    /*----------------------------------------------------------------------------*/
+    /* Clear, Enable Interrupts  */
+    /*----------------------------------------------------------------------------*/
 
     /* Clear any stray PHY interrupts that may be set. */
     ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
@@ -300,8 +296,9 @@ BaseType_t InitMACPHY(uint32_t sysClk)
      * Set MAC filtering options.  We receive all broadcast and mui32ticast
      * packets along with those addressed specifically for us.
      */
-    EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_HASH_AND_PERFECT |
-                       EMAC_FRMFILTER_PASS_MULTICAST));
+    EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_SADDR |
+                                    EMAC_FRMFILTER_HASH_AND_PERFECT |
+                                    EMAC_FRMFILTER_PASS_MULTICAST));
 
     /* Clear any pending MAC interrupts. */
     EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
@@ -318,17 +315,15 @@ BaseType_t InitMACPHY(uint32_t sysClk)
 
     /* Enable the Ethernet interrupt. */
     IntEnable(INT_EMAC0);
-#if (ipconfigZERO_COPY_TX_DRIVER == 1)
+
     /* Enable all processor interrupts. */
-    IntMasterEnable();
-#endif
+    //IntMasterEnable();
 
     /* Tell the PHY to start an auto-negotiation cycle. */
     EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_ANEN |
                  EPHY_BMCR_RESTARTAN));
 
     printPhyStatus();
-
     return pdTRUE;
 }
 
@@ -417,94 +412,6 @@ void printMACIntStatus(uint32_t intStatus)
     INFO_PRINT("\n");
 }
 
-/*-----------------------------------------------------------*/
-void printPHYIntStatus(uint32_t phyIsr1Status, uint32_t phyIsr2Status)
-{
-    INFO_PRINT("PHY ISR1 status: %d", phyIsr1Status);
-
-    if(phyIsr1Status & EPHY_MISR1_LINKSTAT) {
-        INFO_PRINT(", EPHY_MISR1_LINKSTAT");
-    }
-    if(phyIsr1Status & EPHY_MISR1_SPEED) {
-        INFO_PRINT(", EPHY_MISR1_SPEED");
-    }
-    if(phyIsr1Status & EPHY_MISR1_DUPLEXM) {
-        INFO_PRINT(", EPHY_MISR1_DUPLEXM");
-    }
-    if(phyIsr1Status & EPHY_MISR1_ANC) {
-        INFO_PRINT(", EPHY_MISR1_ANC");
-    }
-    if(phyIsr1Status & EPHY_MISR1_FCHF) {
-        INFO_PRINT(", EPHY_MISR1_FCHF");
-    }
-    if(phyIsr1Status & EPHY_MISR1_RXHF) {
-        INFO_PRINT(", EPHY_MISR1_RXHF");
-    }
-    if(phyIsr1Status & EPHY_MISR1_LINKSTATEN) {
-        INFO_PRINT(", EPHY_MISR1_LINKSTATEN");
-    }
-    if(phyIsr1Status & EPHY_MISR1_SPEEDEN) {
-        INFO_PRINT(", EPHY_MISR1_SPEEDEN");
-    }
-    if(phyIsr1Status & EPHY_MISR1_DUPLEXMEN) {
-        INFO_PRINT(", EPHY_MISR1_DUPLEXMEN");
-    }
-    if(phyIsr1Status & EPHY_MISR1_ANCEN) {
-        INFO_PRINT(", EPHY_MISR1_ANCEN");
-    }
-    if(phyIsr1Status & EPHY_MISR1_FCHFEN) {
-        INFO_PRINT(", EPHY_MISR1_FCHFEN");
-    }
-    if(phyIsr1Status & EPHY_MISR1_RXHFEN) {
-        INFO_PRINT(", EPHY_MISR1_RXHFEN");
-    }
-    INFO_PRINT("\n");
-    INFO_PRINT("PHY ISR2 status: %d", phyIsr2Status);
-
-    /* IRS2 */
-    if(phyIsr2Status & EPHY_MISR2_ANERR) {
-        INFO_PRINT(", EPHY_MISR2_ANERR");
-    }
-    if(phyIsr2Status & EPHY_MISR2_PAGERX) {
-        INFO_PRINT(", EPHY_MISR2_PAGERX");
-    }
-    if(phyIsr2Status & EPHY_MISR2_LBFIFO) {
-        INFO_PRINT(", EPHY_MISR2_LBFIFO");
-    }
-    if(phyIsr2Status & EPHY_MISR2_MDICO) {
-        INFO_PRINT(", EPHY_MISR2_MDICO");
-    }
-    if(phyIsr2Status & EPHY_MISR2_SLEEP) {
-        INFO_PRINT(", EPHY_MISR2_SLEEP");
-    }
-    if(phyIsr2Status & EPHY_MISR2_POLINT) {
-        INFO_PRINT(", EPHY_MISR2_POLINT");
-    }
-    if(phyIsr2Status & EPHY_MISR2_JABBER) {
-        INFO_PRINT(", EPHY_MISR2_JABBER");
-    }
-    if(phyIsr2Status & EPHY_MISR2_ANERREN) {
-        INFO_PRINT(", EPHY_MISR2_ANERREN");
-    }
-    if(phyIsr2Status & EPHY_MISR2_PAGERXEN) {
-        INFO_PRINT(", EPHY_MISR2_PAGERXEN");
-    }
-    if(phyIsr2Status & EPHY_MISR2_LBFIFOEN) {
-        INFO_PRINT(", EPHY_MISR2_LBFIFOEN");
-    }
-    if(phyIsr2Status & EPHY_MISR2_MDICOEN) {
-        INFO_PRINT(", EPHY_MISR2_MDICOEN");
-    }
-    if(phyIsr2Status & EPHY_MISR2_SLEEPEN) {
-        INFO_PRINT(", EPHY_MISR2_SLEEPEN");
-    }
-    if(phyIsr2Status & EPHY_MISR2_POLINTEN) {
-        INFO_PRINT(", EPHY_MISR2_POLINTEN");
-    }
-    if(phyIsr2Status & EPHY_MISR2_JABBEREN) {
-        INFO_PRINT(", EPHY_MISR2_JABBEREN");
-    }
-}
 /*------------------------------------------------------------------------*/
 /**
  * @brief this is the deferred ethernet interrupt handler task
@@ -524,7 +431,7 @@ void prvEMACHandlerTask( void *pvParameters )
     uint32_t xStatus;
     const TickType_t xDelay = (1000  / portTICK_PERIOD_MS);
     uint32_t ulISREvents;
-    uint16_t phyIsr1Status, phyIsr2Status;
+
 
     configASSERT( xEMACTaskHandle );
 
@@ -534,14 +441,22 @@ void prvEMACHandlerTask( void *pvParameters )
         if(xQueueReceive(g_pInterrupt, (void *)&ulISREvents, xDelay) != pdFALSE) {
             printMACIntStatus(ulISREvents);
 
-            if(ulISREvents & EMAC_INT_PHY) {
-                /* Read the PHY interrupt status.  This clears all interrupt sources.
-                 * Note that we are only enabling sources in EPHY_MISR1 so we don't
-                 * read EPHY_MISR2.
-                 */
-                phyIsr1Status = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
-                phyIsr2Status = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
-                printPHYIntStatus(phyIsr1Status, phyIsr2Status);
+            /* check for PHY interrupt */
+            if(ulISREvents & EMAC_INT_PHY)
+            {
+                processPhyInterrupt();
+            }
+
+            /* check for TX interrupt */
+            if(ulISREvents & EMAC_INT_TRANSMIT)
+            {
+                processTxInterrupt(ulISREvents);
+            }
+
+            /* check for RX interrupt */
+            if(ulISREvents & (EMAC_INT_RECEIVE | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED))
+            {
+                processRxInterrupt(ulISREvents);
             }
         }
         /* Enable the Ethernet RX and TX interrupt source. */
@@ -549,100 +464,6 @@ void prvEMACHandlerTask( void *pvParameters )
                       EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
                       EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
     }
-#if (ipconfigZERO_COPY_TX_DRIVER == 1)
-
-    vTaskSetTimeOutState( &xPhyTime );
-    xPhyRemTime = pdMS_TO_TICKS( PHY_LS_LOW_CHECK_TIME_MS );
-
-    for( ;; )
-    {
-        vCheckBuffersAndQueue();
-
-        if( ( ulISREvents & EMAC_IF_ALL_EVENT ) == 0 )
-        {
-            /* No events to process now, wait for the next. */
-            ulTaskNotifyTake( pdFALSE, ulMaxBlockTime );
-        }
-
-        if( ( ulISREvents & EMAC_IF_RX_EVENT ) != 0 )
-        {
-            ulISREvents &= ~EMAC_IF_RX_EVENT;
-
-            /* Wait for the EMAC interrupt to indicate that another packet has been
-            received. */
-            xResult = prvEMACRxPoll();
-        }
-
-        if( ( ulISREvents & EMAC_IF_TX_EVENT ) != 0 )
-        {
-            /* Future extension: code to release TX buffers if zero-copy is used. */
-            ulISREvents &= ~EMAC_IF_TX_EVENT;
-            while( xQueueReceive( xTxBufferQueue, &pucBuffer, 0 ) != pdFALSE )
-            {
-                #if( ipconfigZERO_COPY_TX_DRIVER != 0 )
-                {
-                    pxBuffer = pxPacketBuffer_to_NetworkBuffer( pucBuffer );
-                    if( pxBuffer != NULL )
-                    {
-                        vReleaseNetworkBufferAndDescriptor( pxBuffer );
-                        tx_release_count[ 0 ]++;
-                    }
-                    else
-                    {
-                        tx_release_count[ 1 ]++;
-                    }
-                }
-                #else
-                {
-                    tx_release_count[ 0 ]++;
-                }
-                #endif
-                uxCount = uxQueueMessagesWaiting( ( QueueHandle_t ) xTXDescriptorSemaphore );
-                if( uxCount < NUM_TX_DESCRIPTORS )
-                {
-                    /* Tell the counting semaphore that one more TX descriptor is available. */
-                    xSemaphoreGive( xTXDescriptorSemaphore );
-                }
-            }
-        }
-
-        if( ( ulISREvents & EMAC_IF_ERR_EVENT ) != 0 )
-        {
-            /* Future extension: logging about errors that occurred. */
-            ulISREvents &= ~EMAC_IF_ERR_EVENT;
-        }
-
-        if( xResult > 0 )
-        {
-            /* A packet was received. No need to check for the PHY status now,
-            but set a timer to check it later on. */
-            vTaskSetTimeOutState( &xPhyTime );
-            xPhyRemTime = pdMS_TO_TICKS( PHY_LS_HIGH_CHECK_TIME_MS );
-            xResult = 0;
-        }
-        else if( xTaskCheckForTimeOut( &xPhyTime, &xPhyRemTime ) != pdFALSE )
-        {
-            /* Check the link status again. */
-            xStatus = ulReadMDIO( PHY_REG_01_BMSR );
-
-            if( ( ulPHYLinkStatus & BMSR_LINK_STATUS ) != ( xStatus & BMSR_LINK_STATUS ) )
-            {
-                ulPHYLinkStatus = xStatus;
-                FreeRTOS_printf( ( "prvEMACHandlerTask: PHY LS now %d\n", ( ulPHYLinkStatus & BMSR_LINK_STATUS ) != 0 ) );
-            }
-
-            vTaskSetTimeOutState( &xPhyTime );
-            if( ( ulPHYLinkStatus & BMSR_LINK_STATUS ) != 0 )
-            {
-                xPhyRemTime = pdMS_TO_TICKS( PHY_LS_HIGH_CHECK_TIME_MS );
-            }
-            else
-            {
-                xPhyRemTime = pdMS_TO_TICKS( PHY_LS_LOW_CHECK_TIME_MS );
-            }
-        }
-    }
-#endif
 }
 /*-------------------------------------------------------------------------------------------------------------------------*/
 //*****************************************************************************
@@ -655,7 +476,6 @@ void prvEMACHandlerTask( void *pvParameters )
 void xEthernetHandler(void)
 {
     uint32_t ui32Status;
-    uint32_t ui32TimerStatus;
     portBASE_TYPE xWake = pdFALSE;
 
     /* Read and Clear the interrupt. */
@@ -680,7 +500,7 @@ void xEthernetHandler(void)
     /* Check to see whether a hardware timer interrupt has been reported */
     if(ui32Status & EMAC_INT_TIMESTAMP) {
         /* Yes - read and clear the timestamp interrupt status */
-        ui32TimerStatus = EMACTimestampIntStatus(EMAC0_BASE);
+        EMACTimestampIntStatus(EMAC0_BASE);
     }
 
     /* Signal the deferred Ethernet interrupt task */
@@ -694,10 +514,12 @@ void xEthernetHandler(void)
                                     EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
                                     EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
 
-#if (ipconfigZERO_COPY_TX_DRIVER == 1)
-    /* Potentially task switch as a result of the above queue write */
+
+    /* portYIELD_FROM_ISR() - if deferred Ethernet interrupt handler became unblocked because
+     * of QueueSend (i.e. it was waiting for a queue msg) and the deferred handler
+     * has a higher priority (set really high so this would happen) then
+     * the schedule should jump to deferred handler next */
     if(xWake == pdTRUE) {
         portYIELD_FROM_ISR(true);
     }
-#endif
 }

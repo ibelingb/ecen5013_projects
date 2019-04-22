@@ -187,14 +187,21 @@ struct pbuf
 #endif
 
 #ifndef NUM_RX_DESCRIPTORS
-#define NUM_RX_DESCRIPTORS      (4)
+#define NUM_RX_DESCRIPTORS      (8)
 #endif
 
 #ifndef NUM_TX_DESCRIPTORS
 #define NUM_TX_DESCRIPTORS      (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS - NUM_RX_DESCRIPTORS)
 #endif
 
-void printPhyStatus(void);
 void InitDMADescriptors(void);
+int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen);
+
+void processPhyInterrupt(void);
+void processTxInterrupt(uint32_t ulISREvents);
+void processRxInterrupt(uint32_t ulISREvents);
+
+void printPhyStatus(void);
+void printPHYIntStatus(uint32_t phyIsr1Status, uint32_t phyIsr2Status);
 
 #endif // __TIVAIF_H__

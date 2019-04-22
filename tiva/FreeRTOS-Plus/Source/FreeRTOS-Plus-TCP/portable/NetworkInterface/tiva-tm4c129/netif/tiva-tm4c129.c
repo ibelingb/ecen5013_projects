@@ -44,63 +44,18 @@
  *
  */
 
-#include "tiva_netif.h"
-#include <stddef.h>
-#include <stdint.h>
-
-//#include "lwip/opt.h"
-//#include "lwip/def.h"
-//#include "lwip/mem.h"
-//#include "lwip/pbuf.h"
-//#include "lwip/sys.h"
-//#include "lwip/err.h"
-//#include <lwip/stats.h>
-//#include <lwip/snmp.h>
-//#include "lwip/tcpip.h"
-//#include "netif/etharp.h"
-//#include "netif/ppp_oe.h"
-
-/**
- * Sanity Check:  This interface driver will NOT work if the following defines
- * are incorrect.
- *
- */
-#if (PBUF_LINK_HLEN != 16)
-#error "PBUF_LINK_HLEN must be 16 for this interface driver!"
-#endif
-#if (ETH_PAD_SIZE != 0)
-#error "ETH_PAD_SIZE must be 0 for this interface driver!"
-#endif
-
-
-
-#if 0
-#ifndef EMAC_PHY_CONFIG
-#define EMAC_PHY_CONFIG (EMAC_PHY_TYPE_INTERNAL | EMAC_PHY_INT_MDIX_EN |      \
-                         EMAC_PHY_AN_100B_T_FULL_DUPLEX)
-#endif
-#endif
-
-
-
-
-
-/**
- * Setup processing for PTP (IEEE-1588).
- *
- */
-#if LWIP_PTPD
-extern uint32_t g_ui32SysClk;
-extern uint32_t g_ui32PTPTickRate;
-extern void lwIPHostGetTime(u32_t *time_s, u32_t *time_ns);
-#endif
-
-/**
- * Stellaris DriverLib Header Files required for this interface driver.
- *
- */
+/* standard library includes */
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+/* netif includes */
+#include "tiva_netif.h"
+
+/* app includes */
+#include "my_debug.h"
+
+/* TivaWare includes */
 #include "inc/hw_emac.h"
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
@@ -108,14 +63,21 @@ extern void lwIPHostGetTime(u32_t *time_s, u32_t *time_ns);
 #include "driverlib/emac.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/sysctl.h"
+
+/* Sanity Check:  This interface driver will NOT work if the following defines
+ * are incorrect */
+#if (PBUF_LINK_HLEN != 16)
+#error "PBUF_LINK_HLEN must be 16 for this interface driver!"
+#endif
+#if (ETH_PAD_SIZE != 0)
+#error "ETH_PAD_SIZE must be 0 for this interface driver!"
+#endif
+
 /*-------------------------------------------------------------------------------------------------*/
-/**
- *  Helper struct holding a DMA descriptor and the pbuf it currently refers
- *  to.
- */
+/* Helper struct holding a DMA descriptor and the pbuf it currently refers to */
 typedef struct {
   tEMACDMADescriptor Desc;
-  struct pbuf *pBuf;
+  uint8_t *pBuf;
 } tDescriptor;
 
 typedef struct {
@@ -125,30 +87,18 @@ typedef struct {
     uint32_t ui32Write;
 } tDescriptorList;
 
-/**
- * Helper struct to hold private data used to operate your ethernet interface.
- * Keeping the ethernet address of the MAC in this struct is not necessary
- * as it is already kept in the struct netif.
- * But this is only an example, anyway...
- */
-typedef struct {
-  struct eth_addr *ethaddr;
-  /* Add whatever per-interface state that is needed here. */
-  tDescriptorList *pTxDescList;
-  tDescriptorList *pRxDescList;
-} tStellarisIF;
 /*-------------------------------------------------------------------------------------------------*/
 /**
  * Global variable for this interface's private data.  Needed to allow
  * the interrupt handlers access to this information outside of the
- * context of the lwIP netif.
+ * context of the netif.
  *
  */
+
 tDescriptor g_pTxDescriptors[NUM_TX_DESCRIPTORS];
 tDescriptor g_pRxDescriptors[NUM_RX_DESCRIPTORS];
 tDescriptorList g_TxDescList = { g_pTxDescriptors, NUM_TX_DESCRIPTORS, 0, 0 };
 tDescriptorList g_RxDescList = { g_pRxDescriptors, NUM_RX_DESCRIPTORS, 0, 0 };
-static tStellarisIF g_StellarisIFData = { 0, &g_TxDescList, &g_RxDescList };
 /*-------------------------------------------------------------------------------------------------*/
 /**
  * A macro which determines whether a pointer is within the SRAM address
@@ -159,11 +109,11 @@ static tStellarisIF g_StellarisIFData = { 0, &g_TxDescList, &g_RxDescList };
                                     ((uint32_t)(ptr) < 0x20070000))
 /*-------------------------------------------------------------------------------------------------*/
 
-static struct pbuf pRxBuffArray[NUM_RX_DESCRIPTORS];
-static struct pbuf pTxBuffArray[NUM_RX_DESCRIPTORS];
+#define RX_BUFFER_SIZE 1536
+uint8_t g_ppui8RxBuffer[NUM_RX_DESCRIPTORS][RX_BUFFER_SIZE];
 
 /*-------------------------------------------------------------------------------------------------*/
-/**
+/*
  * Initialize the transmit and receive DMA descriptor lists.
  */
 void InitDMADescriptors(void)
@@ -173,7 +123,7 @@ void InitDMADescriptors(void)
     /* Transmit list -  mark all descriptors as not owned by the hardware */
    for(ui32Loop = 0; ui32Loop < NUM_TX_DESCRIPTORS; ui32Loop++)
    {
-       g_pTxDescriptors[ui32Loop].pBuf = (struct pbuf *)0;
+       g_pTxDescriptors[ui32Loop].pBuf = (uint8_t *)0;
        g_pTxDescriptors[ui32Loop].Desc.ui32Count = 0;
        g_pTxDescriptors[ui32Loop].Desc.pvBuffer1 = 0;
        g_pTxDescriptors[ui32Loop].Desc.DES3.pLink = ((ui32Loop == (NUM_TX_DESCRIPTORS - 1)) ?
@@ -181,6 +131,7 @@ void InitDMADescriptors(void)
 
        //todo: are these flags right for simple tx?
        g_pTxDescriptors[ui32Loop].Desc.ui32CtrlStatus = DES0_TX_CTRL_INTERRUPT |
+               DES0_TX_CTRL_LAST_SEG | DES0_TX_CTRL_FIRST_SEG |
                DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_IP_ALL_CKHSUMS;
 
    }
@@ -191,15 +142,17 @@ void InitDMADescriptors(void)
     * allow packets to be received */
   for(ui32Loop = 0; ui32Loop < NUM_RX_DESCRIPTORS; ui32Loop++)
   {
-      g_pRxDescriptors[ui32Loop].pBuf = &pRxBuffArray[ui32Loop];
+      g_pRxDescriptors[ui32Loop].pBuf = &g_ppui8RxBuffer[ui32Loop][0];
       g_pRxDescriptors[ui32Loop].Desc.ui32Count = DES1_RX_CTRL_CHAINED;
 
 
       if(g_pRxDescriptors[ui32Loop].pBuf)
       {
           /* Set the DMA to write directly into the pbuf payload */
-          g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = g_pRxDescriptors[ui32Loop].pBuf->payload;
-          g_pRxDescriptors[ui32Loop].Desc.ui32Count |= (g_pRxDescriptors[ui32Loop].pBuf->len << DES1_RX_CTRL_BUFF1_SIZE_S);
+          g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = g_pRxDescriptors[ui32Loop].pBuf;
+          g_pRxDescriptors[ui32Loop].Desc.ui32Count |=  (RX_BUFFER_SIZE << DES1_RX_CTRL_BUFF1_SIZE_S);
+
+          /* set ownership to MAC (not IP stack) */
           g_pRxDescriptors[ui32Loop].Desc.ui32CtrlStatus = DES0_RX_CTRL_OWN;
       }
       else
@@ -220,88 +173,6 @@ void InitDMADescriptors(void)
   EMACTxDMADescriptorListSet(EMAC0_BASE, &g_pTxDescriptors[0].Desc);
 }
 
-
-/**
- * This function is used to check whether a passed pbuf contains only buffers
- * resident in regions of memory that the Ethernet MAC can access.  If any
- * buffers in the chain are outside a directly-DMAable section of memory,
- * the pbuf is copied to SRAM and a different pointer returned.  If all
- * buffers are safe, the pbuf reference count is incremented and the original
- * pointer returned.
- */
-#ifdef USE_LWIP_LIB
-static struct pbuf * tivaif_check_pbuf(struct pbuf *p)
-{
-
-    struct pbuf *pBuf;
-    err_t Err;
-
-    pBuf = p;
-
-#ifdef DEBUG
-    tivaif_trace_pbuf("Original:", p);
-#endif
-
-    /* Walk the list of buffers in the pbuf checking each. */
-    do
-    {
-        /* Does this pbuf's payload reside in memory that the Ethernet DMA
-         * can access?
-         */
-        if(!PTR_SAFE_FOR_EMAC_DMA(pBuf->payload))
-        {
-            /* This buffer is outside the DMA-able memory space so we need
-             * to copy the pbuf.
-             */
-            pBuf = pbuf_alloc(PBUF_RAW, p->tot_len, PBUF_POOL);
-
-            /* If we got a new pbuf... */
-            if(pBuf)
-            {
-                /* ...copy the old pbuf into the new one. */
-                Err = pbuf_copy(pBuf, p);
-
-                /* If we failed to copy the pbuf, free the newly allocated one
-                 * and make sure we return a NULL to show a problem.
-                 */
-                if(Err != ERR_OK)
-                {
-                    DRIVER_STATS_INC(TXCopyFailCount);
-                    pbuf_free(pBuf);
-                    pBuf = NULL;
-                }
-                else
-                {
-#ifdef DEBUG
-                    tivaif_trace_pbuf("Copied:", pBuf);
-#endif
-                    DRIVER_STATS_INC(TXCopyCount);
-                }
-            }
-
-            /* Reduce the reference count on the original pbuf since we're not
-             * going to hold on to it after returning from tivaif_transmit.
-             * Note that we already bumped the reference count at the top of
-             * tivaif_transmit.
-             */
-            pbuf_free(p);
-
-            /* Send back the new pbuf pointer or NULL if an error occurred. */
-            return(pBuf);
-        }
-
-        /* Move on to the next buffer in the queue */
-        pBuf = pBuf->next;
-    }
-    while(pBuf);
-
-    /**
-     * If we get here, the passed pbuf can be safely used without needing to
-     * be copied.
-     */
-    return(p);
-}
-#endif
 /**
  * This function should do the actual transmission of the packet. The packet is
  * contained in the pbuf that is passed to the function. This pbuf might be
@@ -716,227 +587,227 @@ static void tivaif_receive(struct netif *psNetif)
 
 }
 #endif
-/**
- * should be called at the beginning of the program to set up the
- * network interface. It calls the function tivaif_hwinit() to do the
- * actual setup of the hardware.
- *
- * This function should be passed as a parameter to netif_add().
- *
- * @param psNetif the lwip network interface structure for this ethernetif
- * @return ERR_OK if the loopif is initialized
- *         ERR_MEM if private data coui32dn't be allocated
- *         any other err_t on error
- */
-#ifdef USE_LWIP_LIB
-err_t tivaif_init(struct netif *psNetif)
+
+void processPhyInterrupt(void)
 {
-
-  LWIP_ASSERT("psNetif != NULL", (psNetif != NULL));
-
-#if LWIP_NETIF_HOSTNAME
-  /* Initialize interface hostname */
-  psNetif->hostname = "lwip";
-#endif /* LWIP_NETIF_HOSTNAME */
-
-  /*
-   * Initialize the snmp variables and counters inside the struct netif.
-   * The last argument should be replaced with your link speed, in units
-   * of bits per second.
-   */
-  NETIF_INIT_SNMP(psNetif, snmp_ifType_ethernet_csmacd, 1000000);
-
-  psNetif->state = &g_StellarisIFData;
-  psNetif->name[0] = IFNAME0;
-  psNetif->name[1] = IFNAME1;
-  /* We directly use etharp_output() here to save a function call.
-   * You can instead declare your own function an call etharp_output()
-   * from it if you have to do some checks before sending (e.g. if link
-   * is available...) */
-  psNetif->output = etharp_output;
-  psNetif->linkoutput = tivaif_transmit;
-
-  /* Remember our MAC address. */
-  g_StellarisIFData.ethaddr = (struct eth_addr *)&(psNetif->hwaddr[0]);
-
-  /* Initialize the hardware */
-  tivaif_hwinit(psNetif);
-
-  return ERR_OK;
-}
-#endif
-/**
- * Process interrupts from the PHY.
- *
- * should be called from the Stellaris Ethernet Interrupt Handler.  This
- * function will read packets from the Stellaris Ethernet fifo and place them
- * into a pbuf queue.  If the transmitter is idle and there is at least one packet
- * on the transmit queue, it will place it in the transmit fifo and start the
- * transmitter.
- *
- */
-#ifdef USE_LWIP_LIB
-void tivaif_process_phy_interrupt(struct netif *psNetif)
-{
-    uint16_t ui16Val, ui16Status;
-#if EEE_SUPPORT
-    uint16_t ui16EEEStatus;
-#endif
+    uint16_t phyIsr1Status, phyIsr2Status, phyStatus;
     uint32_t ui32Config, ui32Mode, ui32RxMaxFrameSize;
 
-    /* Read the PHY interrupt status.  This clears all interrupt sources.
-     * Note that we are only enabling sources in EPHY_MISR1 so we don't
-     * read EPHY_MISR2.
-     */
-    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
+    /* Read the PHY interrupt status.  This clears all interrupt sources */
+    phyIsr1Status = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
+    phyIsr2Status = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
+    printPHYIntStatus(phyIsr1Status, phyIsr2Status);
 
     /* Read the current PHY status. */
-    ui16Status = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_STS);
+    phyStatus = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_STS);
 
-    /* If EEE mode support is requested then read the value of the Link
-     * partners status
-     */
-#if EEE_SUPPORT
-    ui16EEEStatus = EMACPHYMMDRead(EMAC0_BASE, PHY_PHYS_ADDR, 0x703D);
-#endif
+    if(phyIsr1Status & EPHY_MISR1_LINKSTAT)
+     {
+         /* Is link up or down now? */
+         if(phyStatus & EPHY_STS_LINK)
+         {
+             /* Tell FreeRTOS the link is up. */
+             //TODO - hook up to FreeRTOS IP stack?
+         }
+         else {
+             /* Tell FreeRTOS the link is down */
+             //TODO - hook up to FreeRTOS IP stack?
+         }
+     }
 
-    /* Has the link status changed? */
-    if(ui16Val & EPHY_MISR1_LINKSTAT)
-    {
-        /* Is link up or down now? */
-        if(ui16Status & EPHY_STS_LINK)
-        {
-            /* Tell lwIP the link is up. */
-            //TODO - hook up to FreeRTOS IP stack?
-            //netif_set_link_up(psNetif);
-            //tcpip_callback((tcpip_callback_fn)netif_set_link_up, psNetif);
+     /* Has the speed or duplex status changed? */
+     if(phyIsr1Status & (EPHY_MISR1_SPEED | EPHY_MISR1_SPEED | EPHY_MISR1_ANC))
+     {
+         /* Get the current MAC configuration. */
+         EMACConfigGet(EMAC0_BASE, &ui32Config, &ui32Mode, &ui32RxMaxFrameSize);
 
-            /* if the link has been advertised as EEE capable then configure
-             * the MAC register for LPI timers and manually set the PHY link
-             * status bit
-             */
-#if EEE_SUPPORT
-            if(ui16EEEStatus & 0x2)
-            {
-                EMACLPIConfig(EMAC0_BASE, true, 1000, 36);
-                EMACLPILinkSet(EMAC0_BASE);
-                g_bEEELinkActive = true;
-            }
-#endif
+         /* What speed is the interface running at now?
+          */
+         if(phyStatus & EPHY_STS_SPEED) {
+             /* 10Mbps is selected */
+             ui32Config &= ~EMAC_CONFIG_100MBPS;
+         }
+         else {
+             /* 100Mbps is selected */
+             ui32Config |= EMAC_CONFIG_100MBPS;
+         }
 
-            /* In this case we drop through since we may need to reconfigure
-             * the MAC depending upon the speed and half/fui32l-duplex settings.
-             */
-        }
-        else
-        {
-            /* Tell lwIP the link is down */
-            //TODO - hook up to FreeRTOS IP stack?
-            //netif_set_link_down(psNetif);
-            //tcpip_callback((tcpip_callback_fn)netif_set_link_down, psNetif);
+         /* Are we in fui32l- or half-duplex mode? */
+         if(phyStatus & EPHY_STS_DUPLEX) {
+             /* Fui32l duplex. */
+             ui32Config |= EMAC_CONFIG_FULL_DUPLEX;
+         }
+         else {
+             /* Half duplex. */
+             ui32Config &= ~EMAC_CONFIG_FULL_DUPLEX;
+         }
 
-            /* if the link has been advertised as EEE capable then clear the
-             * MAC register LPI timers and manually clear the PHY link status
-             * bit
-             */
-#if EEE_SUPPORT
-           	g_bEEELinkActive = false;
-           	EMACLPILinkClear(EMAC0_BASE);
-           	EMACLPIConfig(EMAC0_BASE, false, 1000, 0);
-#endif
-        }
-    }
-
-    /* Has the speed or duplex status changed? */
-    if(ui16Val & (EPHY_MISR1_SPEED | EPHY_MISR1_SPEED | EPHY_MISR1_ANC))
-    {
-        /* Get the current MAC configuration. */
-        EMACConfigGet(EMAC0_BASE, &ui32Config, &ui32Mode,
-                        &ui32RxMaxFrameSize);
-
-        /* What speed is the interface running at now?
-         */
-        if(ui16Status & EPHY_STS_SPEED)
-        {
-            /* 10Mbps is selected */
-            ui32Config &= ~EMAC_CONFIG_100MBPS;
-        }
-        else
-        {
-            /* 100Mbps is selected */
-            ui32Config |= EMAC_CONFIG_100MBPS;
-        }
-
-        /* Are we in fui32l- or half-duplex mode? */
-        if(ui16Status & EPHY_STS_DUPLEX)
-        {
-            /* Fui32l duplex. */
-            ui32Config |= EMAC_CONFIG_FULL_DUPLEX;
-        }
-        else
-        {
-            /* Half duplex. */
-            ui32Config &= ~EMAC_CONFIG_FULL_DUPLEX;
-        }
-
-        /* Reconfigure the MAC */
-        EMACConfigSet(EMAC0_BASE, ui32Config, ui32Mode, ui32RxMaxFrameSize);
-    }
+         /* Reconfigure the MAC */
+         //EMACConfigSet(EMAC0_BASE, ui32Config, ui32Mode, ui32RxMaxFrameSize);
+     }
 }
-#endif
-/**
- * Process tx and rx packets at the low-level interrupt.
- *
- * should be called from the Stellaris Ethernet Interrupt Handler.  This
- * function will read packets from the Stellaris Ethernet fifo and place them
- * into a pbuf queue.  If the transmitter is idle and there is at least one packet
- * on the transmit queue, it will place it in the transmit fifo and start the
- * transmitter.
- *
- */
-#ifdef USE_LWIP_LIB
-void tivaif_interrupt(struct netif *psNetif, uint32_t ui32Status)
+void processTxInterrupt(uint32_t ulISREvents)
 {
-  tStellarisIF *tivaif;
-
-  /* setup pointer to the if state data */
-  tivaif = psNetif->state;
-
-  /* Update our debug interrupt counters. */
-  if(ui32Status & EMAC_INT_NORMAL_INT)
-  {
-      g_ui32NormalInts++;
-  }
-
-  if(ui32Status & EMAC_INT_ABNORMAL_INT)
-  {
-      g_ui32AbnormalInts++;
-  }
-
-  /* Is this an interrupt from the PHY? */
-  if(ui32Status & EMAC_INT_PHY)
-  {
-      tivaif_process_phy_interrupt(psNetif);
-  }
-
-  /* Process the transmit DMA list, freeing any buffers that have been
-   * transmitted since our last interrupt.
-   */
-  if(ui32Status & EMAC_INT_TRANSMIT)
-  {
-      tivaif_process_transmit(tivaif);
-  }
-
-  /**
-   * Process the receive DMA list and pass all successfully received packets
-   * up the stack.  We also call this function in cases where the receiver has
-   * stalled due to missing buffers since the receive function will attempt to
-   * allocate new pbufs for descriptor entries which have none.
-   */
-  if(ui32Status & (EMAC_INT_RECEIVE | EMAC_INT_RX_NO_BUFFER |
-     EMAC_INT_RX_STOPPED))
-  {
-      tivaif_receive(psNetif);
-  }
+    /* should get here, FreeRTOS NetworkOuput function
+     * sends packets, TRAP!!!
+     */
+    while(1){}
 }
-#endif
+
+void processRxInterrupt(uint32_t ulISREvents)
+{
+
+}
+
+/*-----------------------------------------------------------*/
+void printPHYIntStatus(uint32_t phyIsr1Status, uint32_t phyIsr2Status)
+{
+    INFO_PRINT("PHY ISR1 status: %d", phyIsr1Status);
+
+    if(phyIsr1Status & EPHY_MISR1_LINKSTAT) {
+        INFO_PRINT(", EPHY_MISR1_LINKSTAT");
+    }
+    if(phyIsr1Status & EPHY_MISR1_SPEED) {
+        INFO_PRINT(", EPHY_MISR1_SPEED");
+    }
+    if(phyIsr1Status & EPHY_MISR1_DUPLEXM) {
+        INFO_PRINT(", EPHY_MISR1_DUPLEXM");
+    }
+    if(phyIsr1Status & EPHY_MISR1_ANC) {
+        INFO_PRINT(", EPHY_MISR1_ANC");
+    }
+    if(phyIsr1Status & EPHY_MISR1_FCHF) {
+        INFO_PRINT(", EPHY_MISR1_FCHF");
+    }
+    if(phyIsr1Status & EPHY_MISR1_RXHF) {
+        INFO_PRINT(", EPHY_MISR1_RXHF");
+    }
+    if(phyIsr1Status & EPHY_MISR1_LINKSTATEN) {
+        INFO_PRINT(", EPHY_MISR1_LINKSTATEN");
+    }
+    if(phyIsr1Status & EPHY_MISR1_SPEEDEN) {
+        INFO_PRINT(", EPHY_MISR1_SPEEDEN");
+    }
+    if(phyIsr1Status & EPHY_MISR1_DUPLEXMEN) {
+        INFO_PRINT(", EPHY_MISR1_DUPLEXMEN");
+    }
+    if(phyIsr1Status & EPHY_MISR1_ANCEN) {
+        INFO_PRINT(", EPHY_MISR1_ANCEN");
+    }
+    if(phyIsr1Status & EPHY_MISR1_FCHFEN) {
+        INFO_PRINT(", EPHY_MISR1_FCHFEN");
+    }
+    if(phyIsr1Status & EPHY_MISR1_RXHFEN) {
+        INFO_PRINT(", EPHY_MISR1_RXHFEN");
+    }
+    INFO_PRINT("\n");
+    INFO_PRINT("PHY ISR2 status: %d", phyIsr2Status);
+
+    /* IRS2 */
+    if(phyIsr2Status & EPHY_MISR2_ANERR) {
+        INFO_PRINT(", EPHY_MISR2_ANERR");
+    }
+    if(phyIsr2Status & EPHY_MISR2_PAGERX) {
+        INFO_PRINT(", EPHY_MISR2_PAGERX");
+    }
+    if(phyIsr2Status & EPHY_MISR2_LBFIFO) {
+        INFO_PRINT(", EPHY_MISR2_LBFIFO");
+    }
+    if(phyIsr2Status & EPHY_MISR2_MDICO) {
+        INFO_PRINT(", EPHY_MISR2_MDICO");
+    }
+    if(phyIsr2Status & EPHY_MISR2_SLEEP) {
+        INFO_PRINT(", EPHY_MISR2_SLEEP");
+    }
+    if(phyIsr2Status & EPHY_MISR2_POLINT) {
+        INFO_PRINT(", EPHY_MISR2_POLINT");
+    }
+    if(phyIsr2Status & EPHY_MISR2_JABBER) {
+        INFO_PRINT(", EPHY_MISR2_JABBER");
+    }
+    if(phyIsr2Status & EPHY_MISR2_ANERREN) {
+        INFO_PRINT(", EPHY_MISR2_ANERREN");
+    }
+    if(phyIsr2Status & EPHY_MISR2_PAGERXEN) {
+        INFO_PRINT(", EPHY_MISR2_PAGERXEN");
+    }
+    if(phyIsr2Status & EPHY_MISR2_LBFIFOEN) {
+        INFO_PRINT(", EPHY_MISR2_LBFIFOEN");
+    }
+    if(phyIsr2Status & EPHY_MISR2_MDICOEN) {
+        INFO_PRINT(", EPHY_MISR2_MDICOEN");
+    }
+    if(phyIsr2Status & EPHY_MISR2_SLEEPEN) {
+        INFO_PRINT(", EPHY_MISR2_SLEEPEN");
+    }
+    if(phyIsr2Status & EPHY_MISR2_POLINTEN) {
+        INFO_PRINT(", EPHY_MISR2_POLINTEN");
+    }
+    if(phyIsr2Status & EPHY_MISR2_JABBEREN) {
+        INFO_PRINT(", EPHY_MISR2_JABBEREN");
+    }
+}
+/*---------------------------------------------------------------------------------*/
+int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen)
+{
+    /* Todo: find next available descriptor */
+    uint32_t ui32NumDescs, g_ui32TxDescIndex = 0;
+
+//    /* Walk the list until we have checked all descriptors or we reach the
+//     * write pointer or find a descriptor that the hardware is still working
+//     * on. */
+//    for(ui32NumDescs = 0; ui32NumDescs < g_TxDescList->ui32NumDescs; ui32NumDescs++)
+//    {
+//        /* Has the buffer attached to this descriptor been transmitted? */
+//        if(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].Desc.ui32CtrlStatus &
+//           DES0_TX_CTRL_OWN)
+//        {
+//            /* No - we're finished. */
+//            break;
+//        }
+//
+//        /* Does this descriptor have a buffer attached to it? */
+//        if(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf)
+//        {
+//            /* Yes - free it if it's not marked as an intermediate pbuf */
+//            if(!((uint32_t)(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf) & 1))
+//            {
+//                //TODO - hook up to FreeRTOS IP stack?
+//                //pbuf_free(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf);
+//            }
+//            g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf = NULL;
+//        }
+//        else {
+//            /* If the descriptor has no buffer, we are finished. */
+//            break;
+//        }
+//    }
+
+    /* Wait for the transmit descriptor to free up */
+    while(g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus &  DES0_TX_CTRL_OWN)
+    { /* Spin and waste time */ }
+
+    /* Move to the next descriptor */
+    g_ui32TxDescIndex++;
+    if(g_ui32TxDescIndex == NUM_TX_DESCRIPTORS) {
+        g_ui32TxDescIndex = 0;
+    }
+
+    /* Fill in the packet size and pointer, and tell the transmitter to start work */
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32Count = (uint32_t)i32BufLen;
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.pvBuffer1 = pui8Buf;
+
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus =
+    (DES0_TX_CTRL_LAST_SEG | DES0_TX_CTRL_FIRST_SEG |
+    DES0_TX_CTRL_INTERRUPT | DES0_TX_CTRL_IP_ALL_CKHSUMS |
+    DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_OWN);
+
+    /* Tell the DMA to reacquire the descriptor now that we’ve filled it in.
+     * This call is benign if the transmitter hasn’t stalled and checking
+     * the state takes longer than just issuing a poll demand so we do this
+     * for all packets */
+    EMACTxDMAPollDemand(EMAC0_BASE);
+
+    /* Return the number of bytes sent */
+    return(i32BufLen);
+}
