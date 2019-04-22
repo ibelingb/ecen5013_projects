@@ -174,7 +174,7 @@ stack will revert to using the static IP address even when ipconfigUSE_DHCP is
 set to 1 if a valid configuration cannot be obtained from a DHCP server for any
 reason.  The static configuration used is that passed into the stack by the
 FreeRTOS_IPInit() function call. */
-#define ipconfigUSE_DHCP    0
+#define ipconfigUSE_DHCP    1
 
 /* When ipconfigUSE_DHCP is set to 1, DHCP requests will be sent out at
 increasing time intervals until either a reply is received from a DHCP server
@@ -347,7 +347,7 @@ disconnecting stage will timeout after a period of non-activity. */
  * provided hook (or 'callback') function called pcApplicationHostnameHook().
  * When ipconfigDHCP_REGISTER_HOSTNAME is set to 1 the application must
  * provide a hook (callback) function pcApplicationHostnameHook() */
-#define ipconfigDHCP_REGISTER_HOSTNAME      (1)
+#define ipconfigDHCP_REGISTER_HOSTNAME      (0)
 
 #define portINLINE __inline
 

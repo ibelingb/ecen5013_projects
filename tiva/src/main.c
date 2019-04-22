@@ -93,7 +93,6 @@ int main(void)
                             SYSCTL_XTAL_25MHZ |SYSCTL_CFG_VCO_480), SYSTEM_CLOCK);
     g_sysClk = sysClock;
     initUART();
-    //InitIP();
 
     /* create status queue */
     QueueHandle_t statusQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct TaskStatusPacket));
@@ -259,11 +258,10 @@ void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifie
 {
     while(1){}
 }
-
-const char *pcApplicationHostnameHook( void )
-{
-    return "Shady-Tiva-C";
-}
+//const char *pcApplicationHostnameHook( void )
+//{
+//    return "Shady-Tiva-C";
+//}
 /*-----------------------------------------------------------------------------------*/
 
 uint32_t ulApplicationGetNextSequenceNumber( uint32_t ulSourceAddress,

@@ -180,12 +180,6 @@ void remoteTask(void *pvParameters)
             /* for development (verify queue send/recv) */
             PRINT_LOG_MSG_HEADER(&logMsg);
 
-            uint8_t cnt;
-            if((cnt++ % 4) == 0) {
-                printPhyStatus();
-            }
-
-
             /* TODO - send log msgs to Control Node */
         }
         else {
@@ -207,16 +201,16 @@ void InitIP(void)
     /* Define the network addressing.  These parameters will be used if either
     ipconfigUSE_DHCP is 0 or if ipconfigUSE_DHCP is 1 but DHCP auto configuration
     failed. */
-    static const uint8_t ucIPAddress[ 4 ] = { 192, 168, 56, 200 };
+    static const uint8_t ucIPAddress[ 4 ] = { 10, 0, 0, 202 };
     static const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
-    static const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 56, 0 };
+    static const uint8_t ucGatewayAddress[ 4 ] = { 10, 0, 0, 1 };
 
     /* The following is the address of an OpenDNS server. */
-    static const uint8_t ucDNSServerAddress[ 4 ] = { 208, 67, 222, 222 };
+    static const uint8_t ucDNSServerAddress[ 4 ] = { 75, 75, 75, 75 };
 
     /* The MAC address array is not declared const as the MAC address will normally
     be read from an EEPROM and not hard coded (in real deployed applications).*/
-    static uint8_t ucMACAddress[ 6 ] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
+    static uint8_t ucMACAddress[ 6 ] = { 0x00, 0x1a, 0xb6, 0x03, 0x59, 0x89 };
 
     if(FreeRTOS_IPInit(ucIPAddress, ucNetMask, ucGatewayAddress,
                        ucDNSServerAddress, ucMACAddress) != pdPASS) {

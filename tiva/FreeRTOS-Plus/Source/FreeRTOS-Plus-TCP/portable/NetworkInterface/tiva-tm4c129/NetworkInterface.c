@@ -190,23 +190,6 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     uint8_t pui8MAC[6];
     uint16_t ui16Val;
 
-    /* Get the MAC address from the user registers */
-    FlashUserGet(&ui32User0, &ui32User1);
-    if((ui32User0 == 0xffffffff) || (ui32User1 == 0xffffffff))
-    {
-        return pdFALSE;
-    }
-
-    /* Convert the 24/24 split MAC address from NV ram into a 32/16 split MAC
-     * address needed to program the hardware registers, then program the MAC
-     * address into the Ethernet Controller registers */
-    pui8MAC[0] = ((ui32User0 >>  0) & 0xff);
-    pui8MAC[1] = ((ui32User0 >>  8) & 0xff);
-    pui8MAC[2] = ((ui32User0 >> 16) & 0xff);
-    pui8MAC[3] = ((ui32User1 >>  0) & 0xff);
-    pui8MAC[4] = ((ui32User1 >>  8) & 0xff);
-    pui8MAC[5] = ((ui32User1 >> 16) & 0xff);
-
     /* Lower the priority of the Ethernet interrupt handler.  This is required
      * so that the interrupt handler can safely call the interrupt-safe
      * FreeRTOS functions (specifically to send messages to the queue) */
@@ -262,6 +245,23 @@ BaseType_t InitMACPHY(uint32_t sysClk)
                                            EMAC_MODE_TX_THRESHOLD_64_BYTES |
                                            EMAC_MODE_RX_THRESHOLD_64_BYTES),
                                                0);
+
+    /* Get the MAC address from the user registers */
+    FlashUserGet(&ui32User0, &ui32User1);
+    if((ui32User0 == 0xffffffff) || (ui32User1 == 0xffffffff))
+    {
+        return pdFALSE;
+    }
+
+    /* Convert the 24/24 split MAC address from NV ram into a 32/16 split MAC
+     * address needed to program the hardware registers, then program the MAC
+     * address into the Ethernet Controller registers */
+    pui8MAC[0] = ((ui32User0 >>  0) & 0xff);
+    pui8MAC[1] = ((ui32User0 >>  8) & 0xff);
+    pui8MAC[2] = ((ui32User0 >> 16) & 0xff);
+    pui8MAC[3] = ((ui32User1 >>  0) & 0xff);
+    pui8MAC[4] = ((ui32User1 >>  8) & 0xff);
+    pui8MAC[5] = ((ui32User1 >> 16) & 0xff);
 
     /* Program the hardware with its MAC address (for filtering) */
     EMACAddrSet(EMAC0_BASE, 0, (uint8_t *)pui8MAC);
