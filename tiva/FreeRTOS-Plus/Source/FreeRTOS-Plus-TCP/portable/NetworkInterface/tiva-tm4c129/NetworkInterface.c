@@ -172,7 +172,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
     /* Call the standard trace macro to log the send event. */
     iptraceNETWORK_INTERFACE_TRANSMIT();
 
-    if( bReleaseAfterSend != pdFALSE )
+    if( bReleaseAfterSend == pdTRUE )
     {
         /* It is assumed SendData() copies the data out of the FreeRTOS+TCP Ethernet
         buffer.  The Ethernet buffer is therefore no longer needed, and must be
@@ -319,8 +319,6 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     /* Tell the PHY to start an auto-negotiation cycle. */
     EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_ANEN |
                  EPHY_BMCR_RESTARTAN));
-
-    printPhyStatus();
     return pdTRUE;
 }
 

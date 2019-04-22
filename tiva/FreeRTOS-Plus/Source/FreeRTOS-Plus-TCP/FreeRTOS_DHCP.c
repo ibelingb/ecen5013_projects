@@ -405,6 +405,8 @@ BaseType_t xGivingUp = pdFALSE;
 			{
 				FreeRTOS_debug_printf( ( "vDHCPProcess: acked %lxip\n", FreeRTOS_ntohl( xDHCPData.ulOfferedIPAddress ) ) );
 
+				configASSERT(ipLOCAL_IP_ADDRESS_POINTER != NULL);
+
 				/* DHCP completed.  The IP address can now be used, and the
 				timer set to the lease timeout time. */
 				*ipLOCAL_IP_ADDRESS_POINTER = xDHCPData.ulOfferedIPAddress;
@@ -810,13 +812,14 @@ const uint32_t ulMandatoryOptions = 2ul; /* DHCP server address, and the correct
 				{
 					/* HT:endian: used to be network order */
 					xDHCPData.ulOfferedIPAddress = pxDHCPMessage->ulYourIPAddress_yiaddr;
-					FreeRTOS_printf( ( "vDHCPProcess: offer %lxip\n", FreeRTOS_ntohl( xDHCPData.ulOfferedIPAddress ) ) );
+					FreeRTOS_printf( ( "vDHCPProcess: offer %d\n", FreeRTOS_ntohl( xDHCPData.ulOfferedIPAddress ) ) );
 					xReturn = pdPASS;
 				}
 			}
 		}
-
+		FreeRTOS_printf(("releasing buffer\n"));
 		FreeRTOS_ReleaseUDPPayloadBuffer( ( void * ) pucUDPPayload );
+        FreeRTOS_printf(("released buffer\n"));
 	}
 
 	return xReturn;

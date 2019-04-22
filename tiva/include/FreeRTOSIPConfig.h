@@ -338,7 +338,7 @@ disconnecting stage will timeout after a period of non-activity. */
 #define ipconfigTCP_KEEP_ALIVE_INTERVAL     (20) /* in seconds */
 
 /* this does something to FreRTOS */
-#define ipconfigZERO_COPY_TX_DRIVER         (0)
+#define ipconfigZERO_COPY_TX_DRIVER         (1)
 
 /* Often DHCP servers can show the names of devices that have leased
  * IP addresses. When ipconfigDHCP_REGISTER_HOSTNAME is set to 1 the

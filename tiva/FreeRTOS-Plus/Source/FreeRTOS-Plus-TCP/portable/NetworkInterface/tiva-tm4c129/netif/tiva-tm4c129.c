@@ -729,8 +729,8 @@ void processRxInterrupt(uint32_t ulISREvents)
 
                 /* A pointer to the descriptor is stored at the front of the buffer, so
                 swap these too. */
-//                *( ( NetworkBufferDescriptor_t ** )
-//                   ( pxDescriptor->pucEthernetBuffer - ipBUFFER_PADDING ) ) = pxDescriptor;
+                *( ( NetworkBufferDescriptor_t ** )
+                   ( pxDescriptor->pucEthernetBuffer - ipBUFFER_PADDING ) ) = pxDescriptor;
 
 //                *( ( NetworkBufferDescriptor_t ** )
 //                   ( pxDMARxDescriptor->pvBuffer1 - ipBUFFER_PADDING ) ) = pxDMARxDescriptor;
