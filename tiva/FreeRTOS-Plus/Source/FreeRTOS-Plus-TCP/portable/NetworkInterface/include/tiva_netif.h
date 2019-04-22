@@ -172,23 +172,29 @@ struct pbuf
                                          */
 };
 
-/** must be the maximum of all used hardware address lengths
-    across all types of interfaces in use */
-#define NETIF_MAX_HWADDR_LEN 6U
-
 /*------------------------------------------------------------------------------------------------*/
 
-/**
- * If necessary, set the defaui32t number of transmit and receive DMA descriptors
- * used by the Ethernet MAC.
- *
- */
+#ifndef ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
+    #error please define configNUM_RX_DESCRIPTORS in your FreeRTOSIPConfig.h
+#endif
+
+#ifndef ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
+    #error please define configNUM_TX_DESCRIPTORS in your FreeRTOSIPConfig.h
+#endif
+
+#if (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS < 8)
+    #error n0t enough desciptors
+#endif
+
 #ifndef NUM_RX_DESCRIPTORS
-#define NUM_RX_DESCRIPTORS ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
+#define NUM_RX_DESCRIPTORS      (4)
 #endif
 
 #ifndef NUM_TX_DESCRIPTORS
-#define NUM_TX_DESCRIPTORS ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
+#define NUM_TX_DESCRIPTORS      (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS - NUM_RX_DESCRIPTORS)
 #endif
+
+void printPhyStatus(void);
+void InitDMADescriptors(void);
 
 #endif // __TIVAIF_H__

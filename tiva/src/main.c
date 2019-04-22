@@ -223,35 +223,12 @@ int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process)
 events are only received if implemented in the MAC driver. */
 void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
 {
-uint32_t ulIPAddress, ulNetMask, ulGatewayAddress, ulDNSServerAddress;
-char cBuffer[ 16 ];
-static BaseType_t xTasksAlreadyCreated = pdFALSE;
+    uint32_t ulIPAddress, ulNetMask, ulGatewayAddress, ulDNSServerAddress;
+    char cBuffer[16];
 
     /* If the network has just come up...*/
     if( eNetworkEvent == eNetworkUp )
     {
-        /* Create the tasks that use the IP stack if they have not already been
-        created. */
-        if( xTasksAlreadyCreated == pdFALSE )
-        {
-            /* See the comments above the definitions of these pre-processor
-            macros at the top of this file for a description of the individual
-            demo tasks. */
-            #if( mainCREATE_TCP_ECHO_TASKS_SINGLE == 1 )
-            {
-                vStartTCPEchoClientTasks_SingleTasks( mainECHO_CLIENT_TASK_STACK_SIZE, mainECHO_CLIENT_TASK_PRIORITY );
-            }
-            #endif /* mainCREATE_TCP_ECHO_TASKS_SINGLE */
-
-            #if( mainCREATE_TCP_ECHO_SERVER_TASK == 1 )
-            {
-                vStartSimpleTCPServerTasks( mainECHO_SERVER_TASK_STACK_SIZE, mainECHO_SERVER_TASK_PRIORITY );
-            }
-            #endif
-
-            xTasksAlreadyCreated = pdTRUE;
-        }
-
         /* Print out the network configuration, which may have come from a DHCP
         server. */
         FreeRTOS_GetAddressConfiguration( &ulIPAddress, &ulNetMask, &ulGatewayAddress, &ulDNSServerAddress );

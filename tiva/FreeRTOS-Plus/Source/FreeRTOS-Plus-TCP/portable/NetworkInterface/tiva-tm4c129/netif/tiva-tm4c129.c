@@ -108,50 +108,7 @@ extern void lwIPHostGetTime(u32_t *time_s, u32_t *time_ns);
 #include "driverlib/emac.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/sysctl.h"
-
-/* Define those to better describe your network interface. */
-#define IFNAME0 't'
-#define IFNAME1 'i'
-
-
-/**
- * A structure used to keep track of driver state and error counts.
- */
-typedef struct {
-    uint32_t ui32TXCount;
-    uint32_t ui32TXCopyCount;
-    uint32_t ui32TXCopyFailCount;
-    uint32_t ui32TXNoDescCount;
-    uint32_t ui32TXBufQueuedCount;
-    uint32_t ui32TXBufFreedCount;
-    uint32_t ui32RXBufReadCount;
-    uint32_t ui32RXPacketReadCount;
-    uint32_t ui32RXPacketErrCount;
-    uint32_t ui32RXPacketCBErrCount;
-    uint32_t ui32RXNoBufCount;
-}
-tDriverStats;
-
-tDriverStats g_sDriverStats;
-
-#ifdef DEBUG
-/**
- * Note: This rather weird construction where we invoke the macro with the
- * name of the field minus its Hungarian prefix is a workaround for a problem
- * experienced with GCC which does not like concatenating tokens after an
- * operator, specifically '.' or '->', in a macro.
- */
-#define DRIVER_STATS_INC(x) do{ g_sDriverStats.ui32##x++; } while(0)
-#define DRIVER_STATS_DEC(x) do{ g_sDriverStats.ui32##x--; } while(0)
-#define DRIVER_STATS_ADD(x, inc) do{ g_sDriverStats.ui32##x += (inc); } while(0)
-#define DRIVER_STATS_SUB(x, dec) do{ g_sDriverStats.ui32##x -= (dec); } while(0)
-#else
-#define DRIVER_STATS_INC(x)
-#define DRIVER_STATS_DEC(x)
-#define DRIVER_STATS_ADD(x, inc)
-#define DRIVER_STATS_SUB(x, dec)
-#endif
-
+/*-------------------------------------------------------------------------------------------------*/
 /**
  *  Helper struct holding a DMA descriptor and the pbuf it currently refers
  *  to.
@@ -180,7 +137,7 @@ typedef struct {
   tDescriptorList *pTxDescList;
   tDescriptorList *pRxDescList;
 } tStellarisIF;
-
+/*-------------------------------------------------------------------------------------------------*/
 /**
  * Global variable for this interface's private data.  Needed to allow
  * the interrupt handlers access to this information outside of the
@@ -192,20 +149,7 @@ tDescriptor g_pRxDescriptors[NUM_RX_DESCRIPTORS];
 tDescriptorList g_TxDescList = { g_pTxDescriptors, NUM_TX_DESCRIPTORS, 0, 0 };
 tDescriptorList g_RxDescList = { g_pRxDescriptors, NUM_RX_DESCRIPTORS, 0, 0 };
 static tStellarisIF g_StellarisIFData = { 0, &g_TxDescList, &g_RxDescList };
-
-/**
- * Interrupt counters (for debug purposes).
- */
-volatile uint32_t g_ui32NormalInts;
-volatile uint32_t g_ui32AbnormalInts;
-
-/**
- * Status flag for EEE link established
- */
-#if EEE_SUPPORT
-volatile bool g_bEEELinkActive;
-#endif
-
+/*-------------------------------------------------------------------------------------------------*/
 /**
  * A macro which determines whether a pointer is within the SRAM address
  * space and, hence, points to a buffer that the Ethernet MAC can directly
@@ -213,11 +157,16 @@ volatile bool g_bEEELinkActive;
  */
 #define PTR_SAFE_FOR_EMAC_DMA(ptr) (((uint32_t)(ptr) >= 0x2000000) &&   \
                                     ((uint32_t)(ptr) < 0x20070000))
+/*-------------------------------------------------------------------------------------------------*/
+
+static struct pbuf pRxBuffArray[NUM_RX_DESCRIPTORS];
+static struct pbuf pTxBuffArray[NUM_RX_DESCRIPTORS];
+
+/*-------------------------------------------------------------------------------------------------*/
 /**
  * Initialize the transmit and receive DMA descriptor lists.
  */
-void
-InitDMADescriptors(void)
+void InitDMADescriptors(void)
 {
     uint32_t ui32Loop;
 
@@ -229,35 +178,33 @@ InitDMADescriptors(void)
        g_pTxDescriptors[ui32Loop].Desc.pvBuffer1 = 0;
        g_pTxDescriptors[ui32Loop].Desc.DES3.pLink = ((ui32Loop == (NUM_TX_DESCRIPTORS - 1)) ?
                &g_pTxDescriptors[0].Desc : &g_pTxDescriptors[ui32Loop + 1].Desc);
+
+       //todo: are these flags right for simple tx?
        g_pTxDescriptors[ui32Loop].Desc.ui32CtrlStatus = DES0_TX_CTRL_INTERRUPT |
                DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_IP_ALL_CKHSUMS;
 
    }
-
    g_TxDescList.ui32Read = 0;
    g_TxDescList.ui32Write = 0;
 
-
    /* Receive list -  tag each descriptor with a pbuf and set all fields to
-    * allow packets to be received.
-    */
+    * allow packets to be received */
   for(ui32Loop = 0; ui32Loop < NUM_RX_DESCRIPTORS; ui32Loop++)
   {
-      /* TODO: get rid of lwip pbuf_alloc */
-      g_pRxDescriptors[ui32Loop].pBuf = 0;//todo: pbuf_alloc(PBUF_RAW, PBUF_POOL_BUFSIZE, PBUF_POOL);
+      g_pRxDescriptors[ui32Loop].pBuf = &pRxBuffArray[ui32Loop];
       g_pRxDescriptors[ui32Loop].Desc.ui32Count = DES1_RX_CTRL_CHAINED;
 
 
       if(g_pRxDescriptors[ui32Loop].pBuf)
       {
-          /* Set the DMA to write directly into the pbuf payload. */
+          /* Set the DMA to write directly into the pbuf payload */
           g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = g_pRxDescriptors[ui32Loop].pBuf->payload;
           g_pRxDescriptors[ui32Loop].Desc.ui32Count |= (g_pRxDescriptors[ui32Loop].pBuf->len << DES1_RX_CTRL_BUFF1_SIZE_S);
           g_pRxDescriptors[ui32Loop].Desc.ui32CtrlStatus = DES0_RX_CTRL_OWN;
       }
       else
       {
-          /* No pbuf available so leave the buffer pointer empty. */
+          /* No pbuf available so leave the buffer pointer empty */
           g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = 0;
           g_pRxDescriptors[ui32Loop].Desc.ui32CtrlStatus = 0;
       }
@@ -273,77 +220,7 @@ InitDMADescriptors(void)
   EMACTxDMADescriptorListSet(EMAC0_BASE, &g_pTxDescriptors[0].Desc);
 }
 
-/**
- * In this function, the hardware should be initialized.
- * Called from tivaif_init().
- *
- * @param netif the already initialized lwip network interface structure
- *        for this ethernetif
- */
-#ifdef USE_LWIP_LIB
-static void tivaif_hwinit(struct netif *psNetif)
-{
-  uint16_t ui16Val;
 
-  /* Set MAC hardware address length */
-  psNetif->hwaddr_len = ETHARP_HWADDR_LEN;
-
-  /* Set MAC hardware address */
-  EMACAddrGet(EMAC0_BASE, 0, &(psNetif->hwaddr[0]));
-
-  /* Maximum transfer unit */
-  psNetif->mtu = 1500;
-
-  /* Device capabilities */
-  psNetif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
-
-  /* Initialize the DMA descriptors. */
-  InitDMADescriptors();
-
-  /* Clear any stray PHY interrupts that may be set. */
-  ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
-  ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
-
-  /* Configure and enable the link status change interrupt in the PHY. */
-  ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR);
-  ui16Val |= (EPHY_SCR_INTEN_EXT | EPHY_SCR_INTOE_EXT);
-  EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR, ui16Val);
-  EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1, (EPHY_MISR1_LINKSTATEN |
-               EPHY_MISR1_SPEEDEN | EPHY_MISR1_DUPLEXMEN | EPHY_MISR1_ANCEN));
-
-  /* Read the PHY interrupt status to clear any stray events. */
-  ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
-
-  /**
-   * Set MAC filtering options.  We receive all broadcast and mui32ticast
-   * packets along with those addressed specifically for us.
-   */
-  EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_HASH_AND_PERFECT |
-                     EMAC_FRMFILTER_PASS_MULTICAST));
-
-  /* Clear any pending MAC interrupts. */
-  EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
-
-  /* Enable the Ethernet MAC transmitter and receiver. */
-  EMACTxEnable(EMAC0_BASE);
-  EMACRxEnable(EMAC0_BASE);
-
-  /* Enable the Ethernet RX and TX interrupt source. */
-  EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-                EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
-                EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
-
-  /* Enable the Ethernet interrupt. */
-  //todo: IntEnable(INT_EMAC0);
-
-  /* Enable all processor interrupts. */
-  //todo: IntMasterEnable();
-
-  /* Tell the PHY to start an auto-negotiation cycle. */
-  EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_ANEN |
-               EPHY_BMCR_RESTARTAN));
-}
-#endif
 /**
  * This function is used to check whether a passed pbuf contains only buffers
  * resident in regions of memory that the Ethernet MAC can access.  If any
