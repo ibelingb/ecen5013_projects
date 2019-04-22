@@ -328,8 +328,9 @@ disconnecting stage will timeout after a period of non-activity. */
 #define ipconfigTCP_HANG_PROTECTION_TIME    ( 30 )
 
 /* Include support for TCP keep-alive messages. */
-#define ipconfigTCP_KEEP_ALIVE              ( 1 )
-#define ipconfigTCP_KEEP_ALIVE_INTERVAL     ( 20 ) /* in seconds */
+#define ipconfigTCP_KEEP_ALIVE              (1)
+#define ipconfigTCP_KEEP_ALIVE_INTERVAL     (20) /* in seconds */
+#define ipconfigZERO_COPY_TX_DRIVER         (1)
 
 #define portINLINE __inline
 

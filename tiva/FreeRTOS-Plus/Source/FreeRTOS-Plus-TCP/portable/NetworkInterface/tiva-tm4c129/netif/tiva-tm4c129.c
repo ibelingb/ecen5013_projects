@@ -55,6 +55,13 @@
 /* app includes */
 #include "my_debug.h"
 
+/* FreeRTOS includes */
+#include "FreeRTOS.h"
+#include "FreeRTOS_Sockets.h"
+#include "FreeRTOS_IP.h"
+#include "FreeRTOS_IP_Private.h"
+#include "NetworkBufferManagement.h"
+
 /* TivaWare includes */
 #include "inc/hw_emac.h"
 #include "inc/hw_ints.h"
@@ -100,6 +107,8 @@ tDescriptor g_pRxDescriptors[NUM_RX_DESCRIPTORS];
 tDescriptorList g_TxDescList = { g_pTxDescriptors, NUM_TX_DESCRIPTORS, 0, 0 };
 tDescriptorList g_RxDescList = { g_pRxDescriptors, NUM_RX_DESCRIPTORS, 0, 0 };
 /*-------------------------------------------------------------------------------------------------*/
+/* MACROS */
+
 /**
  * A macro which determines whether a pointer is within the SRAM address
  * space and, hence, points to a buffer that the Ethernet MAC can directly
@@ -107,15 +116,16 @@ tDescriptorList g_RxDescList = { g_pRxDescriptors, NUM_RX_DESCRIPTORS, 0, 0 };
  */
 #define PTR_SAFE_FOR_EMAC_DMA(ptr) (((uint32_t)(ptr) >= 0x2000000) &&   \
                                     ((uint32_t)(ptr) < 0x20070000))
-/*-------------------------------------------------------------------------------------------------*/
-
 #define RX_BUFFER_SIZE 1536
+/*-------------------------------------------------------------------------------------------------*/
+/* variables */
 uint8_t g_ppui8RxBuffer[NUM_RX_DESCRIPTORS][RX_BUFFER_SIZE];
+uint32_t g_ui32RxDescIndex;
+uint32_t g_ui32TxDescIndex;
+
+
 
 /*-------------------------------------------------------------------------------------------------*/
-/*
- * Initialize the transmit and receive DMA descriptor lists.
- */
 void InitDMADescriptors(void)
 {
     uint32_t ui32Loop;
@@ -171,6 +181,9 @@ void InitDMADescriptors(void)
   /* Set the descriptor pointers in the hardware */
   EMACRxDMADescriptorListSet(EMAC0_BASE, &g_pRxDescriptors[0].Desc);
   EMACTxDMADescriptorListSet(EMAC0_BASE, &g_pTxDescriptors[0].Desc);
+
+  g_ui32RxDescIndex = 0;
+  g_ui32TxDescIndex = NUM_TX_DESCRIPTORS - 1;
 }
 
 /**
@@ -588,6 +601,7 @@ static void tivaif_receive(struct netif *psNetif)
 }
 #endif
 
+/*---------------------------------------------------------------------------------*/
 void processPhyInterrupt(void)
 {
     uint16_t phyIsr1Status, phyIsr2Status, phyStatus;
@@ -646,17 +660,183 @@ void processPhyInterrupt(void)
          //EMACConfigSet(EMAC0_BASE, ui32Config, ui32Mode, ui32RxMaxFrameSize);
      }
 }
+
+/*---------------------------------------------------------------------------------*/
 void processTxInterrupt(uint32_t ulISREvents)
 {
     /* should get here, FreeRTOS NetworkOuput function
      * sends packets, TRAP!!!
      */
-    while(1){}
+    while(0){}
 }
 
+/*---------------------------------------------------------------------------------*/
 void processRxInterrupt(uint32_t ulISREvents)
 {
+    int32_t i32FrameLen;
+    NetworkBufferDescriptor_t *pxDescriptor;
+    uint8_t *pucTemp;
+    IPStackEvent_t xRxEvent;
+    tEMACDMADescriptor *pxDMARxDescriptor = &g_pRxDescriptors[g_ui32RxDescIndex].Desc;
 
+    /* By default, we assume we got a bad frame */
+    i32FrameLen = 0;
+
+    /* Make sure that we own the receive descriptor */
+    if(!(pxDMARxDescriptor->ui32CtrlStatus & DES0_RX_CTRL_OWN)) {
+
+        /* We own the receive descriptor so check to see if it contains a valid
+        // frame */
+        if(!(pxDMARxDescriptor->ui32CtrlStatus & DES0_RX_STAT_ERR))
+        {
+            /* We have a valid frame. First check that the "last descriptor"
+             * flag is set. We sized the receive buffer such that it can
+             * always hold a valid frame so this flag should never be clear at
+             * this point but... */
+            if(pxDMARxDescriptor->ui32CtrlStatus & DES0_RX_STAT_LAST_DESC)
+            {
+                /* What size is the received frame? */
+                i32FrameLen =
+                ((pxDMARxDescriptor->ui32CtrlStatus & DES0_RX_STAT_FRAME_LENGTH_M) >>
+                DES0_RX_STAT_FRAME_LENGTH_S);
+
+                /* Pass the received buffer up to the application to handle */
+
+                /*------------------------------------------------------------------------------------*/
+                /* Stuff in IP net frame */
+                /*------------------------------------------------------------------------------------*/
+#if(1)
+                /* Allocate a new network buffer descriptor that references an Ethernet
+                frame large enough to hold the maximum network packet size (as defined
+                in the FreeRTOSIPConfig.h header file). */
+                pxDescriptor = pxGetNetworkBufferWithDescriptor( ipTOTAL_ETHERNET_FRAME_SIZE, 0 );
+
+                /* Copy the pointer to the newly allocated Ethernet frame to a temporary
+                variable. */
+                pucTemp = pxDescriptor->pucEthernetBuffer;
+
+                /* This example assumes that the DMADescriptor_t type has a member
+                called pucEthernetBuffer that points to the Ethernet buffer containing
+                the received data, and a member called xDataLength that holds the length
+                of the received data.  Update the newly allocated network buffer descriptor
+                to point to the Ethernet buffer that contains the received data. */
+                pxDescriptor->pucEthernetBuffer = pxDMARxDescriptor->pvBuffer1;
+                pxDescriptor->xDataLength = i32FrameLen;
+
+                /* Update the Ethernet Rx DMA descriptor to point to the newly allocated
+                Ethernet buffer. */
+                pxDMARxDescriptor->pvBuffer1 = pucTemp;
+
+                /* A pointer to the descriptor is stored at the front of the buffer, so
+                swap these too. */
+//                *( ( NetworkBufferDescriptor_t ** )
+//                   ( pxDescriptor->pucEthernetBuffer - ipBUFFER_PADDING ) ) = pxDescriptor;
+
+//                *( ( NetworkBufferDescriptor_t ** )
+//                   ( pxDMARxDescriptor->pvBuffer1 - ipBUFFER_PADDING ) ) = pxDMARxDescriptor;
+
+                  /* The event about to be sent to the TCP/IP is an Rx event. */
+                  xRxEvent.eEventType = eNetworkRxEvent;
+
+                  /* pvData is used to point to the network buffer descriptor that
+                  references the received data. */
+                  xRxEvent.pvData = (void *)pxDescriptor;
+
+                  /* Send the data to the TCP/IP stack. */
+                  if( xSendEventStructToIPTask( &xRxEvent, 0 ) == pdFALSE ) {
+                        /* The buffer could not be sent to the IP task so the buffer
+                        must be released. */
+                        vReleaseNetworkBufferAndDescriptor(pxDescriptor);
+
+                        /* Make a call to the standard trace macro to log the
+                        occurrence. */
+                        iptraceETHERNET_RX_EVENT_LOST();
+                  }
+                  else {
+                        /* The message was successfully sent to the TCP/IP stack.
+                        Call the standard trace macro to log the occurrence. */
+                        iptraceNETWORK_INTERFACE_RECEIVE();
+                  }
+#endif
+            }
+        }
+
+
+        /* Now that we are finished dealing with this descriptor, hand
+         * it back to the hardware. Note that we assume
+         * ApplicationProcessFrame() is finished with the buffer at this point
+         * so it is safe to reuse */
+        g_pRxDescriptors[g_ui32RxDescIndex].Desc.ui32CtrlStatus = DES0_RX_CTRL_OWN;
+
+        /* Move on to the next descriptor in the chain */
+        g_ui32RxDescIndex++;
+        if(g_ui32RxDescIndex == NUM_RX_DESCRIPTORS) {
+            g_ui32RxDescIndex = 0;
+        }
+    }
+}
+
+/*---------------------------------------------------------------------------------*/
+int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen)
+{
+    /* Todo: find next available descriptor */
+//    /* Walk the list until we have checked all descriptors or we reach the
+//     * write pointer or find a descriptor that the hardware is still working
+//     * on. */
+//    for(ui32NumDescs = 0; ui32NumDescs < g_TxDescList->ui32NumDescs; ui32NumDescs++)
+//    {
+//        /* Has the buffer attached to this descriptor been transmitted? */
+//        if(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].Desc.ui32CtrlStatus &
+//           DES0_TX_CTRL_OWN)
+//        {
+//            /* No - we're finished. */
+//            break;
+//        }
+//
+//        /* Does this descriptor have a buffer attached to it? */
+//        if(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf)
+//        {
+//            /* Yes - free it if it's not marked as an intermediate pbuf */
+//            if(!((uint32_t)(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf) & 1))
+//            {
+//                //TODO - hook up to FreeRTOS IP stack?
+//                //pbuf_free(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf);
+//            }
+//            g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf = NULL;
+//        }
+//        else {
+//            /* If the descriptor has no buffer, we are finished. */
+//            break;
+//        }
+//    }
+
+    /* Wait for the transmit descriptor to free up */
+    while(g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus &  DES0_TX_CTRL_OWN)
+    { /* Spin and waste time */ }
+
+    /* Move to the next descriptor */
+    g_ui32TxDescIndex++;
+    if(g_ui32TxDescIndex == NUM_TX_DESCRIPTORS) {
+        g_ui32TxDescIndex = 0;
+    }
+
+    /* Fill in the packet size and pointer, and tell the transmitter to start work */
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32Count = (uint32_t)i32BufLen;
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.pvBuffer1 = pui8Buf;
+
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus =
+    (DES0_TX_CTRL_LAST_SEG | DES0_TX_CTRL_FIRST_SEG |
+    DES0_TX_CTRL_INTERRUPT | DES0_TX_CTRL_IP_ALL_CKHSUMS |
+    DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_OWN);
+
+    /* Tell the DMA to reacquire the descriptor now that we’ve filled it in.
+     * This call is benign if the transmitter hasn’t stalled and checking
+     * the state takes longer than just issuing a poll demand so we do this
+     * for all packets */
+    EMACTxDMAPollDemand(EMAC0_BASE);
+
+    /* Return the number of bytes sent */
+    return(i32BufLen);
 }
 
 /*-----------------------------------------------------------*/
@@ -746,68 +926,4 @@ void printPHYIntStatus(uint32_t phyIsr1Status, uint32_t phyIsr2Status)
     if(phyIsr2Status & EPHY_MISR2_JABBEREN) {
         INFO_PRINT(", EPHY_MISR2_JABBEREN");
     }
-}
-/*---------------------------------------------------------------------------------*/
-int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen)
-{
-    /* Todo: find next available descriptor */
-    uint32_t ui32NumDescs, g_ui32TxDescIndex = 0;
-
-//    /* Walk the list until we have checked all descriptors or we reach the
-//     * write pointer or find a descriptor that the hardware is still working
-//     * on. */
-//    for(ui32NumDescs = 0; ui32NumDescs < g_TxDescList->ui32NumDescs; ui32NumDescs++)
-//    {
-//        /* Has the buffer attached to this descriptor been transmitted? */
-//        if(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].Desc.ui32CtrlStatus &
-//           DES0_TX_CTRL_OWN)
-//        {
-//            /* No - we're finished. */
-//            break;
-//        }
-//
-//        /* Does this descriptor have a buffer attached to it? */
-//        if(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf)
-//        {
-//            /* Yes - free it if it's not marked as an intermediate pbuf */
-//            if(!((uint32_t)(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf) & 1))
-//            {
-//                //TODO - hook up to FreeRTOS IP stack?
-//                //pbuf_free(g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf);
-//            }
-//            g_TxDescList->pDescriptors[g_TxDescList->ui32Read].pBuf = NULL;
-//        }
-//        else {
-//            /* If the descriptor has no buffer, we are finished. */
-//            break;
-//        }
-//    }
-
-    /* Wait for the transmit descriptor to free up */
-    while(g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus &  DES0_TX_CTRL_OWN)
-    { /* Spin and waste time */ }
-
-    /* Move to the next descriptor */
-    g_ui32TxDescIndex++;
-    if(g_ui32TxDescIndex == NUM_TX_DESCRIPTORS) {
-        g_ui32TxDescIndex = 0;
-    }
-
-    /* Fill in the packet size and pointer, and tell the transmitter to start work */
-    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32Count = (uint32_t)i32BufLen;
-    g_pTxDescriptors[g_ui32TxDescIndex].Desc.pvBuffer1 = pui8Buf;
-
-    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus =
-    (DES0_TX_CTRL_LAST_SEG | DES0_TX_CTRL_FIRST_SEG |
-    DES0_TX_CTRL_INTERRUPT | DES0_TX_CTRL_IP_ALL_CKHSUMS |
-    DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_OWN);
-
-    /* Tell the DMA to reacquire the descriptor now that we’ve filled it in.
-     * This call is benign if the transmitter hasn’t stalled and checking
-     * the state takes longer than just issuing a poll demand so we do this
-     * for all packets */
-    EMACTxDMAPollDemand(EMAC0_BASE);
-
-    /* Return the number of bytes sent */
-    return(i32BufLen);
 }
