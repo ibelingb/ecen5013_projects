@@ -245,6 +245,25 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
         INFO_PRINT("DNS Server Address: %s\r\n\r\n\r\n", cBuffer);
     }
 }
+
+/*-----------------------------------------------------------------------------------*/
+void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char *pcTaskName)
+{
+    while(1){}
+}
+void vApplicationMallocFailedHook( void )
+{
+    while(1){}
+}
+void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifier )
+{
+    while(1){}
+}
+
+const char *pcApplicationHostnameHook( void )
+{
+    return "Shady-Tiva-C";
+}
 /*-----------------------------------------------------------------------------------*/
 
 uint32_t ulApplicationGetNextSequenceNumber( uint32_t ulSourceAddress,

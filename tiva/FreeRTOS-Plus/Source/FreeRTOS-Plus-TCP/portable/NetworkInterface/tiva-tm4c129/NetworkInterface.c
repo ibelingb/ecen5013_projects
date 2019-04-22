@@ -110,11 +110,8 @@ extern uint32_t g_sysClk;
 /*-----------------------------------------------------------*/
 BaseType_t InitMACPHY(uint32_t sysClk);
 void prvEMACHandlerTask(void *pvParameters);
-
-#if (ipconfigZERO_COPY_TX_DRIVER == 1)
-
-    void EthernetHandler(void);
-#endif
+void printMACIntStatus(uint32_t intStatus);
+void EthernetHandler(void);
 
 /*-----------------------------------------------------------*/
 BaseType_t xNetworkInterfaceInitialise( void )
@@ -297,8 +294,8 @@ BaseType_t InitMACPHY(uint32_t sysClk)
      * packets along with those addressed specifically for us.
      */
     EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_SADDR |
-                                    EMAC_FRMFILTER_HASH_AND_PERFECT |
-                                    EMAC_FRMFILTER_PASS_MULTICAST));
+            EMAC_FRMFILTER_PASS_MULTICAST |
+            EMAC_FRMFILTER_PASS_NO_CTRL));
 
     /* Clear any pending MAC interrupts. */
     EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
@@ -325,6 +322,108 @@ BaseType_t InitMACPHY(uint32_t sysClk)
 
     printPhyStatus();
     return pdTRUE;
+}
+
+/*------------------------------------------------------------------------*/
+/**
+ * @brief this is the deferred ethernet interrupt handler task
+ */
+void prvEMACHandlerTask( void *pvParameters )
+{
+    const TickType_t xDelay = (1000  / portTICK_PERIOD_MS);
+    uint32_t ulISREvents;
+
+
+    configASSERT( xEMACTaskHandle );
+
+    for(;;)
+    {
+        /* get interrupt msg */
+        if(xQueueReceive(g_pInterrupt, (void *)&ulISREvents, xDelay) != pdFALSE) {
+            printMACIntStatus(ulISREvents);
+
+            /* check for PHY interrupt */
+            if(ulISREvents & EMAC_INT_PHY)
+            {
+                processPhyInterrupt();
+            }
+
+            /* check for TX interrupt */
+            if(ulISREvents & EMAC_INT_TRANSMIT)
+            {
+                processTxInterrupt(ulISREvents);
+            }
+
+            /* check for RX interrupt */
+            if(ulISREvents & (EMAC_INT_RECEIVE | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED))
+            {
+                processRxInterrupt(ulISREvents);
+            }
+        }
+        /* Enable the Ethernet RX and TX interrupt source. */
+        EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
+                      EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
+                      EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
+    }
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------*/
+//*****************************************************************************
+//
+// This is the code that gets called when the processor receives an ethernet
+// interrupt.  This simply enters an infinite loop, preserving the system state
+// for examination by a debugger.
+//
+//*****************************************************************************
+void xEthernetHandler(void)
+{
+    uint32_t ui32Status;
+    portBASE_TYPE xWake = pdFALSE;
+
+    /* Read and Clear the interrupt. */
+    ui32Status = EMACIntStatus(EMAC0_BASE, true);
+
+    /* If the PMT mode exit status bit is set then enable the MAC transmit
+     * and receive paths, read the PMT status to clear the interrupt and
+     * clear the interrupt flag */
+    if(ui32Status & EMAC_INT_POWER_MGMNT)
+    {
+        EMACTxEnable(EMAC0_BASE);
+        EMACRxEnable(EMAC0_BASE);
+        EMACPowerManagementStatusGet(EMAC0_BASE);
+        ui32Status &= ~(EMAC_INT_POWER_MGMNT);
+    }
+
+    /*If the interrupt really came from the Ethernet and not our timer, clear it */
+    if(ui32Status) {
+        EMACIntClear(EMAC0_BASE, ui32Status);
+    }
+
+    /* Check to see whether a hardware timer interrupt has been reported */
+    if(ui32Status & EMAC_INT_TIMESTAMP) {
+        /* Yes - read and clear the timestamp interrupt status */
+        EMACTimestampIntStatus(EMAC0_BASE);
+    }
+
+    /* Signal the deferred Ethernet interrupt task */
+    xQueueSendFromISR(g_pInterrupt, (void *)&ui32Status, &xWake);
+    //
+    // Disable the Ethernet interrupts.  Since the interrupts have not been
+    // handled, they are not asserted.  Once they are handled by the deferrerd Ethernet
+    // interrupt task, it will re-enable the interrupts.
+    //
+    EMACIntDisable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
+                                    EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
+                                    EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
+
+
+    /* portYIELD_FROM_ISR() - if deferred Ethernet interrupt handler became unblocked because
+     * of QueueSend (i.e. it was waiting for a queue msg) and the deferred handler
+     * has a higher priority (set really high so this would happen) then
+     * the schedule should jump to deferred handler next */
+    if(xWake == pdTRUE) {
+        portYIELD_FROM_ISR(true);
+    }
 }
 
 /*-----------------------------------------------------------*/
@@ -410,116 +509,4 @@ void printMACIntStatus(uint32_t intStatus)
         INFO_PRINT(", EMAC_INT_TRANSMIT");
     }
     INFO_PRINT("\n");
-}
-
-/*------------------------------------------------------------------------*/
-/**
- * @brief this is the deferred ethernet interrupt handler task
- */
-void prvEMACHandlerTask( void *pvParameters )
-{
-
-    TimeOut_t xPhyTime;
-    TickType_t xPhyRemTime;
-    UBaseType_t uxCount;
-    #if( ipconfigZERO_COPY_TX_DRIVER != 0 )
-        NetworkBufferDescriptor_t *pxBuffer;
-        const TickType_t ulMaxBlockTime = pdMS_TO_TICKS( EMAC_MAX_BLOCK_TIME_MS );
-    #endif
-    uint8_t *pucBuffer;
-    BaseType_t xResult = 0;
-    uint32_t xStatus;
-    const TickType_t xDelay = (1000  / portTICK_PERIOD_MS);
-    uint32_t ulISREvents;
-
-
-    configASSERT( xEMACTaskHandle );
-
-    for(;;)
-    {
-        /* get interrupt msg */
-        if(xQueueReceive(g_pInterrupt, (void *)&ulISREvents, xDelay) != pdFALSE) {
-            printMACIntStatus(ulISREvents);
-
-            /* check for PHY interrupt */
-            if(ulISREvents & EMAC_INT_PHY)
-            {
-                processPhyInterrupt();
-            }
-
-            /* check for TX interrupt */
-            if(ulISREvents & EMAC_INT_TRANSMIT)
-            {
-                processTxInterrupt(ulISREvents);
-            }
-
-            /* check for RX interrupt */
-            if(ulISREvents & (EMAC_INT_RECEIVE | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED))
-            {
-                processRxInterrupt(ulISREvents);
-            }
-        }
-        /* Enable the Ethernet RX and TX interrupt source. */
-        EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-                      EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
-                      EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
-    }
-}
-/*-------------------------------------------------------------------------------------------------------------------------*/
-//*****************************************************************************
-//
-// This is the code that gets called when the processor receives an ethernet
-// interrupt.  This simply enters an infinite loop, preserving the system state
-// for examination by a debugger.
-//
-//*****************************************************************************
-void xEthernetHandler(void)
-{
-    uint32_t ui32Status;
-    portBASE_TYPE xWake = pdFALSE;
-
-    /* Read and Clear the interrupt. */
-    ui32Status = EMACIntStatus(EMAC0_BASE, true);
-
-    /* If the PMT mode exit status bit is set then enable the MAC transmit
-     * and receive paths, read the PMT status to clear the interrupt and
-     * clear the interrupt flag */
-    if(ui32Status & EMAC_INT_POWER_MGMNT)
-    {
-        EMACTxEnable(EMAC0_BASE);
-        EMACRxEnable(EMAC0_BASE);
-        EMACPowerManagementStatusGet(EMAC0_BASE);
-        ui32Status &= ~(EMAC_INT_POWER_MGMNT);
-    }
-
-    /*If the interrupt really came from the Ethernet and not our timer, clear it */
-    if(ui32Status) {
-        EMACIntClear(EMAC0_BASE, ui32Status);
-    }
-
-    /* Check to see whether a hardware timer interrupt has been reported */
-    if(ui32Status & EMAC_INT_TIMESTAMP) {
-        /* Yes - read and clear the timestamp interrupt status */
-        EMACTimestampIntStatus(EMAC0_BASE);
-    }
-
-    /* Signal the deferred Ethernet interrupt task */
-    xQueueSendFromISR(g_pInterrupt, (void *)&ui32Status, &xWake);
-    //
-    // Disable the Ethernet interrupts.  Since the interrupts have not been
-    // handled, they are not asserted.  Once they are handled by the deferrerd Ethernet
-    // interrupt task, it will re-enable the interrupts.
-    //
-    EMACIntDisable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-                                    EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
-                                    EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
-
-
-    /* portYIELD_FROM_ISR() - if deferred Ethernet interrupt handler became unblocked because
-     * of QueueSend (i.e. it was waiting for a queue msg) and the deferred handler
-     * has a higher priority (set really high so this would happen) then
-     * the schedule should jump to deferred handler next */
-    if(xWake == pdTRUE) {
-        portYIELD_FROM_ISR(true);
-    }
 }

@@ -218,7 +218,7 @@ FreeRTOS_inet_addr_quick() takes an IP address as four separate numerical octets
 ipconfigINCLUDE_FULL_INET_ADDR is set to 1 then both FreeRTOS_inet_addr() and
 FreeRTOS_indet_addr_quick() are available.  If ipconfigINCLUDE_FULL_INET_ADDR is
 not set to 1 then only FreeRTOS_indet_addr_quick() is available. */
-#define ipconfigINCLUDE_FULL_INET_ADDR  0
+#define ipconfigINCLUDE_FULL_INET_ADDR  1
 
 /* ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS defines the total number of network buffer that
 are available to the IP stack.  The total number of network buffers is limited
@@ -261,7 +261,7 @@ contain.  For normal Ethernet V2 frames the maximum MTU is 1500.  Setting a
 lower value can save RAM, depending on the buffer management scheme used.  If
 ipconfigCAN_FRAGMENT_OUTGOING_PACKETS is 1 then (ipconfigNETWORK_MTU - 28) must
 be divisible by 8. */
-#define ipconfigNETWORK_MTU     1200
+#define ipconfigNETWORK_MTU     1536
 
 /* Set ipconfigUSE_DNS to 1 to include a basic DNS client/resolver.  DNS is used
 through the FreeRTOS_gethostbyname() API function. */
@@ -273,7 +273,7 @@ generate replies to incoming ICMP echo (ping) requests. */
 
 /* If ipconfigSUPPORT_OUTGOING_PINGS is set to 1 then the
 FreeRTOS_SendPingRequest() API function is available. */
-#define ipconfigSUPPORT_OUTGOING_PINGS              0
+#define ipconfigSUPPORT_OUTGOING_PINGS              1
 
 /* If ipconfigSUPPORT_SELECT_FUNCTION is set to 1 then the FreeRTOS_select()
 (and associated) API function is available. */
@@ -310,13 +310,19 @@ outstanding packets (for Rx and Tx).  When using up to 10 TP sockets
 simultaneously, one could define TCP_WIN_SEG_COUNT as 120. */
 #define ipconfigTCP_WIN_SEG_COUNT       240
 
-/* Each TCP socket has a circular buffers for Rx and Tx, which have a fixed
-maximum size.  Define the size of Rx buffer for TCP sockets. */
-#define ipconfigTCP_RX_BUF_LENGTH          ( 1000 )
+#define ipconfigTCP_OPTIONS_BYTES   (12)
+#define ipconfigTCP_MSS     ( ipconfigNETWORK_MTU - ipSIZE_OF_IPv4_HEADER\
+                              - ipSIZE_OF_TCP_HEADER - ipSIZE_OF_ETH_HEADER\
+                              - ipconfigTCP_OPTIONS_BYTES)
 
+/* Each TCP socket has circular stream buffers for Rx and Tx, which
+ * have a fixed maximum size.
+ * The defaults for these size are defined here, although
+ * they can be overridden at runtime by using the setsockopt() call */
+#define ipconfigTCP_RX_BUFFER_LENGTH    ( 4u * ipconfigTCP_MSS )
 
-/* Define the size of Tx buffer for TCP sockets. */
-#define ipconfigTCP_TX_BUF_LENGTH          ( 1000 )
+/* Define the size of Tx stream buffer for TCP sockets */
+#define ipconfigTCP_TX_BUFFER_LENGTH    ( 4u * ipconfigTCP_MSS )
 
 /* When using call-back handlers, the driver may check if the handler points to
 real program memory (RAM or flash) or just has a random non-zero value. */
@@ -330,7 +336,18 @@ disconnecting stage will timeout after a period of non-activity. */
 /* Include support for TCP keep-alive messages. */
 #define ipconfigTCP_KEEP_ALIVE              (1)
 #define ipconfigTCP_KEEP_ALIVE_INTERVAL     (20) /* in seconds */
-#define ipconfigZERO_COPY_TX_DRIVER         (1)
+
+/* this does something to FreRTOS */
+#define ipconfigZERO_COPY_TX_DRIVER         (0)
+
+/* Often DHCP servers can show the names of devices that have leased
+ * IP addresses. When ipconfigDHCP_REGISTER_HOSTNAME is set to 1 the
+ * device running FreeRTOS+TCP can identify itself to a DHCP server
+ * with a human readable name by returning the name from an application
+ * provided hook (or 'callback') function called pcApplicationHostnameHook().
+ * When ipconfigDHCP_REGISTER_HOSTNAME is set to 1 the application must
+ * provide a hook (callback) function pcApplicationHostnameHook() */
+#define ipconfigDHCP_REGISTER_HOSTNAME      (1)
 
 #define portINLINE __inline
 

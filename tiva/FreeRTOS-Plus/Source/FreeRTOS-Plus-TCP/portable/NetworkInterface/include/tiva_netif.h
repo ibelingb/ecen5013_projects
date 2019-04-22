@@ -60,7 +60,7 @@ typedef int8_t err_t;
  * TCP_MSS, IP header, and link header.
  */
 #ifndef PBUF_POOL_BUFSIZE
-#define PBUF_POOL_BUFSIZE               LWIP_MEM_ALIGN_SIZE(TCP_MSS+40+PBUF_LINK_HLEN)
+#define PBUF_POOL_BUFSIZE               LWIP_MEM_ALIGN_SIZE(ipconfigNETWORK_MTU)
 #endif
 
 /**
@@ -89,7 +89,7 @@ typedef int8_t err_t;
  *    2 byte alignment -> #define MEM_ALIGNMENT 2
  */
 #ifndef MEM_ALIGNMENT
-#define MEM_ALIGNMENT                   1
+#define MEM_ALIGNMENT                   8
 #endif
 
 /** Calculate memory size for an aligned buffer - returns the next highest

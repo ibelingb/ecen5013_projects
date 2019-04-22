@@ -207,9 +207,9 @@ void InitIP(void)
     /* Define the network addressing.  These parameters will be used if either
     ipconfigUSE_DHCP is 0 or if ipconfigUSE_DHCP is 1 but DHCP auto configuration
     failed. */
-    static const uint8_t ucIPAddress[ 4 ] = { 10, 0, 0, 200 };
+    static const uint8_t ucIPAddress[ 4 ] = { 192, 168, 56, 200 };
     static const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
-    static const uint8_t ucGatewayAddress[ 4 ] = { 10, 0, 0, 1 };
+    static const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 56, 0 };
 
     /* The following is the address of an OpenDNS server. */
     static const uint8_t ucDNSServerAddress[ 4 ] = { 208, 67, 222, 222 };
