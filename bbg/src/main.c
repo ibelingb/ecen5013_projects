@@ -43,18 +43,20 @@
 #define FOUND_GPIO_LIB
 #define MAIN_LOG_EXIT_DELAY (100 * 1000)
 #define USR_LED_53          (53)
-#define BUFFER_SIZE         (3)
+#define BUFFER_SIZE         (6)
 
 /* private functions */
 void set_sig_handlers(void);
 void sigintHandler(int sig);
-void displayControlMenu();
-int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue);
+void displayCommandMenu();
+int8_t handleConsoleCmd(uint32_t cmd, mqd_t cmdMsgQueue);
 int readInputNonBlock();
+void setPeriodicWaterSched(uint32_t sched);
+void setOneshotWaterSched(uint32_t sched);
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
-
+static RemoteCmd_e gCurrentCmd = 0; /* Tracks current user cmd if waiting for additional data */
 static uint8_t gExit = 1;
 
 int main(int argc, char *argv[]){
@@ -74,8 +76,8 @@ int main(int argc, char *argv[]){
   char ind;
   uint8_t newError;
  
-  char inputCmdBuffer[BUFFER_SIZE];
-  int inputCmd = 0;
+  char userInputBuffer[BUFFER_SIZE];
+  uint32_t userInput = 0;
 
   /* parse cmdline args */
   if(argc >= 2) {
@@ -243,7 +245,7 @@ int main(int argc, char *argv[]){
   MUTED_PRINT("main started successfully, pid: %d\n",(pid_t)syscall(SYS_gettid));
 
   /* Display menu to UART console; Receive cmd from user */
-  displayControlMenu();
+  displayCommandMenu();
 
   /* Parent thread Asymmetrical - running concurrently with children threads */
   /* Periodically get thread status, send to logging thread */
@@ -252,16 +254,13 @@ int main(int argc, char *argv[]){
     /* Determine if input has been received by user */
     if(readInputNonBlock() == 1) {
       /* Convert received input from ascii to int */
-      scanf("%s", inputCmdBuffer);
-      inputCmd = atoi(inputCmdBuffer);
+      scanf("%s", userInputBuffer);
+      userInput = atoi(userInputBuffer);
 
       /* Process received cmd from user; display cmd menu again */
-      handleConsoleCmd(inputCmd, cmdMsgQueue);
-      displayControlMenu();
+      handleConsoleCmd(userInput, cmdMsgQueue);
+      displayCommandMenu();
     }
-
-    /* wait on signal timer */
-    sigwait(&set, &signum);
 
     /* If wish to log each heartbeat event monitored by main, uncomment below */
     //LOG_HEARTBEAT();
@@ -270,6 +269,9 @@ int main(int argc, char *argv[]){
     //monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
     MUTED_PRINT("newError: %d\n", newError);
     setStatusLed(newError);
+
+    /* wait on signal timer */
+    sigwait(&set, &signum);
   }
   LOG_SYSTEM_HALTED();
 
@@ -323,26 +325,43 @@ void sigintHandler(int sig){
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief Prints a menu of actions to the user to send to the BBG Control Node via
- *        the serial interface.
+ * @brief Prints a menu of actions to the user to update the current operating state of the 
+ *        BBG Control Node  or the TIVA Remote Node.
  * 
  * @return void
  */
-void displayControlMenu()
+void displayCommandMenu()
 {
-  printf("\nEnter a value to specify a command to send to the Sensor Application:\n"
-         "\t1 = Water Plant\n"
-         "\t2 = Schedule Periodic Watering Cycle\n"
-         "\t3 = Schedule One-Shot Watering Event\n"
-         "\t4 = Get Latest Sensor Data\n"
-         "\t5 = Get Device/Actuator State\n"
-         "\t6 = Enable TIVA Device2 (LED2 On)\n"
-         "\t7 = Disable TIVA Device2 (LED2 Off)\n"
-         //"\t8 = \n"
-         //"\t9 = \n"
-         //"\t10 = \n"
-         //"\t11 = \n"
-  );
+  switch(gCurrentCmd)
+  {
+    case CMD_SCHED_PERIODIC:
+      printf("\nEnter a value to water the plant at a periodically date/time.\n");
+      break;
+    case CMD_SCHED_ONESHOT:
+      printf("\nEnter a value to water the plant at a future date/time.\n");
+      break;
+    case CMD_SETMOISTURE_LOWTHRES:
+      printf("\nEnter a value to set for the Moisture Sensor Low Threshold.\n");
+      break;
+    case CMD_SETMOISTURE_HIGHTHRES:
+      printf("\nEnter a value to set for the Moisture Sensor High Threshold.\n");
+      break;
+    default:
+      printf("\nEnter a value to specify a command to send to the Sensor Application:\n"
+             "\t1 = Water Plant\n"
+             "\t2 = Schedule Periodic Watering Cycle\n"
+             "\t3 = Schedule One-Shot Watering Event\n"
+             "\t4 = Display Sensor Data\n"
+             "\t5 = Display Device/Actuator State\n"
+             "\t6 = Enable TIVA Device2 (LED2 On)\n"
+             "\t7 = Disable TIVA Device2 (LED2 Off)\n"
+             "\t8 = Set Moisture Low Threshold\n"
+             "\t9 = Set Moisture Threshold\n"
+             //"\t10 = \n"
+             //"\t11 = \n"
+            );
+      break;
+  }
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -351,64 +370,116 @@ void displayControlMenu()
  * 
  * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
  */
-int8_t handleConsoleCmd(uint8_t cmd, mqd_t cmdMsgQueue) {
+int8_t handleConsoleCmd(uint32_t userInput, mqd_t cmdMsgQueue) {
   bool txCmd = false;
+  uint32_t data = 0;
 
-  /* Verify received cmd is valid */
-  if((cmd >= CMD_MAX_CMDS)) {
-    printf("Invalid command received of {%d} - ignoring cmd\n", cmd);
-    return EXIT_FAILURE;
+  if(gCurrentCmd != 0) {
+    data = userInput;
+    userInput = gCurrentCmd;
   }
 
-  switch((ConsoleCmd_e)cmd)
-  {
-    case CMD_WATER_PLANT :
-      /* Populate packet and push onto cmdQueue to tx to Remote Node */
-      printf("CMD_WATER_PLANT\n");
-      txCmd = true;
-      break;
-    case CMD_SCHED_PERIODIC :
-      printf("CMD_SCHED_PERIODIC\n");
-      // TODO
-      break;
-    case CMD_SCHED_ONESHOT :
-      printf("CMD_SCHED_ONESHOT\n");
-      // TODO
-      break;
-    case CMD_GET_SENSOR_DATA :
-      printf("CMD_GET_SENSOR_DATA\n");
-      // TODO
-      break;
-    case CMD_GET_APP_STATE :
-      printf("CMD_GET_APP_STATE\n");
-      // TODO
-      break;
-    case CMD_EN_DEV2 :
-      /* Populate packet and push onto cmdQueue to tx to Remote Node */
-      printf("CMD_EN_DEV2\n");
-      txCmd = true;
-      break;
-    case CMD_DS_DEV2 :
-      printf("CMD_DS_DEV2\n");
-      txCmd = true;
-      break;
+  /* Verify received cmd is valid */
+  if(userInput >= CMD_MAX_CMDS) {
+    gCurrentCmd = 0;
+    printf("Invalid command received of {%d} - ignoring cmd\n", userInput);
+    return EXIT_FAILURE;
+  } 
+  else {
+    switch((ConsoleCmd_e)userInput)
+    {
+      case CMD_WATER_PLANT :
+        /* Populate packet and push onto cmdQueue to tx to Remote Node */
+        printf("CMD_WATER_PLANT\n");
+        txCmd = true;
+        break;
+      case CMD_SCHED_PERIODIC :
+        printf("CMD_SCHED_PERIODIC\n");
+        gCurrentCmd = CMD_SCHED_PERIODIC;
+        if(data != 0) {
+          setPeriodicWaterSched(data);
+          gCurrentCmd = 0;
+        }
+        break;
+      case CMD_SCHED_ONESHOT :
+        printf("CMD_SCHED_ONESHOT\n");
+        gCurrentCmd = CMD_SCHED_ONESHOT;
+        if(data != 0) {
+          setOneshotWaterSched(data);
+          gCurrentCmd = 0;
+        }
+        break;
+      case CMD_GET_SENSOR_DATA :
+        printf("CMD_GET_SENSOR_DATA\n");
+        // TODO
+        break;
+      case CMD_GET_APP_STATE :
+        printf("CMD_GET_APP_STATE\n");
+        // TODO
+        break;
+      case CMD_EN_DEV2 :
+        /* Populate packet and push onto cmdQueue to tx to Remote Node */
+        printf("CMD_EN_DEV2\n");
+        txCmd = true;
+        break;
+      case CMD_DS_DEV2 :
+        printf("CMD_DS_DEV2\n");
+        txCmd = true;
+        break;
+      case CMD_SETMOISTURE_LOWTHRES:
+        printf("CMD_SETMOISTURE_LOWTHRES\n");
+        gCurrentCmd = CMD_SETMOISTURE_LOWTHRES;
 
-    /*
-    case CMD_ :
-      // TODO
-      break;
-    */
+        if(data != 0) {
+          /* Validate data received from user */
+          if(data > SOIL_MOISTURE_MAX) {
+            gCurrentCmd = 0;
+            ERROR_PRINT("Invalid High Threshold value for Soil Moisture received.\n"
+                        "Max value: {%d} | Received value: {%d}\n", SOIL_MOISTURE_MAX, data);
+          }
+          else {
+            txCmd = true;
+          }
+        }
+        break;
+      case CMD_SETMOISTURE_HIGHTHRES:
+        printf("CMD_SETMOISTURE_HIGHTHRES\n");
+        gCurrentCmd = CMD_SETMOISTURE_HIGHTHRES;
 
-    default:
-      printf("Unrecognized command received. Request ignored.\n");
+        if (data != 0) {
+          /* Validate data received from user */
+          if(data > SOIL_MOISTURE_MAX) {
+            gCurrentCmd = 0;
+            ERROR_PRINT("Invalid Low Threshold value for Soil Moisture received.\n"
+                        "Max value: {%d} | Received value: {%d}\n", SOIL_MOISTURE_MAX, data);
+          }
+          else {
+            txCmd = true;
+          }
+        }
+        break;
+        /*
+           case CMD_ :
+        // TODO
+        break;
+         */
+
+      default:
+        ERROR_PRINT("Unrecognized command received. Request ignored.\n");
       return EXIT_FAILURE;
+    }
   }
 
   /* If cmd received needs to be transmitted to the TIVA, populate packet and send */
   if(txCmd) {
     RemoteCmdPacket cmdPacket = {0};
-    cmdPacket.cmd = cmd;
+    cmdPacket.cmd = userInput;
+    cmdPacket.data = data;
+
+    printf("Cmd TX: cmd: %d | data: %d\n", cmdPacket.cmd, cmdPacket.data);
+
     mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
+    gCurrentCmd = 0;
   }
 
   return EXIT_SUCCESS;
@@ -428,4 +499,18 @@ int readInputNonBlock()
   FD_SET(STDIN_FILENO, &fds);
   select(STDIN_FILENO+1, &fds, NULL, NULL, &tv);
   return (FD_ISSET(0, &fds));
+}
+
+/*---------------------------------------------------------------------------------*/
+void setPeriodicWaterSched(uint32_t sched) {
+  /* Validate input watering schedule */
+  // TODO
+
+}
+
+/*---------------------------------------------------------------------------------*/
+void setOneshotWaterSched(uint32_t sched) {
+  /* Validate input watering date/time */
+  // TODO
+
 }
