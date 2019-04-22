@@ -118,7 +118,7 @@ typedef int8_t err_t;
 #endif
 
 #ifndef NUM_RX_DESCRIPTORS
-#define NUM_RX_DESCRIPTORS      (20)
+#define NUM_RX_DESCRIPTORS      (12)
 #endif
 
 #ifndef NUM_TX_DESCRIPTORS
