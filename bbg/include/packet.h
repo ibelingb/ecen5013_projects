@@ -48,7 +48,6 @@
 #define LOG_MSG_PAYLOAD_SIZE      (128) // bytes
 #define IPC_NAME_SIZE             (30)
 
-
 #define SOIL_MOISTURE_MAX (900)
 
 /* Identifies start of a packet */
@@ -234,6 +233,13 @@ typedef struct RemoteCmdPacket
   RemoteCmd_e cmd;
   uint32_t data;
 } RemoteCmdPacket;
+
+typedef struct RemoteDataPacket
+{
+  uint16_t header;
+  float luxData;
+  float moistureData;
+} RemoteDataPacket;
 
 /* This struct will be used within shared memory to define data structure to read/write btw threads */
 typedef struct TempDataStruct
