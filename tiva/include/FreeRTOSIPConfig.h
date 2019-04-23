@@ -219,7 +219,7 @@ not set to 1 then only FreeRTOS_indet_addr_quick() is available. */
 are available to the IP stack.  The total number of network buffers is limited
 to ensure the total amount of RAM that can be consumed by the IP stack is capped
 to a pre-determinable value. */
-#define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS      28
+#define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS      16
 
 /* A FreeRTOS queue is used to send events from application tasks to the IP
 stack.  ipconfigEVENT_QUEUE_LENGTH sets the maximum number of events that can
@@ -333,8 +333,8 @@ disconnecting stage will timeout after a period of non-activity. */
 #define ipconfigTCP_KEEP_ALIVE_INTERVAL     (20) /* in seconds */
 
 /* this does something to FreRTOS */
-#define ipconfigZERO_COPY_TX_DRIVER         (0)
-#define ipconfigZERO_COPY_RX_DRIVER         (0)
+#define ipconfigZERO_COPY_TX_DRIVER         (1)
+#define ipconfigZERO_COPY_RX_DRIVER         (1)
 
 /* If the network card/driver includes checksum offloading (IP/TCP/UDP checksums)
 then set ipconfigDRIVER_INCLUDED_RX_IP_CHECKSUM to 1 to prevent the software

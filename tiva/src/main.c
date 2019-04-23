@@ -258,10 +258,10 @@ void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifie
 {
     while(1){}
 }
-//const char *pcApplicationHostnameHook( void )
-//{
-//    return "Shady-Tiva-C";
-//}
+const char *pcApplicationHostnameHook( void )
+{
+    return "Shady-Tiva-C";
+}
 /*-----------------------------------------------------------------------------------*/
 
 uint32_t ulApplicationGetNextSequenceNumber( uint32_t ulSourceAddress,

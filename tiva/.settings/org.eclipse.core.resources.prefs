@@ -43,8 +43,6 @@ encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface
 encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/STM32Fxx/subdir_vars.mk=UTF-8
 encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/subdir_rules.mk=UTF-8
 encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/subdir_vars.mk=UTF-8
-encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/tiva-tm4c129/netif/subdir_rules.mk=UTF-8
-encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/tiva-tm4c129/netif/subdir_vars.mk=UTF-8
 encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/tiva-tm4c129/subdir_rules.mk=UTF-8
 encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/tiva-tm4c129/subdir_vars.mk=UTF-8
 encoding//Debug/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/subdir_rules.mk=UTF-8

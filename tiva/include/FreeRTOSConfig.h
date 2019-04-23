@@ -91,7 +91,7 @@
 #define configUSE_PREEMPTION                1
 #define configUSE_IDLE_HOOK                 0
 #define configUSE_TICK_HOOK                 0
-#define configMAX_PRIORITIES                ( 5 )
+#define configMAX_PRIORITIES                (16)
 #define configMINIMAL_STACK_SIZE            ( ( unsigned short ) 400 )
 #define configTOTAL_HEAP_SIZE               ( ( size_t ) ( 50000 ) )
 #define configMAX_TASK_NAME_LEN             ( 10 )

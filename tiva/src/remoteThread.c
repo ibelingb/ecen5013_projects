@@ -74,41 +74,42 @@ void remoteTask(void *pvParameters)
 //    static const TickType_t xTimeOut = pdMS_TO_TICKS( 2000 );
 
     /*-------------------------------------------------------------------------------------*/
-    /* set up UDP socket for testing */
+    /* set up socket  */
     /*-------------------------------------------------------------------------------------*/
-//#define CONFIGURE_IP_STACK
-//#ifdef CONFIGURE_IP_STACK
     Socket_t xListeningSocket;
-    struct freertos_sockaddr xBindAddress;
-    const TickType_t xSendTimeOut = 200 / portTICK_PERIOD_MS;
+    const TickType_t xTimeOut = 200 / portTICK_PERIOD_MS;
     char cString[ 50 ];
     uint32_t ulCount = 0UL;
-    Socket_t xSocket;
     struct freertos_sockaddr xDestinationAddress;
+    socklen_t xSize = sizeof(struct freertos_sockaddr);
+    uint8_t chksumEnable = 1;
 
     /* Send strings to port 10000 on IP address 192.168.0.50. */
     xDestinationAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.144" );
-    xDestinationAddress.sin_port = FreeRTOS_htons( 10000 );
+    xDestinationAddress.sin_port = FreeRTOS_htons( 1021 );
 
-    /* Attempt to open the UDP socket. */
+    /* Attempt to open the TCP socket. */
     xListeningSocket = FreeRTOS_socket( FREERTOS_AF_INET,
-                                        FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
+                                        FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP );
 
     /* Check for errors. */
     configASSERT( xListeningSocket != FREERTOS_INVALID_SOCKET );
 
-    /* Ensure calls to FreeRTOS_sendto() timeout if a network buffer cannot be
-    obtained within 200ms. */
+    /* set timeouts and checksum flag */
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_SNDTIMEO,
-                         &xSendTimeOut, sizeof( xSendTimeOut ) );
+                         &xTimeOut, sizeof( xTimeOut ) );
+    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_RCVTIMEO,
+                         &xTimeOut, sizeof( xTimeOut ) );
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
-                         &xSendTimeOut, sizeof( xSendTimeOut ) );
+                         &chksumEnable, 0 );
 
     /* Bind the socket to port 0x1234. */
-    xBindAddress.sin_port = FreeRTOS_htons( 0x1234 );
-    FreeRTOS_bind( xListeningSocket, &xBindAddress, sizeof( xBindAddress ) );
+    FreeRTOS_bind(xListeningSocket, &xDestinationAddress, xSize);
+
+    /* try to connect */
+    while(!(FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize)));
     /*-------------------------------------------------------------------------------------*/
-//#endif
+
     /* set portion of statusMsg that does not change */
     memset(&logMsg, 0,sizeof(LogMsgPacket));
 
@@ -150,20 +151,14 @@ void remoteTask(void *pvParameters)
         /*---------------------------------------------------------------------*/
         /* TODO - send shmem data to Control Node */
         /*---------------------------------------------------------------------*/
-#ifdef CONFIGURE_IP_STACK
         /* Create the string that is sent. */
         sprintf(cString, "Standard send message number %lu\r\n", ulCount);
 
-        /* Send the string to the UDP socket.  ulFlags is set to 0, so the standard
-        semantics are used.  That means the data from cString[] is copied
-        into a network buffer inside FreeRTOS_sendto(), and cString[] can be
-        reused as soon as FreeRTOS_sendto() has returned. */
-        FreeRTOS_sendto(xSocket, cString, strlen(cString), 0,
-                         &xDestinationAddress, sizeof( xDestinationAddress ));
+        /* Send the string to the UDP socket */
+        //FreeRTOS_send(xListeningSocket, cString, strlen(cString), 0);
 
         ulCount++;
         /*-----------------------------------------------------------------------*/
-#endif
         /* get thread status msgs */
         if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
         {

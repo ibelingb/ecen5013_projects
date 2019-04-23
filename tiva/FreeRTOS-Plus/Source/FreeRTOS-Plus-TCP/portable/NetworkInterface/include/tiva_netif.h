@@ -6,6 +6,9 @@
 #include "FreeRTOS.h"
 #include "FreeRTOSIPConfig.h"
 
+/* TivaWare includes */
+#include "driverlib/emac.h"
+
 /**
  * Set the physical address of the PHY we will be using if this is not
  * specified in lwipopts.h.  We assume 0 for the internal PHY.
@@ -15,32 +18,6 @@
 #endif
 
 /*------------------------------------------------------------------------------*/
-/* from lwip's err.h */
-
-typedef int8_t err_t;
-/* Definitions for error constants. */
-
-#define ERR_OK          0    /* No error, everything OK. */
-#define ERR_MEM        -1    /* Out of memory error.     */
-#define ERR_BUF        -2    /* Buffer error.            */
-#define ERR_TIMEOUT    -3    /* Timeout.                 */
-#define ERR_RTE        -4    /* Routing problem.         */
-#define ERR_INPROGRESS -5    /* Operation in progress    */
-#define ERR_VAL        -6    /* Illegal value.           */
-#define ERR_WOULDBLOCK -7    /* Operation would block.   */
-#define ERR_USE        -8    /* Address in use.          */
-#define ERR_ISCONN     -9    /* Already connected.       */
-
-#define ERR_IS_FATAL(e) ((e) < ERR_ISCONN)
-
-#define ERR_ABRT       -10   /* Connection aborted.      */
-#define ERR_RST        -11   /* Connection reset.        */
-#define ERR_CLSD       -12   /* Connection closed.       */
-#define ERR_CONN       -13   /* Not connected.           */
-
-#define ERR_ARG        -14   /* Illegal argument.        */
-
-#define ERR_IF         -15   /* Low-level netif error    */
 
 /** ETH_PAD_SIZE: number of bytes added before the ethernet header to ensure
  * alignment of payload after that header. Since the header is 14 bytes long,
@@ -97,33 +74,34 @@ typedef int8_t err_t;
 #define LWIP_MEM_ALIGN_SIZE(size) (((size) + MEM_ALIGNMENT - 1) & ~(MEM_ALIGNMENT-1))
 #endif
 
-/*------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
 
-#ifndef ETHARP_HWADDR_LEN
-#define ETHARP_HWADDR_LEN     6
+#ifndef ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
+    #error please define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS in FreeRTOSIPConfig.h
+#endif
+
+#ifndef NUM_RX_DESCRIPTORS
+#define NUM_RX_DESCRIPTORS      (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS - NUM_TX_DESCRIPTORS)
+#endif
+
+#ifndef NUM_TX_DESCRIPTORS
+#define NUM_TX_DESCRIPTORS      (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS / 4)
+#endif
+
+#if (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS < (NUM_RX_DESCRIPTORS + NUM_TX_DESCRIPTORS))
+    #error n0t enough desciptors
 #endif
 
 /*------------------------------------------------------------------------------------------------*/
 
-#ifndef ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
-    #error please define configNUM_RX_DESCRIPTORS in your FreeRTOSIPConfig.h
-#endif
+typedef struct {
+  tEMACDMADescriptor Desc;
+  uint8_t *pBuf;
+} tDescriptor;
+extern tDescriptor g_pTxDescriptors[NUM_TX_DESCRIPTORS];
+extern tDescriptor g_pRxDescriptors[NUM_RX_DESCRIPTORS];
 
-#ifndef ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS
-    #error please define configNUM_TX_DESCRIPTORS in your FreeRTOSIPConfig.h
-#endif
-
-#if (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS < 8)
-    #error n0t enough desciptors
-#endif
-
-#ifndef NUM_RX_DESCRIPTORS
-#define NUM_RX_DESCRIPTORS      (12)
-#endif
-
-#ifndef NUM_TX_DESCRIPTORS
-#define NUM_TX_DESCRIPTORS      (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS - NUM_RX_DESCRIPTORS)
-#endif
+/*------------------------------------------------------------------------------------------------*/
 
 void InitDMADescriptors(void);
 int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen);

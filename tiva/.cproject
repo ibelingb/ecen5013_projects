@@ -51,7 +51,6 @@
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/include}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/Compiler/GCC}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/include}"/>
-									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/tiva-tm4c129/include}"/>
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_18.1.compilerID.DEBUGGING_MODEL.1568569394" name="Debugging model" superClass="com.ti.ccstudio.buildDefinitions.TMS470_18.1.compilerID.DEBUGGING_MODEL" value="com.ti.ccstudio.buildDefinitions.TMS470_18.1.compilerID.DEBUGGING_MODEL.SYMDEBUG__DWARF" valueType="enumerated"/>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_18.1.compilerID.DIAG_WARNING.1944670481" name="Treat diagnostic &lt;id&gt; as warning (--diag_warning, -pdsw)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_18.1.compilerID.DIAG_WARNING" valueType="stringList">

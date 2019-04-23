@@ -49,6 +49,9 @@
 #include "driverlib/sysctl.h"       /* for clk */
 #include "inc/hw_memmap.h"
 #include "inc/hw_emac.h"
+#include "inc/hw_gpio.h"
+#include "driverlib/gpio.h"
+#include "driverlib/pin_map.h"
 #include "driverlib/debug.h"
 
 /* my includes */
@@ -62,34 +65,9 @@
 /* define PHY configuration */
 #define EMAC_PHY_CONFIG (EMAC_PHY_TYPE_INTERNAL | EMAC_PHY_INT_MDIX_EN | EMAC_PHY_AN_100B_T_FULL_DUPLEX)
 
-
 /* Netif interrupt handling task */
 #ifndef configEMAC_TASK_STACK_SIZE
 #define configEMAC_TASK_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
-#endif
-
-#if (ipconfigZERO_COPY_TX_DRIVER == 1)
-    #ifndef EMAC_MAX_BLOCK_TIME_MS
-        #define EMAC_MAX_BLOCK_TIME_MS  100ul
-    #endif
-
-
-    #ifndef PHY_LS_HIGH_CHECK_TIME_MS
-        /* Check if the LinkSStatus in the PHY is still high after 15 seconds of not
-        receiving packets. */
-        #define PHY_LS_HIGH_CHECK_TIME_MS   15000
-    #endif
-
-    #ifndef PHY_LS_LOW_CHECK_TIME_MS
-        /* Check if the LinkSStatus in the PHY is still low every second. */
-        #define PHY_LS_LOW_CHECK_TIME_MS    1000
-    #endif
-
-    /* Interrupt events to process */
-    #define EMAC_IF_RX_EVENT        1UL
-    #define EMAC_IF_TX_EVENT        2UL
-    #define EMAC_IF_ERR_EVENT       4UL
-    #define EMAC_IF_ALL_EVENT       ( EMAC_IF_RX_EVENT | EMAC_IF_TX_EVENT | EMAC_IF_ERR_EVENT )
 #endif
 
 /*-----------------------------------------------------------*/
@@ -163,6 +141,7 @@ BaseType_t InitMACPHY(uint32_t sysClk)
 {
     uint32_t ui32User0, ui32User1;
     uint8_t pui8MAC[6];
+    uint8_t ind;
     uint16_t ui16Val;
 
     /* Lower the priority of the Ethernet interrupt handler.  This is required
@@ -174,7 +153,14 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     /* Enable Peripherals & Initialize EMAC */
     /*----------------------------------------------------------------------------*/
 
-    /* Enable the ethernet peripheral */
+    /* Ethernet LEDs */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+    GPIOPinConfigure(GPIO_PF0_EN0LED0);
+    GPIOPinConfigure(GPIO_PF4_EN0LED1);
+    GPIOPinTypeEthernetLED(GPIO_PORTF_BASE, GPIO_PIN_4);
+    GPIOPinTypeEthernetLED(GPIO_PORTF_BASE, GPIO_PIN_0);
+
+    /* Enable and reset MAC */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_EMAC0);
     SysCtlPeripheralReset(SYSCTL_PERIPH_EMAC0);
 
@@ -202,6 +188,9 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     /* Configure for use with whichever PHY the user requires */
     EMACPHYConfigSet(EMAC0_BASE, EMAC_PHY_CONFIG);
 
+    /* Reset the MAC to latch the PHY configuration */
+    EMACReset(EMAC0_BASE);
+
     /* Initialize the MAC and set the DMA mode */
     EMACInit(EMAC0_BASE, sysClk,
                  EMAC_BCONFIG_MIXED_BURST | EMAC_BCONFIG_PRIORITY_FIXED,
@@ -209,11 +198,11 @@ BaseType_t InitMACPHY(uint32_t sysClk)
 
     /* Set MAC configuration options */
     EMACConfigSet(EMAC0_BASE, ( EMAC_CONFIG_FULL_DUPLEX |
-                                EMAC_CONFIG_CHECKSUM_OFFLOAD | /* could remove to make simpler */
+                                EMAC_CONFIG_CHECKSUM_OFFLOAD |
                                 EMAC_CONFIG_7BYTE_PREAMBLE |
                                 EMAC_CONFIG_IF_GAP_96BITS |
                                 EMAC_CONFIG_USE_MACADDR0 |
-                                EMAC_CONFIG_SA_FROM_DESCRIPTOR | /*todo: make sure desc has correct SA */
+                                EMAC_CONFIG_SA_FROM_DESCRIPTOR |
                                 EMAC_CONFIG_BO_LIMIT_1024),
                                           (EMAC_MODE_RX_STORE_FORWARD |
                                            EMAC_MODE_TX_STORE_FORWARD |
@@ -251,45 +240,46 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     /*----------------------------------------------------------------------------*/
 
     /* Clear any stray PHY interrupts that may be set. */
-    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
-    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
+    EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
+    EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
 
-    /* Configure and enable the link status change interrupt in the PHY. */
+    /* Configure and enable the link status change interrupt in the PHY */
     ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR);
     ui16Val |= (EPHY_SCR_INTEN_EXT | EPHY_SCR_INTOE_EXT);
     EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR, ui16Val);
     EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1, (EPHY_MISR1_LINKSTATEN |
                  EPHY_MISR1_SPEEDEN | EPHY_MISR1_DUPLEXMEN | EPHY_MISR1_ANCEN));
 
-    /* Read the PHY interrupt status to clear any stray events. */
+    /* Read the PHY interrupt status to clear any stray events */
     ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
 
-    /**
-     * Set MAC filtering options.  We receive all broadcast and mui32ticast
-     * packets along with those addressed specifically for us.
-     */
+    /* Set MAC filtering options.  We receive multicast
+     * packets along with those addressed specifically for us */
     EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_SADDR |
             EMAC_FRMFILTER_PASS_MULTICAST |
             EMAC_FRMFILTER_PASS_NO_CTRL));
 
-    /* Clear any pending MAC interrupts. */
+    /* Clear any pending MAC interrupts */
     EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
 
-    /* Enable the Ethernet MAC transmitter and receiver. */
+    /* Mark the receive descriptors as available to the DMA to start
+     * the receive processing */
+    for(ind = 0; ind < NUM_RX_DESCRIPTORS; ++ind)
+    {
+        g_pRxDescriptors[ind].Desc.ui32CtrlStatus |= DES0_RX_CTRL_OWN;
+    }
+
+    /* Enable the Ethernet MAC transmitter and receiver */
     EMACTxEnable(EMAC0_BASE);
     EMACRxEnable(EMAC0_BASE);
 
     /* Enable the Ethernet RX and TX interrupt source. */
     EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-                  EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
-                  EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
+//                  EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED |
+                  EMAC_INT_PHY));
 
-
-    /* Enable the Ethernet interrupt. */
+    /* Enable the Ethernet interrupt */
     IntEnable(INT_EMAC0);
-
-    /* Enable all processor interrupts. */
-    //IntMasterEnable();
 
     /* Tell the PHY to start an auto-negotiation cycle. */
     EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_ANEN |
@@ -328,7 +318,7 @@ void prvEMACHandlerTask( void *pvParameters )
             }
 
             /* check for RX interrupt */
-            if(ulISREvents & (EMAC_INT_RECEIVE | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED))
+            if(ulISREvents & EMAC_INT_RECEIVE)
             {
                 processRxInterrupt(ulISREvents);
             }
