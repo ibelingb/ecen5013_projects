@@ -49,6 +49,7 @@
 #define IPC_NAME_SIZE             (30)
 
 #define SOIL_MOISTURE_MAX (900)
+#define SOIL_SATURATION_THRES (600) // Soil saturation threshold
 
 /* Identifies start of a packet */
 #define PKT_HEADER (0xABCD)
@@ -181,6 +182,7 @@ typedef enum ConsoleCmd_e
   CMD_DS_DEV2, /* Disable TIVA Device 2 (LED) */
   CMD_SETMOISTURE_LOWTHRES,
   CMD_SETMOISTURE_HIGHTHRES,
+  CMD_SCHED_CANCEL,
   CMD_MAX_CMDS
 } ConsoleCmd_e;
 
@@ -203,6 +205,19 @@ typedef enum {
   REMOTE_SETMOISTURE_HIGHTHRES,
   MAX_CMDS
 } RemoteCmd_e;
+
+typedef enum ControlLoopState_e {
+  IDLE = 0,
+  WATER_PERIODIC_SCHED,
+  WATER_ONESHOT_SCHED,
+  WATERING_PLANT
+} ControlLoopState_e;
+
+typedef enum SystemState_e {
+  NOMINAL = 0,
+  DEGRADED,
+  FAULT
+} SystemState_e;
 
 /* ------------------------------------------------------------- */
 /*** PACKET/STRUCT DEFINITIONS ***/

@@ -53,19 +53,26 @@
 void set_sig_handlers(void);
 void sigintHandler(int sig);
 void displayCommandMenu();
-int8_t handleConsoleCmd(uint32_t cmd, mqd_t cmdMsgQueue);
+int8_t handleConsoleCmd(uint32_t cmd);
 int readInputNonBlock();
 void setPeriodicWaterSched(uint32_t hours);
 void setOneshotWaterSched(uint32_t hours);
+void cancelWaterSched();
 static void waterDeviceTx();
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
-static RemoteCmd_e gCurrentCmd = 0; /* Tracks current user cmd if waiting for additional data */
 static uint8_t gExit = 1;
 
+static RemoteCmd_e gCurrentCmd = 0; /* Tracks current user cmd if waiting for additional data */
 static mqd_t cmdMsgQueue;
 static timer_t waterTimerid;
+uint32_t waterCyclePeriodHours = 0;
+float luxData, moistureData = 0;
+
+/* Variables to track system operating state */
+ControlLoopState_e controlLoopState = IDLE;
+SystemState_e systemState = NOMINAL;
 
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
@@ -82,14 +89,14 @@ int main(int argc, char *argv[]){
   mqd_t dataMsgQueue;
   char ind;
   uint8_t newError;
- 
+
+  /* Variables for handling user input cmds */
   char userInputBuffer[BUFFER_SIZE];
   uint32_t userInput = 0;
 
+  /* Variables for tx/rx of data with remoteNode */
   RemoteDataPacket dataPacket = {0};
   size_t dataPacketSize = sizeof(struct RemoteDataPacket);
-  float luxData, moistureData = 0;
-  uint8_t dayNightCycleCount = 0;
 
   /* parse cmdline args */
   if(argc >= 2) {
@@ -281,7 +288,7 @@ int main(int argc, char *argv[]){
       userInput = atoi(userInputBuffer);
 
       /* Process received cmd from user; display cmd menu again */
-      handleConsoleCmd(userInput, cmdMsgQueue);
+      handleConsoleCmd(userInput);
       displayCommandMenu();
     }
 
@@ -290,24 +297,57 @@ int main(int argc, char *argv[]){
     {
       luxData = dataPacket.luxData;
       moistureData = dataPacket.moistureData;
-
-      if((luxData > LIGHT_DARK_THRESHOLD) && (dataPacket.luxData <= LIGHT_DARK_THRESHOLD)){
-        dayNightCycleCount++;
-      }
-      
-      if(dayNightCycleCount > 6 && moistureData < 10){
-        // TODO Water device?
-      }
     }
 
-    // Control Loop
-    // TODO
+    /** Control Loop **/
+    /* Based on current operating state, handle data returned from TIVA */
+    /* If soil moisture exceed saturation level, reset timer of next water cycle */
+    switch(controlLoopState) {
+      case WATER_PERIODIC_SCHED:
+        /* Waiting until next periodic watering cycle */
+        /* If soil moisture exceeds threshold between scheduled watering cycles, reset timer */
+        if(moistureData > SOIL_SATURATION_THRES)
+        {
+          setPeriodicWaterSched(waterCyclePeriodHours);
+        }
+        break;
+      case WATER_ONESHOT_SCHED:
+        /* Waiting until next one-shot watering cycle */
+        break;
+      case WATERING_PLANT:
+        /* Plant should be getting watered - remain in watering state until soil moisture exceeds threshold */
+        // TODO: Update below to use state of Solenoid/Simulated LED Device reported from TIVA
+        //       --> If Solenoid is "open", watering plant
+        if(moistureData < SOIL_SATURATION_THRES)
+        {
+          /* Continue watering plant */
+        } 
+        else {
+          /* Watering complete, update current state */
+          struct itimerspec waterTimeSpec;
+          timer_gettime(waterTimerid, &waterTimeSpec);
+          /* Check if timer scheduled; if zero, timer is disabled and set state to IDLE */
+          if(((int)waterTimeSpec.it_value.tv_sec == 0) && 
+             ((int)waterTimeSpec.it_value.tv_nsec == 0))
+          {
+            controlLoopState = IDLE;
+          }
+          else {
+            controlLoopState = WATER_PERIODIC_SCHED;
+          }
+        }
+        break;
+      case IDLE:
+      default:
+        // TODO: TBD
+        break;
+    }
 
     /* If wish to log each heartbeat event monitored by main, uncomment below */
     //LOG_HEARTBEAT();
 
     newError = 0;
-    //monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
+    //monitorHealth(&heartbeatMsgQueue, &gExit, &newError); // TODO: Need to update - Causing seg fault on shutdown
     MUTED_PRINT("newError: %d\n", newError);
     setStatusLed(newError);
 
@@ -399,7 +439,7 @@ void displayCommandMenu()
              "\t7 = Disable TIVA Device2 (LED2 Off)\n"
              "\t8 = Set Moisture Low Threshold\n"
              "\t9 = Set Moisture Threshold\n"
-             //"\t10 = \n"
+             "\t10 = Cancel Scheduled Watering Event\n"
              //"\t11 = \n"
             );
       break;
@@ -412,7 +452,7 @@ void displayCommandMenu()
  * 
  * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
  */
-int8_t handleConsoleCmd(uint32_t userInput, mqd_t cmdMsgQueue) {
+int8_t handleConsoleCmd(uint32_t userInput) {
   bool txCmd = false;
   uint32_t data = 0;
 
@@ -433,7 +473,7 @@ int8_t handleConsoleCmd(uint32_t userInput, mqd_t cmdMsgQueue) {
       case CMD_WATER_PLANT :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
         printf("CMD_WATER_PLANT\n");
-        txCmd = true;
+        waterDeviceTx();
         break;
       case CMD_SCHED_PERIODIC :
         printf("CMD_SCHED_PERIODIC\n");
@@ -453,11 +493,11 @@ int8_t handleConsoleCmd(uint32_t userInput, mqd_t cmdMsgQueue) {
         break;
       case CMD_GET_SENSOR_DATA :
         printf("CMD_GET_SENSOR_DATA\n");
-        // TODO
+        printf("LuxData: {%f} | MoistureData: {%f}\n", luxData, moistureData);
         break;
       case CMD_GET_APP_STATE :
         printf("CMD_GET_APP_STATE\n");
-        // TODO
+        printf("ControlLoopState: {%d} | SystemState: {%d}\n", controlLoopState, systemState);
         break;
       case CMD_EN_DEV2 :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
@@ -499,6 +539,12 @@ int8_t handleConsoleCmd(uint32_t userInput, mqd_t cmdMsgQueue) {
           }
         }
         break;
+
+      case CMD_SCHED_CANCEL :
+        printf("CMD_SCHED_CANCEL\n");
+        cancelWaterSched();
+        break;
+
         /*
            case CMD_ :
         // TODO
@@ -558,6 +604,13 @@ void setPeriodicWaterSched(uint32_t hours) {
   timeSpec.it_interval.tv_nsec = 0;
 
   timer_settime(waterTimerid, 0, &timeSpec, NULL);
+  waterCyclePeriodHours = hours;
+  
+  /* Update controlLoopState if not currently watering plant */
+  if(controlLoopState != WATERING_PLANT)
+  {
+    controlLoopState = WATER_PERIODIC_SCHED;
+  }
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -569,12 +622,35 @@ void setOneshotWaterSched(uint32_t hours) {
   timeSpec.it_interval.tv_nsec = 0;
 
   timer_settime(waterTimerid, 0, &timeSpec, NULL);
+
+  /* Update controlLoopState if not currently watering plant */
+  if(controlLoopState != WATERING_PLANT)
+  {
+    controlLoopState = WATER_ONESHOT_SCHED;
+  }
 }
 
+/*---------------------------------------------------------------------------------*/
+void cancelWaterSched() {
+  struct itimerspec timeSpec;
+  timeSpec.it_value.tv_sec = 0;
+  timeSpec.it_value.tv_nsec = 0;
+  timeSpec.it_interval.tv_sec = 0;
+  timeSpec.it_interval.tv_nsec = 0;
+
+  timer_settime(waterTimerid, 0, &timeSpec, NULL);
+
+  /* Update controlLoopState if not currently watering plant */
+  if(controlLoopState != WATERING_PLANT)
+  {
+    controlLoopState = IDLE;
+  }
+}
 
 /*---------------------------------------------------------------------------------*/
 static void waterDeviceTx() {
   RemoteCmdPacket cmdPacket = {0};
   cmdPacket.cmd = REMOTE_WATERPLANT;
   mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
+  controlLoopState = WATERING_PLANT;
 }
