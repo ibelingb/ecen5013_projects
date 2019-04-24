@@ -38,7 +38,7 @@
 #define DEBUG_TEST_ALL_MSG_TYPES (0)
 
 #define LOG_MSG_QUEUE
-#define LOG
+//#define LOG
 
 #ifndef LOG
     #define LOG_FLUSH()
@@ -60,6 +60,10 @@
     #define LOG_REMOTE_CMD_EVENT(event_e)
     #define LOG_LOG_EVENT(event_e)
     #define LOG_MAIN_EVENT(event_e)
+    #define LOG_REMOTE_CLIENT_EVENT(event_e)
+    #define LOG_SOLENOID_EVENT(event_e)
+    #define LOG_OBSERVER_EVENT(event_e)
+    #define LOG_MOISTURE_EVENT(event_e)
 #else /* LOGging enabled */
     #define LOG_ITEM(pLogItem)              (log_queue_item(pLogItem))
     #define LOG_DEQUEUE_ITEM(pLogItem)      (log_dequeue_item(pLogItem))

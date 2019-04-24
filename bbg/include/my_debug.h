@@ -38,4 +38,7 @@
 #define MUTED_PRINT(...)
 #define DEBUG_PRINT(...)    (UARTprintf(__VA_ARGS__))
 #endif
+
+#define RETURN_SUCCESS  (0)
+#define RETURN_ERROR    (-1)
 #endif /* DEBUG_H_ */

@@ -144,11 +144,6 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     uint8_t ind;
     uint16_t ui16Val;
 
-    /* Lower the priority of the Ethernet interrupt handler.  This is required
-     * so that the interrupt handler can safely call the interrupt-safe
-     * FreeRTOS functions (specifically to send messages to the queue) */
-    IntPrioritySet(INT_EMAC0_TM4C129, 0xC0);
-
     /*----------------------------------------------------------------------------*/
     /* Enable Peripherals & Initialize EMAC */
     /*----------------------------------------------------------------------------*/
@@ -187,6 +182,11 @@ BaseType_t InitMACPHY(uint32_t sysClk)
                                            EMAC_MODE_RX_THRESHOLD_64_BYTES),
                                                0);
 
+    /*------------------------------------------------------------------------------------------*/
+    /* Initialize the DMA descriptors */
+    /*------------------------------------------------------------------------------------------*/
+    InitDMADescriptors();
+
     /* Get the MAC address from the user registers */
     FlashUserGet(&ui32User0, &ui32User1);
     if((ui32User0 == 0xffffffff) || (ui32User1 == 0xffffffff)) {
@@ -203,13 +203,10 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     pui8MAC[4] = ((ui32User1 >>  8) & 0xff);
     pui8MAC[5] = ((ui32User1 >> 16) & 0xff);
 
-    /* Program the hardware with its MAC address (for filtering) */
-    EMACAddrSet(EMAC0_BASE, 0, (uint8_t *)pui8MAC);
+    uint8_t ucMACAddress[ 6 ] = { 0x00, 0x1a, 0xb6, 0x03, 0x59, 0x89 };
 
-    /*------------------------------------------------------------------------------------------*/
-    /* Initialize the DMA descriptors */
-    /*------------------------------------------------------------------------------------------*/
-    InitDMADescriptors();
+    /* Program the hardware with its MAC address (for filtering) */
+    EMACAddrSet(EMAC0_BASE, 0, ucMACAddress);
 
     /*----------------------------------------------------------------------------*/
     /* Clear, Enable Interrupts  */
@@ -219,15 +216,20 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
     EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
 
-    /* Configure and enable the link status change interrupt in the PHY */
-    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR);
-    ui16Val |= (EPHY_SCR_INTEN_EXT | EPHY_SCR_INTOE_EXT);
-    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR, ui16Val);
-    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1, (EPHY_MISR1_LINKSTATEN |
-                 EPHY_MISR1_SPEEDEN | EPHY_MISR1_DUPLEXMEN | EPHY_MISR1_ANCEN));
+//    /* Configure and enable the link status change interrupt in the PHY */
+//    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR);
+//    ui16Val |= (EPHY_SCR_INTEN_EXT | EPHY_SCR_INTOE_EXT);
+//    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR, ui16Val);
+//    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1, (EPHY_MISR1_LINKSTATEN |
+//                 EPHY_MISR1_SPEEDEN | EPHY_MISR1_DUPLEXMEN | EPHY_MISR1_ANCEN));
+//
+//    /* Read the PHY interrupt status to clear any stray events */
+//    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
 
-    /* Read the PHY interrupt status to clear any stray events */
-    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
+    /* Wait for the link to become active */
+    while((EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMSR) & EPHY_BMSR_LINKSTAT) == 0)
+    {
+    }
 
     /* Set MAC filtering options.  We receive multicast
      * packets along with those addressed specifically for us */
@@ -249,15 +251,16 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     EMACTxEnable(EMAC0_BASE);
     EMACRxEnable(EMAC0_BASE);
 
-    /* Enable the Ethernet RX and TX interrupt source. */
-    EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_PHY));
+    /* Lower the priority of the Ethernet interrupt handler.  This is required
+     * so that the interrupt handler can safely call the interrupt-safe
+     * FreeRTOS functions (specifically to send messages to the queue) */
+    IntPrioritySet(INT_EMAC0_TM4C129, 0xC0);
 
     /* Enable the Ethernet interrupt */
     IntEnable(INT_EMAC0);
 
-    /* Tell the PHY to start an auto-negotiation cycle. */
-    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_ANEN |
-                 EPHY_BMCR_RESTARTAN));
+    /* Enable the Ethernet RX and TX interrupt source. */
+    EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_PHY | EMAC_INT_TRANSMIT));
     return pdTRUE;
 }
 

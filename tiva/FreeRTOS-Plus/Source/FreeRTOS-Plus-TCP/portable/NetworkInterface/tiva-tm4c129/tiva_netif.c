@@ -280,7 +280,7 @@ void processRxInterrupt(uint32_t ulISREvents)
                     /* Allocate a new network buffer descriptor that references an Ethernet
                     frame large enough to hold the maximum network packet size (as defined
                     in the FreeRTOSIPConfig.h header file). */
-                    pxDescriptor = pxGetNetworkBufferWithDescriptor( i32FrameLen, 0 );
+                    pxDescriptor = pxGetNetworkBufferWithDescriptor( ipTOTAL_ETHERNET_FRAME_SIZE, 0 );
 
                     if( pxDescriptor != NULL )
                     {
@@ -308,15 +308,15 @@ void processRxInterrupt(uint32_t ulISREvents)
                         *( ( NetworkBufferDescriptor_t ** )
                            ( pxDMARxDescriptor->pvBuffer1 - ipBUFFER_PADDING ) ) = pxDMARxDescriptor;
 
-                          /* The event about to be sent to the TCP/IP is an Rx event. */
-                          xRxEvent.eEventType = eNetworkRxEvent;
-
-                          /* pvData is used to point to the network buffer descriptor that
-                          references the received data. */
-                          xRxEvent.pvData = (void *)pxDescriptor;
-                          if( eConsiderFrameForProcessing(pxDescriptor->pucEthernetBuffer)
-                                                          == eProcessBuffer)
+                          if(eConsiderFrameForProcessing(pxDescriptor->pucEthernetBuffer) == eProcessBuffer)
                           {
+                              /* The event about to be sent to the TCP/IP is an Rx event. */
+                              xRxEvent.eEventType = eNetworkRxEvent;
+
+                              /* pvData is used to point to the network buffer descriptor that
+                              references the received data. */
+                              xRxEvent.pvData = (void *)pxDescriptor;
+
                               /* Send the data to the TCP/IP stack. */
                                  if( xSendEventStructToIPTask( &xRxEvent, 0 ) == pdFALSE ) {
                                        /* The buffer could not be sent to the IP task so the buffer
@@ -332,6 +332,9 @@ void processRxInterrupt(uint32_t ulISREvents)
                                        Call the standard trace macro to log the occurrence. */
                                        iptraceNETWORK_INTERFACE_RECEIVE();
                                  }
+                          }
+                          else {
+                              vReleaseNetworkBufferAndDescriptor(pxDescriptor);
                           }
                     }
                 }

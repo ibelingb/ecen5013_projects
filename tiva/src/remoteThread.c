@@ -48,9 +48,12 @@
 
 /*---------------------------------------------------------------------------------*/
 static uint8_t keepAlive;   /* global to kill thread */
+static Socket_t xListeningSocket;
 
 /*---------------------------------------------------------------------------------*/
 void InitIP(void);
+int8_t sendSocketData(uint8_t *pData, size_t length);
+int8_t readSocketData(uint8_t *pData, size_t length);
 
 /*---------------------------------------------------------------------------------*/
 void remoteTask(void *pvParameters)
@@ -65,29 +68,23 @@ void remoteTask(void *pvParameters)
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
     MUTED_PRINT("Remote Task #: %d\n\r", getTaskNum());
 
-
     InitIP();
-
-    /* initialize sockets for sensor, status, and logging data channels */
-//    Socket_t xSensorSocket, xStatusSocket, xLoggingSocket;
-//    socklen_t xSize = sizeof( struct freertos_sockaddr );
-//    static const TickType_t xTimeOut = pdMS_TO_TICKS( 2000 );
-
     /*-------------------------------------------------------------------------------------*/
     /* set up socket  */
     /*-------------------------------------------------------------------------------------*/
-    Socket_t xListeningSocket;
-    const TickType_t xTimeOut = 30 / portTICK_PERIOD_MS;
+
+    const TickType_t xTimeOut = 10000 / portTICK_PERIOD_MS;
     char cString[ 50 ];
-    uint8_t recvData[50];
+    uint8_t recvData[30];
     uint32_t ulCount = 0UL;
     struct freertos_sockaddr xDestinationAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
     uint8_t chksumEnable = 1;
+    BaseType_t ret;
 
     /* Set destination */
     xDestinationAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.144" );
-    xDestinationAddress.sin_port = FreeRTOS_htons( 1021 );
+    xDestinationAddress.sin_port = FreeRTOS_htons( 15000 );
 
     /* Attempt to open the TCP socket. */
     xListeningSocket = FreeRTOS_socket( FREERTOS_AF_INET,
@@ -101,11 +98,8 @@ void remoteTask(void *pvParameters)
                          &xTimeOut, sizeof( xTimeOut ) );
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_RCVTIMEO,
                          &xTimeOut, sizeof( xTimeOut ) );
-//    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
-//                         &chksumEnable, 0 );
-
-    /* Bind the socket to port 0x1234. */
-    FreeRTOS_bind(xListeningSocket, &xDestinationAddress, xSize);
+    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
+                         &chksumEnable, 0 );
 
     /*-------------------------------------------------------------------------------------*/
 
@@ -125,7 +119,36 @@ void remoteTask(void *pvParameters)
     }
 
     /* try to connect */
-    while(!(FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize)));
+    ret = 1;
+    do
+    {
+        ret = FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize);
+    } while(ret != 0);
+
+    if((ret == pdFREERTOS_ERRNO_EBADF) || (ret == (-1 * pdFREERTOS_ERRNO_EBADF))) {
+        ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_EBADF \n");
+    }
+    else if(ret == pdFREERTOS_ERRNO_EISCONN) {
+        ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_EISCONN \n");
+    }
+    else if(ret == pdFREERTOS_ERRNO_EINPROGRESS) {
+        ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_EINPROGRESS \n");
+    }
+    else if(ret == pdFREERTOS_ERRNO_EAGAIN) {
+        ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_EAGAIN \n");
+    }
+    else if(ret == pdFREERTOS_ERRNO_EWOULDBLOCK) {
+        ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_EWOULDBLOCK \n");
+    }
+    else if(ret == pdFREERTOS_ERRNO_ETIMEDOUT) {
+        ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_ETIMEDOUT \n");
+    }
+    else if (ret != 0) {
+        ERROR_PRINT("FreeRTOS_connect failed: OTHER(%d)\n", ret);
+    }
+    else {
+        INFO_PRINT("FreeRTOS_connect successed\n");
+    }
 
     /* send data, log and status msgs to Control Node */
     while(keepAlive)
@@ -157,8 +180,8 @@ void remoteTask(void *pvParameters)
         sprintf(cString, "Standard send message number %lu\r\n", ulCount);
 
         /* Send the string to the UDP socket */
-        //FreeRTOS_send(xListeningSocket, cString, strlen(cString), 0);
-        FreeRTOS_recv(xListeningSocket, recvData, sizeof(recvData), 0);
+        sendSocketData((uint8_t *)cString, strlen(cString));
+        readSocketData(recvData, sizeof(recvData));
 
         ulCount++;
         /*-----------------------------------------------------------------------*/
@@ -186,6 +209,12 @@ void remoteTask(void *pvParameters)
             //LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
         }
     }
+
+    /* gracefully shutdown socket */
+    FreeRTOS_shutdown( xListeningSocket, FREERTOS_SHUT_RDWR );
+
+    /* The socket has shut down and is safe to close. */
+    FreeRTOS_closesocket( xListeningSocket );
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
 }
 
@@ -216,4 +245,53 @@ void InitIP(void)
                        ucDNSServerAddress, ucMACAddress) != pdPASS) {
         ERROR_PRINT("IPInit error\n");
     }
+}
+
+int8_t readSocketData(uint8_t *pData, size_t length)
+{
+    BaseType_t ret;
+    ret = FreeRTOS_recv(xListeningSocket, pData, length, 0);
+
+    if(ret == length) {
+        return RETURN_SUCCESS;
+    }
+    if(ret == pdFREERTOS_ERRNO_ENOMEM ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOMEM\n");
+    }
+    if(ret == pdFREERTOS_ERRNO_ENOTCONN ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOTCONN\n");
+    }
+    if(ret == pdFREERTOS_ERRNO_EINTR ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINTR\n");
+    }
+    if(ret == pdFREERTOS_ERRNO_EINVAL ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINVAL\n");
+    }
+    if(ret == 0) {
+        ERROR_PRINT("readSocketData TIMEOUT\n");
+    }
+    return RETURN_ERROR;
+}
+
+int8_t sendSocketData(uint8_t *pData, size_t length)
+{
+    BaseType_t ret;
+    ret = FreeRTOS_send(xListeningSocket, pData, length, 0);
+
+    if(ret == length) {
+        return RETURN_SUCCESS;
+    }
+    if(ret == pdFREERTOS_ERRNO_ENOMEM ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOMEM\n");
+    }
+    if(ret == pdFREERTOS_ERRNO_ENOTCONN ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOTCONN\n");
+    }
+    if(ret == pdFREERTOS_ERRNO_EINVAL  ) {
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINVAL \n");
+    }
+    if(ret == pdFREERTOS_ERRNO_ENOSPC ) {
+        ERROR_PRINT("readSocketData TIMEOUT\n");
+    }
+    return RETURN_ERROR;
 }

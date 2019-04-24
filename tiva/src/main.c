@@ -137,7 +137,7 @@ int main(void)
     LOG_LOGGER_INITIALIZED();
 
     /* create threads */
-    xTaskCreate(observerTask, (const portCHAR *)"Observer", configMINIMAL_STACK_SIZE, (void *)&info, 1, &observerTaskHandle);
+    xTaskCreate(observerTask, (const portCHAR *)"Observer", configMINIMAL_STACK_SIZE * 2, (void *)&info, 1, &observerTaskHandle);
     setTaskNum(observerTaskHandle, PID_OBSERVER);
 
     xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid", configMINIMAL_STACK_SIZE, (void *)&info, 1, &solenoidTaskHandle);
