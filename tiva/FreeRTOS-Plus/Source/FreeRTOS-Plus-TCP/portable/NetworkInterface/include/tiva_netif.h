@@ -85,7 +85,7 @@
 #endif
 
 #ifndef NUM_TX_DESCRIPTORS
-#define NUM_TX_DESCRIPTORS      (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS / 4)
+#define NUM_TX_DESCRIPTORS      (3)//(ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS / 4)
 #endif
 
 #if (ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS < (NUM_RX_DESCRIPTORS + NUM_TX_DESCRIPTORS))
@@ -104,7 +104,7 @@ extern tDescriptor g_pRxDescriptors[NUM_RX_DESCRIPTORS];
 /*------------------------------------------------------------------------------------------------*/
 
 void InitDMADescriptors(void);
-int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen);
+int32_t PacketTransmit(uint8_t *pui8Buf, uint32_t i32BufLen);
 
 void processPhyInterrupt(void);
 void processTxInterrupt(uint32_t ulISREvents);

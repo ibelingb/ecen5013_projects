@@ -146,7 +146,7 @@ int main(void)
     xTaskCreate(lightTask, (const portCHAR *)"Light", configMINIMAL_STACK_SIZE, (void *)&info, 1, &lightTaskHandle);
     setTaskNum(lightTaskHandle, PID_LIGHT);
 
-    xTaskCreate(remoteTask, (const portCHAR *)"Remote", configMINIMAL_STACK_SIZE, (void *)&info, 1, &remoteTaskHandle);
+    xTaskCreate(remoteTask, (const portCHAR *)"Remote", configMINIMAL_STACK_SIZE * 3, (void *)&info, 1, &remoteTaskHandle);
     setTaskNum(remoteTaskHandle, PID_REMOTE_CLIENT);
 
     xTaskCreate(moistureTask, (const portCHAR *)"Moist", configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);

@@ -219,7 +219,7 @@ not set to 1 then only FreeRTOS_indet_addr_quick() is available. */
 are available to the IP stack.  The total number of network buffers is limited
 to ensure the total amount of RAM that can be consumed by the IP stack is capped
 to a pre-determinable value. */
-#define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS      16
+#define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS      12
 
 /* A FreeRTOS queue is used to send events from application tasks to the IP
 stack.  ipconfigEVENT_QUEUE_LENGTH sets the maximum number of events that can
@@ -256,7 +256,7 @@ contain.  For normal Ethernet V2 frames the maximum MTU is 1500.  Setting a
 lower value can save RAM, depending on the buffer management scheme used.  If
 ipconfigCAN_FRAGMENT_OUTGOING_PACKETS is 1 then (ipconfigNETWORK_MTU - 28) must
 be divisible by 8. */
-#define ipconfigNETWORK_MTU     1536
+#define ipconfigNETWORK_MTU     1540
 
 /* Set ipconfigUSE_DNS to 1 to include a basic DNS client/resolver.  DNS is used
 through the FreeRTOS_gethostbyname() API function. */
@@ -268,7 +268,7 @@ generate replies to incoming ICMP echo (ping) requests. */
 
 /* If ipconfigSUPPORT_OUTGOING_PINGS is set to 1 then the
 FreeRTOS_SendPingRequest() API function is available. */
-#define ipconfigSUPPORT_OUTGOING_PINGS              1
+#define ipconfigSUPPORT_OUTGOING_PINGS              0
 
 /* If ipconfigSUPPORT_SELECT_FUNCTION is set to 1 then the FreeRTOS_select()
 (and associated) API function is available. */
@@ -314,10 +314,10 @@ simultaneously, one could define TCP_WIN_SEG_COUNT as 120. */
  * have a fixed maximum size.
  * The defaults for these size are defined here, although
  * they can be overridden at runtime by using the setsockopt() call */
-#define ipconfigTCP_RX_BUFFER_LENGTH    ( 3u * ipconfigTCP_MSS )
+#define ipconfigTCP_RX_BUFFER_LENGTH    ( 4u * ipconfigTCP_MSS )
 
 /* Define the size of Tx stream buffer for TCP sockets */
-#define ipconfigTCP_TX_BUFFER_LENGTH    ( 2u * ipconfigTCP_MSS )
+#define ipconfigTCP_TX_BUFFER_LENGTH    ( 4u * ipconfigTCP_MSS )
 
 /* When using call-back handlers, the driver may check if the handler points to
 real program memory (RAM or flash) or just has a random non-zero value. */

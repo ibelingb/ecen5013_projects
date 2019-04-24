@@ -77,14 +77,15 @@ void remoteTask(void *pvParameters)
     /* set up socket  */
     /*-------------------------------------------------------------------------------------*/
     Socket_t xListeningSocket;
-    const TickType_t xTimeOut = 200 / portTICK_PERIOD_MS;
+    const TickType_t xTimeOut = 30 / portTICK_PERIOD_MS;
     char cString[ 50 ];
+    uint8_t recvData[50];
     uint32_t ulCount = 0UL;
     struct freertos_sockaddr xDestinationAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
     uint8_t chksumEnable = 1;
 
-    /* Send strings to port 10000 on IP address 192.168.0.50. */
+    /* Set destination */
     xDestinationAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.144" );
     xDestinationAddress.sin_port = FreeRTOS_htons( 1021 );
 
@@ -100,14 +101,12 @@ void remoteTask(void *pvParameters)
                          &xTimeOut, sizeof( xTimeOut ) );
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_RCVTIMEO,
                          &xTimeOut, sizeof( xTimeOut ) );
-    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
-                         &chksumEnable, 0 );
+//    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
+//                         &chksumEnable, 0 );
 
     /* Bind the socket to port 0x1234. */
     FreeRTOS_bind(xListeningSocket, &xDestinationAddress, xSize);
 
-    /* try to connect */
-    while(!(FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize)));
     /*-------------------------------------------------------------------------------------*/
 
     /* set portion of statusMsg that does not change */
@@ -124,6 +123,9 @@ void remoteTask(void *pvParameters)
     else {
         LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
     }
+
+    /* try to connect */
+    while(!(FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize)));
 
     /* send data, log and status msgs to Control Node */
     while(keepAlive)
@@ -156,6 +158,7 @@ void remoteTask(void *pvParameters)
 
         /* Send the string to the UDP socket */
         //FreeRTOS_send(xListeningSocket, cString, strlen(cString), 0);
+        FreeRTOS_recv(xListeningSocket, recvData, sizeof(recvData), 0);
 
         ulCount++;
         /*-----------------------------------------------------------------------*/

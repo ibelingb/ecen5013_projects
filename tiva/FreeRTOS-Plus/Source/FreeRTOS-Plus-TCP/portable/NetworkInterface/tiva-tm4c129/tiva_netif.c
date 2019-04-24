@@ -124,6 +124,8 @@ uint32_t g_ui32TxDescIndex;
 void InitDMADescriptors(void)
 {
     uint32_t ui32Loop;
+    uint8_t *pNetBuffer;
+    size_t requestedSize = RX_BUFFER_SIZE;
 
     /* Transmit list -  mark all descriptors as not owned by the hardware */
    for(ui32Loop = 0; ui32Loop < NUM_TX_DESCRIPTORS; ui32Loop++)
@@ -145,8 +147,12 @@ void InitDMADescriptors(void)
   {
       g_pRxDescriptors[ui32Loop].pBuf = &g_ppui8RxBuffer[ui32Loop][0];
 
-      /* Set the DMA to write directly into the pbuf */
-      g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = g_pRxDescriptors[ui32Loop].pBuf;
+      /* get a network buffer pointer */
+      pNetBuffer = pucGetNetworkBuffer(&requestedSize);
+      configASSERT(pNetBuffer != NULL);
+      configASSERT(reqeustedSize == RX_BUFFER_SIZE);
+
+      g_pRxDescriptors[ui32Loop].Desc.pvBuffer1 = pNetBuffer;//g_pRxDescriptors[ui32Loop].pBuf;
       g_pRxDescriptors[ui32Loop].Desc.ui32Count |=  (DES1_RX_CTRL_CHAINED |
               (RX_BUFFER_SIZE << DES1_RX_CTRL_BUFF1_SIZE_S));
 
@@ -164,421 +170,6 @@ void InitDMADescriptors(void)
   g_ui32RxDescIndex = 0;
   g_ui32TxDescIndex = NUM_TX_DESCRIPTORS - 1;
 }
-
-/**
- * This function should do the actual transmission of the packet. The packet is
- * contained in the pbuf that is passed to the function. This pbuf might be
- * chained.
- *
- * @param psNetif the lwip network interface structure for this ethernetif
- * @param p the MAC packet to send (e.g. IP packet including MAC addresses and type)
- * @return ERR_OK if the packet coui32d be sent
- *         an err_t value if the packet coui32dn't be sent
- */
-#ifdef USE_LWIP_LIB
-static err_t
-tivaif_transmit(struct netif *psNetif, struct pbuf *p)
-{
-  tStellarisIF *pIF;
-  tDescriptor *pDesc;
-  struct pbuf *pBuf;
-  uint32_t ui32NumChained, ui32NumDescs;
-  bool bFirst;
-  SYS_ARCH_DECL_PROTECT(lev);
-
-  LWIP_DEBUGF(NETIF_DEBUG, ("tivaif_transmit 0x%08x, len %d\n", p,
-              p->tot_len));
-
-  /**
-   * This entire function must run within a "critical section" to preserve
-   * the integrity of the transmit pbuf queue.
-   */
-  SYS_ARCH_PROTECT(lev);
-
-  /* Update our transmit attempt counter. */
-  DRIVER_STATS_INC(TXCount);
-
-  /**
-   * Increase the reference count on the packet provided so that we can
-   * hold on to it until we are finished transmitting its content.
-   */
-  pbuf_ref(p);
-
-  /**
-   * Determine whether all buffers passed are within SRAM and, if not, copy
-   * the pbuf into SRAM-resident buffers so that the Ethernet DMA can access
-   * the data.
-   */
-  p = tivaif_check_pbuf(p);
-
-  /* Make sure we still have a valid buffer (it may have been copied) */
-  if(!p)
-  {
-      LINK_STATS_INC(link.memerr);
-      SYS_ARCH_UNPROTECT(lev);
-      return(ERR_MEM);
-  }
-
-  /* Get our state data from the netif structure we were passed. */
-  pIF = (tStellarisIF *)psNetif->state;
-
-  /* Make sure that the transmit descriptors are not all in use */
-  pDesc = &(pIF->pTxDescList->pDescriptors[pIF->pTxDescList->ui32Write]);
-  if(pDesc->pBuf)
-  {
-      /**
-       * The current write descriptor has a pbuf attached to it so this
-       * implies that the ring is full. Reject this transmit request with a
-       * memory error since we can't satisfy it just now.
-       */
-      pbuf_free(p);
-      LINK_STATS_INC(link.memerr);
-      DRIVER_STATS_INC(TXNoDescCount);
-      SYS_ARCH_UNPROTECT(lev);
-      return (ERR_MEM);
-  }
-
-  /* How many pbufs are in the chain passed? */
-  ui32NumChained = (uint32_t)pbuf_clen(p);
-
-  /* How many free transmit descriptors do we have? */
-  ui32NumDescs = (pIF->pTxDescList->ui32Read > pIF->pTxDescList->ui32Write) ?
-          (pIF->pTxDescList->ui32Read - pIF->pTxDescList->ui32Write) :
-          ((NUM_TX_DESCRIPTORS - pIF->pTxDescList->ui32Write) +
-           pIF->pTxDescList->ui32Read);
-
-  /* Do we have enough free descriptors to send the whole packet? */
-  if(ui32NumDescs < ui32NumChained)
-  {
-      /* No - we can't transmit this whole packet so return an error. */
-      pbuf_free(p);
-      LINK_STATS_INC(link.memerr);
-      DRIVER_STATS_INC(TXNoDescCount);
-      SYS_ARCH_UNPROTECT(lev);
-      return (ERR_MEM);
-  }
-
-  /* Tag the first descriptor as the start of the packet. */
-  bFirst = true;
-  pDesc->Desc.ui32CtrlStatus = DES0_TX_CTRL_FIRST_SEG;
-
-  /* Here, we know we can send the packet so write it to the descriptors */
-  pBuf = p;
-
-  while(ui32NumChained)
-  {
-      /* Get a pointer to the descriptor we will write next. */
-      pDesc = &(pIF->pTxDescList->pDescriptors[pIF->pTxDescList->ui32Write]);
-
-      /* Fill in the buffer pointer and length */
-      pDesc->Desc.ui32Count = (uint32_t)pBuf->len;
-      pDesc->Desc.pvBuffer1 = pBuf->payload;
-
-      /* Tag the first descriptor as the start of the packet. */
-      if(bFirst)
-      {
-          bFirst = false;
-          pDesc->Desc.ui32CtrlStatus = DES0_TX_CTRL_FIRST_SEG;
-      }
-      else
-      {
-          pDesc->Desc.ui32CtrlStatus = 0;
-      }
-
-      pDesc->Desc.ui32CtrlStatus |= (DES0_TX_CTRL_IP_ALL_CKHSUMS |
-                                     DES0_TX_CTRL_CHAINED);
-
-      /* Decrement our descriptor counter, move on to the next buffer in the
-       * pbuf chain. */
-      ui32NumChained--;
-      pBuf = pBuf->next;
-
-      /* Update the descriptor list write index. */
-      pIF->pTxDescList->ui32Write++;
-      if(pIF->pTxDescList->ui32Write == NUM_TX_DESCRIPTORS)
-      {
-          pIF->pTxDescList->ui32Write = 0;
-      }
-
-      /* If this is the last descriptor, mark it as the end of the packet. */
-      if(!ui32NumChained)
-      {
-          pDesc->Desc.ui32CtrlStatus |= (DES0_TX_CTRL_LAST_SEG |
-                                         DES0_TX_CTRL_INTERRUPT);
-
-          /* Tag the descriptor with the original pbuf pointer. */
-          pDesc->pBuf = p;
-      }
-      else
-      {
-          /* Set the lsb of the pbuf pointer.  We use this as a signal that
-           * we should not free the pbuf when we are walking the descriptor
-           * list while processing the transmit interrupt.  We only free the
-           * pbuf when processing the last descriptor used to transmit its
-           * chain.
-           */
-          pDesc->pBuf = (struct pbuf *)((uint32_t)p + 1);
-      }
-
-      DRIVER_STATS_INC(TXBufQueuedCount);
-
-      /* Hand the descriptor over to the hardware. */
-      pDesc->Desc.ui32CtrlStatus |= DES0_TX_CTRL_OWN;
-  }
-
-  /* Tell the transmitter to start (in case it had stopped). */
-  EMACTxDMAPollDemand(EMAC0_BASE);
-
-  /* Update lwIP statistics */
-  LINK_STATS_INC(link.xmit);
-
-  SYS_ARCH_UNPROTECT(lev);
-  return(ERR_OK);
-}
-#endif
-/**
- * This function will process all transmit descriptors and free pbufs attached
- * to any that have been transmitted since we last checked.
- *
- * This function is called only from the Ethernet interrupt handler.
- *
- * @param netif the lwip network interface structure for this ethernetif
- * @return None.
- */
-#ifdef USE_LWIP_LIB
-static void tivaif_process_transmit(tStellarisIF *pIF)
-{
-    tDescriptorList *pDescList;
-    uint32_t ui32NumDescs;
-
-    /* Get a pointer to the transmit descriptor list. */
-    pDescList = pIF->pTxDescList;
-
-    /* Walk the list until we have checked all descriptors or we reach the
-     * write pointer or find a descriptor that the hardware is still working
-     * on.
-     */
-    for(ui32NumDescs = 0; ui32NumDescs < pDescList->ui32NumDescs; ui32NumDescs++)
-    {
-        /* Has the buffer attached to this descriptor been transmitted? */
-        if(pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus &
-           DES0_TX_CTRL_OWN)
-        {
-            /* No - we're finished. */
-            break;
-        }
-
-        /* Does this descriptor have a buffer attached to it? */
-        if(pDescList->pDescriptors[pDescList->ui32Read].pBuf)
-        {
-            /* Yes - free it if it's not marked as an intermediate pbuf */
-            if(!((uint32_t)(pDescList->pDescriptors[pDescList->ui32Read].pBuf) & 1))
-            {
-                //TODO - hook up to FreeRTOS IP stack?
-                //pbuf_free(pDescList->pDescriptors[pDescList->ui32Read].pBuf);
-                DRIVER_STATS_INC(TXBufFreedCount);
-            }
-            pDescList->pDescriptors[pDescList->ui32Read].pBuf = NULL;
-        }
-        else
-        {
-            /* If the descriptor has no buffer, we are finished. */
-            break;
-        }
-
-        /* Move on to the next descriptor. */
-        pDescList->ui32Read++;
-        if(pDescList->ui32Read == pDescList->ui32NumDescs)
-        {
-            pDescList->ui32Read = 0;
-        }
-    }
-}
-#endif
-/**
- * This function will process all receive descriptors that contain newly read
- * data and pass complete frames up the lwIP stack as they are found.  The
- * timestamp of the packet will be placed into the pbuf structure if PTPD is
- * enabled.
- *
- * This function is called only from the Ethernet interrupt handler.
- *
- * @param psNetif the lwip network interface structure for this ethernetif
- * @return None.
- */
-#ifdef USE_LWIP_LIB
-static void tivaif_receive(struct netif *psNetif)
-{
-
-  tDescriptorList *pDescList;
-  tStellarisIF *pIF;
-  static struct pbuf *pBuf = NULL;
-  uint32_t ui32DescEnd;
-
-  /* Get a pointer to our state data */
-  pIF = (tStellarisIF *)(psNetif->state);
-
-  /* Get a pointer to the receive descriptor list. */
-  pDescList = pIF->pRxDescList;
-
-  /* Start with a NULL pbuf so that we don't try to link chain the first
-   * time round.
-   */
-  //pBuf = NULL;
-
-  /* Determine where we start and end our walk of the descriptor list */
-  ui32DescEnd = pDescList->ui32Read ? (pDescList->ui32Read - 1) : (pDescList->ui32NumDescs - 1);
-
-  /* Step through the descriptors that are marked for CPU attention. */
-  while(pDescList->ui32Read != ui32DescEnd)
-  {
-      /* Does the current descriptor have a buffer attached to it? */
-      if(pDescList->pDescriptors[pDescList->ui32Read].pBuf)
-      {
-          /* Yes - determine if the host has filled it yet. */
-          if(pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus &
-             DES0_RX_CTRL_OWN)
-          {
-              /* The DMA engine still owns the descriptor so we are finished */
-              break;
-          }
-
-          DRIVER_STATS_INC(RXBufReadCount);
-
-          /* If this descriptor contains the end of the packet, fix up the
-           * buffer size accordingly.
-           */
-          if(pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus &
-             DES0_RX_STAT_LAST_DESC)
-          {
-              /* This is the last descriptor for the frame so fix up the
-               * length.  It is safe for us to modify the internal fields
-               * directly here (rather than calling pbuf_realloc) since we
-               * know each of these pbufs is never chained.
-               */
-              pDescList->pDescriptors[pDescList->ui32Read].pBuf->len =
-                       (pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus &
-                        DES0_RX_STAT_FRAME_LENGTH_M) >>
-                        DES0_RX_STAT_FRAME_LENGTH_S;
-              pDescList->pDescriptors[pDescList->ui32Read].pBuf->tot_len =
-                        pDescList->pDescriptors[pDescList->ui32Read].pBuf->len;
-          }
-
-          if(pBuf)
-          {
-              /* Link this pbuf to the last one we looked at since this buffer
-               * is a continuation of an existing frame (split across multiple
-               * pbufs).  Note that we use pbuf_cat() here rather than
-               * pbuf_chain() since we don't want to increase the reference
-               * count of either pbuf - we only want to link them together.
-               */
-              pbuf_cat(pBuf, pDescList->pDescriptors[pDescList->ui32Read].pBuf);
-              pDescList->pDescriptors[pDescList->ui32Read].pBuf = pBuf;
-          }
-
-          /* Remember the buffer associated with this descriptor. */
-          pBuf = pDescList->pDescriptors[pDescList->ui32Read].pBuf;
-
-          /* Is this the last descriptor for the current frame? */
-          if(pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus &
-             DES0_RX_STAT_LAST_DESC)
-          {
-              /* Yes - does the frame contain errors? */
-              if(pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus &
-                 DES0_RX_STAT_ERR)
-              {
-                  /* This is a bad frame so discard it and update the relevant
-                   * statistics.
-                   */
-                  LWIP_DEBUGF(NETIF_DEBUG, ("tivaif_receive: packet error\n"));
-                  pbuf_free(pBuf);
-                  LINK_STATS_INC(link.drop);
-                  DRIVER_STATS_INC(RXPacketErrCount);
-                  pBuf = NULL;
-              }
-              else
-              {
-                  /* This is a good frame so pass it up the stack. */
-                  LINK_STATS_INC(link.recv);
-                  DRIVER_STATS_INC(RXPacketReadCount);
-
-#if LWIP_PTPD
-                  /* Place the timestamp in the PBUF if PTPD is enabled */
-                  pBuf->time_s =
-                       pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32IEEE1588TimeHi;
-                  pBuf->time_ns =
-                       pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32IEEE1588TimeLo;
-#endif
-
-#if NO_SYS
-                  if(ethernet_input(pBuf, psNetif) != ERR_OK)
-#else
-                  if(tcpip_input(pBuf, psNetif) != ERR_OK)
-#endif
-                  {
-                      /* drop the packet */
-                      LWIP_DEBUGF(NETIF_DEBUG, ("tivaif_input: input error\n"));
-                      pbuf_free(pBuf);
-
-                      /* Adjust the link statistics */
-                      LINK_STATS_INC(link.memerr);
-                      LINK_STATS_INC(link.drop);
-                      DRIVER_STATS_INC(RXPacketCBErrCount);
-                  }
-
-                  /* We're finished with this packet so make sure we don't try
-                   * to link the next buffer to it.
-                   */
-                  pBuf = NULL;
-              }
-          }
-      }
-
-      /* Allocate a new buffer for this descriptor */
-      pDescList->pDescriptors[pDescList->ui32Read].pBuf = pbuf_alloc(PBUF_RAW,
-                                                        PBUF_POOL_BUFSIZE,
-                                                        PBUF_POOL);
-      pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32Count =
-                                                        DES1_RX_CTRL_CHAINED;
-      if(pDescList->pDescriptors[pDescList->ui32Read].pBuf)
-      {
-          /* We got a buffer so fill in the payload pointer and size. */
-          pDescList->pDescriptors[pDescList->ui32Read].Desc.pvBuffer1 =
-                              pDescList->pDescriptors[pDescList->ui32Read].pBuf->payload;
-          pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32Count |=
-                              (pDescList->pDescriptors[pDescList->ui32Read].pBuf->len <<
-                               DES1_RX_CTRL_BUFF1_SIZE_S);
-
-          /* Give this descriptor back to the hardware */
-          pDescList->pDescriptors[pDescList->ui32Read].Desc.ui32CtrlStatus =
-                              DES0_RX_CTRL_OWN;
-      }
-      else
-      {
-          LWIP_DEBUGF(NETIF_DEBUG, ("tivaif_receive: pbuf_alloc error\n"));
-
-          pDescList->pDescriptors[pDescList->ui32Read].Desc.pvBuffer1 = 0;
-
-          /* Update the stats to show we coui32dn't allocate a pbuf. */
-          DRIVER_STATS_INC(RXNoBufCount);
-          LINK_STATS_INC(link.memerr);
-
-          /* Stop parsing here since we can't leave a broken descriptor in
-           * the chain.
-           */
-          break;
-      }
-
-      /* Move on to the next descriptor in the chain, taking care to wrap. */
-      pDescList->ui32Read++;
-      if(pDescList->ui32Read == pDescList->ui32NumDescs)
-      {
-          pDescList->ui32Read = 0;
-      }
-  }
-
-}
-#endif
 
 /*---------------------------------------------------------------------------------*/
 void processPhyInterrupt(void)
@@ -643,7 +234,7 @@ void processPhyInterrupt(void)
 /*---------------------------------------------------------------------------------*/
 void processTxInterrupt(uint32_t ulISREvents)
 {
-    /* should get here, FreeRTOS NetworkOuput function
+    /* shouldn't get here, FreeRTOS NetworkOutput function
      * sends packets, TRAP!!!
      */
     while(0){}
@@ -723,21 +314,24 @@ void processRxInterrupt(uint32_t ulISREvents)
                           /* pvData is used to point to the network buffer descriptor that
                           references the received data. */
                           xRxEvent.pvData = (void *)pxDescriptor;
+                          if( eConsiderFrameForProcessing(pxDescriptor->pucEthernetBuffer)
+                                                          == eProcessBuffer)
+                          {
+                              /* Send the data to the TCP/IP stack. */
+                                 if( xSendEventStructToIPTask( &xRxEvent, 0 ) == pdFALSE ) {
+                                       /* The buffer could not be sent to the IP task so the buffer
+                                       must be released. */
+                                       vReleaseNetworkBufferAndDescriptor(pxDescriptor);
 
-                          /* Send the data to the TCP/IP stack. */
-                          if( xSendEventStructToIPTask( &xRxEvent, 0 ) == pdFALSE ) {
-                                /* The buffer could not be sent to the IP task so the buffer
-                                must be released. */
-                                vReleaseNetworkBufferAndDescriptor(pxDescriptor);
-
-                                /* Make a call to the standard trace macro to log the
-                                occurrence. */
-                                iptraceETHERNET_RX_EVENT_LOST();
-                          }
-                          else {
-                                /* The message was successfully sent to the TCP/IP stack.
-                                Call the standard trace macro to log the occurrence. */
-                                iptraceNETWORK_INTERFACE_RECEIVE();
+                                       /* Make a call to the standard trace macro to log the
+                                       occurrence. */
+                                       iptraceETHERNET_RX_EVENT_LOST();
+                                 }
+                                 else {
+                                       /* The message was successfully sent to the TCP/IP stack.
+                                       Call the standard trace macro to log the occurrence. */
+                                       iptraceNETWORK_INTERFACE_RECEIVE();
+                                 }
                           }
                     }
                 }
@@ -759,7 +353,7 @@ void processRxInterrupt(uint32_t ulISREvents)
 }
 
 /*---------------------------------------------------------------------------------*/
-int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen)
+int32_t PacketTransmit(uint8_t *pui8Buf, uint32_t ui32BufLen)
 {
 
     /* Wait for the transmit descriptor to free up */
@@ -773,7 +367,7 @@ int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen)
     }
 
     /* Fill in the packet size and pointer, and tell the transmitter to start work */
-    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32Count = (uint32_t)i32BufLen;
+    g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32Count = ui32BufLen;
     g_pTxDescriptors[g_ui32TxDescIndex].Desc.pvBuffer1 = pui8Buf;
 
     g_pTxDescriptors[g_ui32TxDescIndex].Desc.ui32CtrlStatus =
@@ -788,7 +382,7 @@ int32_t PacketTransmit(uint8_t *pui8Buf, int32_t i32BufLen)
     EMACTxDMAPollDemand(EMAC0_BASE);
 
     /* Return the number of bytes sent */
-    return(i32BufLen);
+    return(ui32BufLen);
 }
 
 /*-----------------------------------------------------------*/

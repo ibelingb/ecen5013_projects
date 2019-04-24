@@ -89,9 +89,6 @@ void EthernetHandler(void);
 /*-----------------------------------------------------------*/
 BaseType_t xNetworkInterfaceInitialise( void )
 {
-    if(InitMACPHY(g_sysClk) != pdTRUE) {
-        return pdFAIL;
-    }
 
     /* create interrupt queue */
     g_pInterrupt = xQueueCreate(ipconfigEVENT_QUEUE_LENGTH, sizeof(uint32_t));
@@ -104,6 +101,9 @@ BaseType_t xNetworkInterfaceInitialise( void )
     xTaskCreate( prvEMACHandlerTask, "emacEvent", configEMAC_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES - 1, &xEMACTaskHandle );
     configASSERT( xEMACTaskHandle );
 
+    if(InitMACPHY(g_sysClk) != pdTRUE) {
+        return pdFAIL;
+    }
 	return pdPASS;
 }
 /*-----------------------------------------------------------*/
@@ -147,40 +147,17 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     /* Lower the priority of the Ethernet interrupt handler.  This is required
      * so that the interrupt handler can safely call the interrupt-safe
      * FreeRTOS functions (specifically to send messages to the queue) */
-    IntPrioritySet(INT_EMAC0_TM4C129, 0xE0);
+    IntPrioritySet(INT_EMAC0_TM4C129, 0xC0);
 
     /*----------------------------------------------------------------------------*/
     /* Enable Peripherals & Initialize EMAC */
     /*----------------------------------------------------------------------------*/
 
-    /* Ethernet LEDs */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinConfigure(GPIO_PF0_EN0LED0);
-    GPIOPinConfigure(GPIO_PF4_EN0LED1);
-    GPIOPinTypeEthernetLED(GPIO_PORTF_BASE, GPIO_PIN_4);
-    GPIOPinTypeEthernetLED(GPIO_PORTF_BASE, GPIO_PIN_0);
-
-    /* Enable and reset MAC */
+    /* Enable and reset MAC & PHY */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_EMAC0);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_EPHY0);
     SysCtlPeripheralReset(SYSCTL_PERIPH_EMAC0);
-
-    /* Enable the internal PHY if it's present and we're being asked to use it. */
-    if((EMAC_PHY_CONFIG & EMAC_PHY_TYPE_MASK) == EMAC_PHY_TYPE_INTERNAL)
-    {
-        /* We've been asked to configure for use with the internal
-         * PHY.  Is it present? */
-        if(SysCtlPeripheralPresent(SYSCTL_PERIPH_EPHY0))
-        {
-            /* Yes - enable and reset it. */
-            SysCtlPeripheralEnable(SYSCTL_PERIPH_EPHY0);
-            SysCtlPeripheralReset(SYSCTL_PERIPH_EPHY0);
-        }
-        else
-        {
-            /* Internal PHY is not present on this part so hang here */
-            while(1) {}
-        }
-    }
+    SysCtlPeripheralReset(SYSCTL_PERIPH_EPHY0);
 
     /* Wait for the MAC to come out of reset */
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_EMAC0)) {}
@@ -212,8 +189,7 @@ BaseType_t InitMACPHY(uint32_t sysClk)
 
     /* Get the MAC address from the user registers */
     FlashUserGet(&ui32User0, &ui32User1);
-    if((ui32User0 == 0xffffffff) || (ui32User1 == 0xffffffff))
-    {
+    if((ui32User0 == 0xffffffff) || (ui32User1 == 0xffffffff)) {
         return pdFALSE;
     }
 
@@ -274,9 +250,7 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     EMACRxEnable(EMAC0_BASE);
 
     /* Enable the Ethernet RX and TX interrupt source. */
-    EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-//                  EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED |
-                  EMAC_INT_PHY));
+    EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_PHY));
 
     /* Enable the Ethernet interrupt */
     IntEnable(INT_EMAC0);
@@ -296,48 +270,30 @@ void prvEMACHandlerTask( void *pvParameters )
     const TickType_t xDelay = (1000  / portTICK_PERIOD_MS);
     uint32_t ulISREvents;
 
-
-    configASSERT( xEMACTaskHandle );
-
     for(;;)
     {
         /* get interrupt msg */
         if(xQueueReceive(g_pInterrupt, (void *)&ulISREvents, xDelay) != pdFALSE) {
             printMACIntStatus(ulISREvents);
 
-            /* check for PHY interrupt */
-            if(ulISREvents & EMAC_INT_PHY)
-            {
-                processPhyInterrupt();
-            }
-
-            /* check for TX interrupt */
-            if(ulISREvents & EMAC_INT_TRANSMIT)
-            {
-                processTxInterrupt(ulISREvents);
-            }
-
             /* check for RX interrupt */
             if(ulISREvents & EMAC_INT_RECEIVE)
             {
                 processRxInterrupt(ulISREvents);
             }
+
+            /* check for PHY interrupt */
+            if(ulISREvents & EMAC_INT_PHY)
+            {
+                processPhyInterrupt();
+            }
         }
         /* Enable the Ethernet RX and TX interrupt source. */
-        EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-                      EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
-                      EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
+        EMACIntEnable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_PHY));
     }
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------*/
-//*****************************************************************************
-//
-// This is the code that gets called when the processor receives an ethernet
-// interrupt.  This simply enters an infinite loop, preserving the system state
-// for examination by a debugger.
-//
-//*****************************************************************************
 void xEthernetHandler(void)
 {
     uint32_t ui32Status;
@@ -375,9 +331,7 @@ void xEthernetHandler(void)
     // handled, they are not asserted.  Once they are handled by the deferrerd Ethernet
     // interrupt task, it will re-enable the interrupts.
     //
-    EMACIntDisable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT |
-                                    EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER |
-                                    EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
+    EMACIntDisable(EMAC0_BASE, (EMAC_INT_RECEIVE | EMAC_INT_PHY));
 
 
     /* portYIELD_FROM_ISR() - if deferred Ethernet interrupt handler became unblocked because
