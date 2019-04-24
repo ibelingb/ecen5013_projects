@@ -55,8 +55,7 @@ void* remoteDataThreadHandler(void* threadInfo)
   }
 
   sensorInfo = *(SensorThreadInfo *)threadInfo;
-  // TODO: Define data packet
-  LightDataStruct dataPacket = {0};
+  RemoteDataPacket dataPacket = {0};
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
   mqd_t dataMsgQueue;  /* Data MessageQueue */
@@ -64,7 +63,7 @@ void* remoteDataThreadHandler(void* threadInfo)
   int sockfdDataServer, sockfdDataClient, socketDataFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
-  size_t dataPacketSize = sizeof(struct LightDataStruct);
+  size_t dataPacketSize = sizeof(struct RemoteDataPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
@@ -78,8 +77,8 @@ void* remoteDataThreadHandler(void* threadInfo)
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));
   memset(&timerid, 0, sizeof(timer_t));
-  timer_interval.tv_nsec = LIGHT_LOOP_TIME_NSEC;
-  timer_interval.tv_sec = LIGHT_LOOP_TIME_SEC;
+  timer_interval.tv_nsec = REMOTE_LOOP_TIME_NSEC;
+  timer_interval.tv_sec = REMOTE_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
 
   /* block SIGRTs signals */
@@ -218,7 +217,7 @@ void* remoteDataThreadHandler(void* threadInfo)
       // TODO
 
       /* Pass received data to main thread */
-
+      mq_send(dataMsgQueue, (char *)&dataPacket, sizeof(struct RemoteDataPacket), 1);
     }
   }
 
@@ -247,7 +246,7 @@ void remoteDataSigHandler(int signo, siginfo_t *info, void *extra)
 
 /*---------------------------------------------------------------------------------*/
 /**
- * @brief Get method to receive lightThread's alive status.
+ * @brief Get method to receive remoteDataThread's alive status.
  *
  * @param pAlive - Pointer to return alive status back to caller function to.
  * @return void

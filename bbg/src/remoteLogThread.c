@@ -76,8 +76,8 @@ void* remoteLogThreadHandler(void* threadInfo)
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));
   memset(&timerid, 0, sizeof(timer_t));
-  timer_interval.tv_nsec = LIGHT_LOOP_TIME_NSEC;
-  timer_interval.tv_sec = LIGHT_LOOP_TIME_SEC;
+  timer_interval.tv_nsec = REMOTE_LOOP_TIME_NSEC;
+  timer_interval.tv_sec = REMOTE_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
 
   /* block SIGRTs signals */

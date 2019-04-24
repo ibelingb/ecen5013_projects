@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include <errno.h>
 
 #include "remoteThread.h"
@@ -45,19 +46,26 @@
 #define USR_LED_53          (53)
 #define BUFFER_SIZE         (6)
 
+//#define HOUR_TO_SEC (3600)
+#define HOUR_TO_SEC (1) // For testing, set to seconds
+
 /* private functions */
 void set_sig_handlers(void);
 void sigintHandler(int sig);
 void displayCommandMenu();
 int8_t handleConsoleCmd(uint32_t cmd, mqd_t cmdMsgQueue);
 int readInputNonBlock();
-void setPeriodicWaterSched(uint32_t sched);
-void setOneshotWaterSched(uint32_t sched);
+void setPeriodicWaterSched(uint32_t hours);
+void setOneshotWaterSched(uint32_t hours);
+static void waterDeviceTx();
 
 /* Define static and global variables */
 pthread_t gThreads[NUM_THREADS];
 static RemoteCmd_e gCurrentCmd = 0; /* Tracks current user cmd if waiting for additional data */
 static uint8_t gExit = 1;
+
+static mqd_t cmdMsgQueue;
+static timer_t waterTimerid;
 
 int main(int argc, char *argv[]){
   char *heartbeatMsgQueueName = "/heartbeat_mq";
@@ -72,12 +80,16 @@ int main(int argc, char *argv[]){
   mqd_t logMsgQueue;
   mqd_t heartbeatMsgQueue;
   mqd_t dataMsgQueue;
-  mqd_t cmdMsgQueue;
   char ind;
   uint8_t newError;
  
   char userInputBuffer[BUFFER_SIZE];
   uint32_t userInput = 0;
+
+  RemoteDataPacket dataPacket = {0};
+  size_t dataPacketSize = sizeof(struct RemoteDataPacket);
+  float luxData, moistureData = 0;
+  uint8_t dayNightCycleCount = 0;
 
   /* parse cmdline args */
   if(argc >= 2) {
@@ -85,11 +97,14 @@ int main(int argc, char *argv[]){
   }
   printf("logfile: %s\n", logFile);
 
-  /* timer variables */
+  /* Thread timer variables */
   static timer_t timerid;
   sigset_t set;
   int signum = SIGALRM;
   struct timespec timer_interval;
+
+  /* Watering timer variables */
+  struct sigevent waterSigEvent;
 
   /* set signal handlers and actions */
 	set_sig_handlers();
@@ -233,9 +248,17 @@ int main(int argc, char *argv[]){
   memset(&set, 0, sizeof(sigset_t));
   memset(&timerid, 0, sizeof(timer_t));
 
+  /* Create main-loop timer */
   timer_interval.tv_nsec = MAIN_LOOP_TIME_NSEC;
   timer_interval.tv_sec = MAIN_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
+
+  /* Create watering timer */
+  waterSigEvent.sigev_notify = SIGEV_THREAD;
+  waterSigEvent.sigev_value.sival_ptr = NULL;
+  waterSigEvent.sigev_notify_function = waterDeviceTx;
+  waterSigEvent.sigev_notify_attributes = NULL;
+  timer_create(CLOCK_REALTIME, &waterSigEvent, &waterTimerid);
 
   /* initialize status LED */
   initLed();
@@ -261,6 +284,24 @@ int main(int argc, char *argv[]){
       handleConsoleCmd(userInput, cmdMsgQueue);
       displayCommandMenu();
     }
+
+    /* If data received from TIVA, write to local data */
+    if(mq_receive(dataMsgQueue, (char *)&dataPacket, dataPacketSize, NULL) == dataPacketSize)
+    {
+      luxData = dataPacket.luxData;
+      moistureData = dataPacket.moistureData;
+
+      if((luxData > LIGHT_DARK_THRESHOLD) && (dataPacket.luxData <= LIGHT_DARK_THRESHOLD)){
+        dayNightCycleCount++;
+      }
+      
+      if(dayNightCycleCount > 6 && moistureData < 10){
+        // TODO Water device?
+      }
+    }
+
+    // Control Loop
+    // TODO
 
     /* If wish to log each heartbeat event monitored by main, uncomment below */
     //LOG_HEARTBEAT();
@@ -289,6 +330,7 @@ int main(int argc, char *argv[]){
   /* Cleanup */
   printf("main() Cleanup.\n");
   timer_delete(timerid);
+  timer_delete(waterTimerid);
   mq_unlink(heartbeatMsgQueueName);
   mq_unlink(logMsgQueueName);
   mq_unlink(dataMsgQueueName);
@@ -429,7 +471,6 @@ int8_t handleConsoleCmd(uint32_t userInput, mqd_t cmdMsgQueue) {
       case CMD_SETMOISTURE_LOWTHRES:
         printf("CMD_SETMOISTURE_LOWTHRES\n");
         gCurrentCmd = CMD_SETMOISTURE_LOWTHRES;
-
         if(data != 0) {
           /* Validate data received from user */
           if(data > SOIL_MOISTURE_MAX) {
@@ -502,15 +543,38 @@ int readInputNonBlock()
 }
 
 /*---------------------------------------------------------------------------------*/
-void setPeriodicWaterSched(uint32_t sched) {
+void setPeriodicWaterSched(uint32_t hours) {
   /* Validate input watering schedule */
-  // TODO
+  if(hours < 8) {
+    ERROR_PRINT("Periodic watering cycle must have a minimum interval of 8 hours - "
+                "Setting periodic watering cycle failed.\n");
+    return;
+  }
 
+  struct itimerspec timeSpec;
+  timeSpec.it_value.tv_sec = hours*HOUR_TO_SEC;
+  timeSpec.it_value.tv_nsec = 0;
+  timeSpec.it_interval.tv_sec = hours*HOUR_TO_SEC;
+  timeSpec.it_interval.tv_nsec = 0;
+
+  timer_settime(waterTimerid, 0, &timeSpec, NULL);
 }
 
 /*---------------------------------------------------------------------------------*/
-void setOneshotWaterSched(uint32_t sched) {
-  /* Validate input watering date/time */
-  // TODO
+void setOneshotWaterSched(uint32_t hours) {
+  struct itimerspec timeSpec;
+  timeSpec.it_value.tv_sec = hours*HOUR_TO_SEC;
+  timeSpec.it_value.tv_nsec = 0;
+  timeSpec.it_interval.tv_sec = 0;
+  timeSpec.it_interval.tv_nsec = 0;
 
+  timer_settime(waterTimerid, 0, &timeSpec, NULL);
+}
+
+
+/*---------------------------------------------------------------------------------*/
+static void waterDeviceTx() {
+  RemoteCmdPacket cmdPacket = {0};
+  cmdPacket.cmd = REMOTE_WATERPLANT;
+  mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
 }
