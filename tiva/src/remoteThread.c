@@ -84,7 +84,49 @@ void remoteTask(void *pvParameters)
 
     /* Set destination */
     xDestinationAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.144" );
-    xDestinationAddress.sin_port = FreeRTOS_htons( 15000 );
+    xDestinationAddress.sin_port = FreeRTOS_htons( 50000 );
+
+#ifdef UDP_SEND_TEST
+    Socket_t xSocket;
+    const TickType_t x1000ms = 1000UL / portTICK_PERIOD_MS;
+
+
+       /* Create the socket. */
+       xSocket = FreeRTOS_socket( FREERTOS_AF_INET,
+                                  FREERTOS_SOCK_DGRAM,/*FREERTOS_SOCK_DGRAM for UDP.*/
+                                  FREERTOS_IPPROTO_UDP );
+
+       /* Check the socket was created. */
+       configASSERT( xSocket != FREERTOS_INVALID_SOCKET );
+
+       /* NOTE: FreeRTOS_bind() is not called.  This will only work if
+       ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND is set to 1 in FreeRTOSIPConfig.h. */
+
+       for( ;; )
+       {
+           /* Create the string that is sent. */
+           sprintf( cString,
+                    "Standard send message number %lu\r\n",
+                    ulCount );
+
+           /* Send the string to the UDP socket.  ulFlags is set to 0, so the standard
+           semantics are used.  That means the data from cString[] is copied
+           into a network buffer inside FreeRTOS_sendto(), and cString[] can be
+           reused as soon as FreeRTOS_sendto() has returned. */
+           FreeRTOS_sendto( xSocket,
+                            cString,
+                            strlen( cString ),
+                            0,
+                            &xDestinationAddress,
+                            sizeof( xDestinationAddress ) );
+
+           ulCount++;
+
+           /* Wait until it is time to send again. */
+           vTaskDelay( x1000ms );
+       }
+
+#else
 
     /* Attempt to open the TCP socket. */
     xListeningSocket = FreeRTOS_socket( FREERTOS_AF_INET,
@@ -98,8 +140,9 @@ void remoteTask(void *pvParameters)
                          &xTimeOut, sizeof( xTimeOut ) );
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_RCVTIMEO,
                          &xTimeOut, sizeof( xTimeOut ) );
-    FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_UDPCKSUM_OUT,
-                         &chksumEnable, 0 );
+
+
+#endif
 
     /*-------------------------------------------------------------------------------------*/
 

@@ -270,8 +270,6 @@ void processRxInterrupt(uint32_t ulISREvents)
                 ((pxDMARxDescriptor->ui32CtrlStatus & DES0_RX_STAT_FRAME_LENGTH_M) >>
                 DES0_RX_STAT_FRAME_LENGTH_S);
 
-                /* Pass the received buffer up to the application to handle */
-
                 /*------------------------------------------------------------------------------------*/
                 /* Stuff in IP net frame */
                 /*------------------------------------------------------------------------------------*/

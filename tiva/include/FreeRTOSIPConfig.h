@@ -239,7 +239,7 @@ socketAUTO_PORT_ALLOCATION_START_NUMBER to 0xffff.  If
 ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND is set to 0 then calling FreeRTOS_sendto()
 on a socket that has not yet been bound will result in the send operation being
 aborted. */
-#define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 0
+#define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 1
 
 /* Defines the Time To Live (TTL) values used in outgoing UDP packets. */
 #define ipconfigUDP_TIME_TO_LIVE        128
@@ -268,7 +268,7 @@ generate replies to incoming ICMP echo (ping) requests. */
 
 /* If ipconfigSUPPORT_OUTGOING_PINGS is set to 1 then the
 FreeRTOS_SendPingRequest() API function is available. */
-#define ipconfigSUPPORT_OUTGOING_PINGS              0
+#define ipconfigSUPPORT_OUTGOING_PINGS              1
 
 /* If ipconfigSUPPORT_SELECT_FUNCTION is set to 1 then the FreeRTOS_select()
 (and associated) API function is available. */
