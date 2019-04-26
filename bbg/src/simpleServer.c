@@ -26,6 +26,8 @@
 #include <netdb.h>
 #include <signal.h>
 
+#include "remoteThread.h"
+
 /* global to kill loop */
 uint8_t gExit = 1;
 
@@ -34,7 +36,7 @@ void set_sig_handlers(void);
 
 int main( int argc, char *argv[] ) 
 {
-   	int sockfd, newsockfd, portno;
+   	int sockfd, newsockfd;
    	socklen_t clilen;
    	char buffer[256];
    	struct sockaddr_in serv_addr, cli_addr;
@@ -60,11 +62,10 @@ int main( int argc, char *argv[] )
    	
    	/* Initialize socket structure */
    	bzero((char *) &serv_addr, sizeof(serv_addr));
-   	portno = 5008;
    
    	serv_addr.sin_family = AF_INET;
    	serv_addr.sin_addr.s_addr = INADDR_ANY;
-   	serv_addr.sin_port = htons(portno);
+   	serv_addr.sin_port = htons(DATA_PORT);
    
    	/* Now bind the host address using bind() call.*/
    	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {

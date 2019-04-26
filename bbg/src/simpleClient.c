@@ -24,9 +24,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-
 #define DEFAULT_SERV_ADDR "10.0.0.93"
-#define SENSOR_PORT (5008)
 
 /*---------------------------------------------------------------------------------*/
 int main(int argc, char *argv[])
@@ -53,7 +51,7 @@ int main(int argc, char *argv[])
 
   /* Establish Connection with Server */
   servAddr.sin_family = AF_INET;
-  servAddr.sin_port = htons((int)SENSOR_PORT);
+  servAddr.sin_port = htons((int)DATA_PORT);
   if(inet_pton(AF_INET, ipAddress, &servAddr.sin_addr) != 1){
     printf("ERROR: remoteClient Application IP address provided of {%s} is invalid - exiting.\n", ipAddress);
     return -1;
