@@ -38,7 +38,7 @@
 #define DEBUG_TEST_ALL_MSG_TYPES (0)
 
 #define LOG_MSG_QUEUE
-//#define LOG
+#define LOG
 
 #ifndef LOG
     #define LOG_FLUSH()

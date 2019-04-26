@@ -58,6 +58,16 @@
 #define STATUS_QUEUE_LENGTH         (8)
 #define LOG_QUEUE_LENGTH            (8)
 
+#define STACK_SCALE_FACTOR              (10)
+#define STACK_SIZE_LIGHT_TASK           ((configMINIMAL_STACK_SIZE * STACK_SCALE_FACTOR) / 10)
+#define STACK_SIZE_REMOTE_TASK          (((configMINIMAL_STACK_SIZE * 3) * STACK_SCALE_FACTOR) / 10)
+#define STACK_SIZE_MOISTURE_TASK        (((configMINIMAL_STACK_SIZE * 2) * STACK_SCALE_FACTOR) / 10)
+#define STACK_SIZE_OBSERVER_TASK        (((configMINIMAL_STACK_SIZE * 2) * STACK_SCALE_FACTOR) / 10)
+#define STACK_SIZE_SOLENOID_TASK        ((configMINIMAL_STACK_SIZE * STACK_SCALE_FACTOR) / 10)
+
+
+/*---------------------------------------------------------------------------------*/
+
 /* Note: FreeRTOS doesn't have an efficient way of
  * getting the thread / task number, so main has to call
  * its private setTaskNum method after creating the threads
@@ -137,19 +147,19 @@ int main(void)
     LOG_LOGGER_INITIALIZED();
 
     /* create threads */
-    xTaskCreate(observerTask, (const portCHAR *)"Observer", configMINIMAL_STACK_SIZE * 2, (void *)&info, 1, &observerTaskHandle);
+    xTaskCreate(observerTask, (const portCHAR *)"Observer", STACK_SIZE_OBSERVER_TASK, (void *)&info, 1, &observerTaskHandle);
     setTaskNum(observerTaskHandle, PID_OBSERVER);
 
-    xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid", configMINIMAL_STACK_SIZE, (void *)&info, 1, &solenoidTaskHandle);
+    xTaskCreate(solenoidTask, (const portCHAR *)"Solenoid", STACK_SIZE_SOLENOID_TASK, (void *)&info, 1, &solenoidTaskHandle);
     setTaskNum(solenoidTaskHandle, PID_SOLENOID);
 
-    xTaskCreate(lightTask, (const portCHAR *)"Light", configMINIMAL_STACK_SIZE, (void *)&info, 1, &lightTaskHandle);
+    xTaskCreate(lightTask, (const portCHAR *)"Light", STACK_SIZE_LIGHT_TASK, (void *)&info, 1, &lightTaskHandle);
     setTaskNum(lightTaskHandle, PID_LIGHT);
 
-    xTaskCreate(remoteTask, (const portCHAR *)"Remote", configMINIMAL_STACK_SIZE * 3, (void *)&info, 1, &remoteTaskHandle);
+    xTaskCreate(remoteTask, (const portCHAR *)"Remote", STACK_SIZE_REMOTE_TASK, (void *)&info, 1, &remoteTaskHandle);
     setTaskNum(remoteTaskHandle, PID_REMOTE_CLIENT);
 
-    xTaskCreate(moistureTask, (const portCHAR *)"Moist", configMINIMAL_STACK_SIZE, (void *)&info, 1, &moistureTaskHandle);
+    xTaskCreate(moistureTask, (const portCHAR *)"Moist", STACK_SIZE_MOISTURE_TASK, (void *)&info, 1, &moistureTaskHandle);
     setTaskNum(moistureTaskHandle, PID_MOISTURE);
 
     vTaskStartScheduler();
@@ -157,6 +167,12 @@ int main(void)
     vQueueDelete(logQueue);
     vQueueDelete(statusQueue);
     vSemaphoreDelete(info.shmemMutex);
+
+    vTaskDelete(observerTaskHandle);
+    vTaskDelete(solenoidTaskHandle);
+    vTaskDelete(lightTaskHandle);
+    vTaskDelete(remoteTaskHandle);
+    vTaskDelete(moistureTaskHandle);
     return EXIT_SUCCESS;
 }
 
