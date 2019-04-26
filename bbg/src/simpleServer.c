@@ -86,7 +86,7 @@ int main( int argc, char *argv[] )
 
    	/* Accept actual connection from the client */
    	noConnection = 1;
-   	while(noConnection)
+   	while(noConnection && gExit)
    	{
    		newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
    		inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
@@ -95,25 +95,28 @@ int main( int argc, char *argv[] )
    			noConnection = 0;
    		}
    	}
-
-   	/* Update Socket Client connections to be non-blocking */
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
-
-    /* If connection is established then start communicating */
-   	bzero(buffer,256);
-   	while(gExit)
+   	if(gExit != 0)
    	{
+   		/* Update Socket Client connections to be non-blocking */
+	    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
 
-   	   	n = read(newsockfd,buffer, 5);
-   
-	   	if (n < 0) {
-	      	printf("ERROR reading from socket\n");
-	      	continue;
+	    /* If connection is established then start communicating */
+	   	bzero(buffer,256);
+	   	while(gExit)
+	   	{
+
+	   	   	n = read(newsockfd,buffer, 5);
+	   
+		   	if (n < 0) {
+		      	printf("ERROR reading from socket\n");
+		      	continue;
+		   	}
+		   	printf(" %s\n", buffer);
 	   	}
-	   	printf(" %s\n", buffer);
    	}
 
     /* Cleanup */
+    printf("closing socket, exiting\n");
   	close(sockfd);
     
    return 0;
