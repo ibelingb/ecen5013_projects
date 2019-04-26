@@ -46,14 +46,16 @@
 #include "task.h"
 #include "semphr.h"
 
+
+
 /*---------------------------------------------------------------------------------*/
 static uint8_t keepAlive;   /* global to kill thread */
 static Socket_t xClientSocket;
 
 /*---------------------------------------------------------------------------------*/
-void InitIP(void);
-BaseType_t sendSocketData(uint8_t *pData, size_t length);
-int8_t readSocketData(uint8_t *pData, size_t length);
+void InitIPStack(void);
+BaseType_t sendSocketData(Socket_t *pSocket, uint8_t *pData, size_t length);
+BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length);
 void printConnectionStatus(BaseType_t ret);
 
 /*---------------------------------------------------------------------------------*/
@@ -72,7 +74,7 @@ void remoteTask(void *pvParameters)
     /*-------------------------------------------------------------------------------------*/
     /* set up socket  */
     /*-------------------------------------------------------------------------------------*/
-    InitIP();
+    InitIPStack();
 
     static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     char cString[ 50 ];
@@ -87,11 +89,10 @@ void remoteTask(void *pvParameters)
     xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
     xServerAddress.sin_port = FreeRTOS_htons(5008);
 
-    /* Attempt to open the TCP socket. */
-    xClientSocket = FreeRTOS_socket( FREERTOS_AF_INET,
-                                        FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP );
+    /* Attempt to open the TCP socket */
+    xClientSocket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP );
 
-    /* Check for errors. */
+    /* Check for errors */
     configASSERT( xClientSocket != FREERTOS_INVALID_SOCKET );
 
     /* set timeouts and checksum flag */
@@ -122,7 +123,6 @@ void remoteTask(void *pvParameters)
         LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
     }
 
-
     /* send data, log and status msgs to Control Node */
     connectionLost = 1;
     while(keepAlive)
@@ -130,7 +130,7 @@ void remoteTask(void *pvParameters)
         ++count;
 
         /*--------------------------------------------------------------------------*/
-        /* Connect State */
+        /* Connect Lost State */
         /*--------------------------------------------------------------------------*/
         if(connectionLost) {
 
@@ -141,6 +141,9 @@ void remoteTask(void *pvParameters)
             } while(ret != 0);
             connectionLost = 0;
         }
+        /*--------------------------------------------------------------------------*/
+        /* Connected State */
+        /*--------------------------------------------------------------------------*/
         else {
             /* try to read sensor data from shmem */
             /* TODO - need to restrict how offet this is sent */
@@ -168,10 +171,10 @@ void remoteTask(void *pvParameters)
             sprintf(cString, "Standard send message number %lu\r\n", ulCount);
 
             /* Transmit data */
-            if(sendSocketData((uint8_t *)cString, strlen(cString)) == pdFREERTOS_ERRNO_ENOTCONN) {
+            if(sendSocketData(&xClientSocket, (uint8_t *)cString, strlen(cString)) == pdFREERTOS_ERRNO_ENOTCONN) {
                 connectionLost = 1;
             }
-     //       readSocketData(recvData, sizeof(recvData));
+     //       readSocketData(&xClientSocket, recvData, sizeof(recvData));
 
             ulCount++;
             /*-----------------------------------------------------------------------*/
@@ -222,7 +225,7 @@ void killRemoteTask(void)
 /*
  *
  */
-void InitIP(void)
+void InitIPStack(void)
 {
     /* Define the network addressing.  These parameters will be used if either
     ipconfigUSE_DHCP is 0 or if ipconfigUSE_DHCP is 1 but DHCP auto configuration
@@ -248,25 +251,31 @@ void InitIP(void)
 /*
  *
  */
-int8_t readSocketData(uint8_t *pData, size_t length)
+BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
 {
     BaseType_t ret;
-    ret = FreeRTOS_recv(xClientSocket, pData, length, 0);
+    configASSERT(pSocket);
+
+    /* try to read data */
+    ret = FreeRTOS_recv(*pSocket, pData, length, 0);
 
     if(ret == length) {
         return RETURN_SUCCESS;
     }
     if(ret == pdFREERTOS_ERRNO_ENOMEM ) {
-        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOMEM\n");
+        /* The no-memory error has priority above the non-connected error.
+        Both are fatal and will elad to closing the socket. */
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOMEM (no memory)\n");
     }
     if(ret == pdFREERTOS_ERRNO_ENOTCONN ) {
-        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOTCONN\n");
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_ENOTCONN (socket not connected)\n");
     }
     if(ret == pdFREERTOS_ERRNO_EINTR ) {
         ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINTR\n");
     }
     if(ret == pdFREERTOS_ERRNO_EINVAL ) {
-        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINVAL\n");
+        /* Socket invalid, not TCP or not bound */
+        ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINVAL(invalid socket) \n");
     }
     if(ret == 0) {
         ERROR_PRINT("readSocketData TIMEOUT\n");
@@ -278,14 +287,20 @@ int8_t readSocketData(uint8_t *pData, size_t length)
 /*
  *
  */
-BaseType_t sendSocketData(uint8_t *pData, size_t length)
+BaseType_t sendSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
 {
     BaseType_t ret;
-    ret = FreeRTOS_send(xClientSocket, pData, length, 0);
+    configASSERT(pSocket);
 
+    /* send data */
+    ret = FreeRTOS_send(*pSocket, pData, length, 0);
+
+    /* if all bytes sent, success! */
     if(ret == length) {
         return ret;
     }
+
+    /* FreeRTOS uses negative value to indicate obsolete error code */
     ret = ret < 0 ? -1 * ret : ret;
 
     if(ret == pdFREERTOS_ERRNO_ENOMEM) {

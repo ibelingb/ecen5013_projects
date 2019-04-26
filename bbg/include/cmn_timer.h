@@ -16,6 +16,19 @@
 #ifndef CMN_TIMER_H
 #define CMN_TIMER_H
 
+
+#ifndef __linux__
+
+#include "FreeRTOS.h"
+#define SOLENOID_TASK_DELAY_SEC         (0.5)
+#define LIGHT_TASK_DELAY_SEC            (0.5)
+#define REMOTE_TASK_DELAY_SEC           (0.5)
+#define OBSERVER_TASK_DELAY_SEC         (0.5)
+#define MOISTURE_TASK_DELAY_SEC         (0.5)
+#define THREAD_MUTEX_DELAY              (( TickType_t ) 10)
+
+#else /* linux */
+
 #include <stdint.h>
 #include <signal.h>
 
@@ -31,15 +44,7 @@
 #define LOG_LOOP_TIME_SEC       (0)
 #define LOG_LOOP_TIME_NSEC      (5e-3 * 1e9)
 
-#ifndef __linux__
-#include "FreeRTOS.h"
-#define SOLENOID_TASK_DELAY_SEC         (0.5)
-#define LIGHT_TASK_DELAY_SEC            (0.5)
-#define REMOTE_TASK_DELAY_SEC           (0.5)
-#define OBSERVER_TASK_DELAY_SEC         (0.5)
-#define MOISTURE_TASK_DELAY_SEC         (0.5)
-#define THREAD_MUTEX_DELAY              (( TickType_t ) 10)
-#endif
+
 
 /**
  * @brief generic setup of posix timer
@@ -52,4 +57,5 @@
  */
 int8_t setupTimer(sigset_t *pSet, timer_t *pTimer, int signum, const struct timespec *pRate);
 
+#endif /* __linux__ */
 #endif /* CMN_TIMER_H */
