@@ -73,7 +73,7 @@ void remoteTask(void *pvParameters)
     /* set up socket  */
     /*-------------------------------------------------------------------------------------*/
 
-    const TickType_t xTimeOut = 10000 / portTICK_PERIOD_MS;
+    static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     char cString[ 50 ];
     uint8_t recvData[30];
     uint32_t ulCount = 0UL;
@@ -83,8 +83,8 @@ void remoteTask(void *pvParameters)
     BaseType_t ret;
 
     /* Set destination */
-    xDestinationAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.144" );
-    xDestinationAddress.sin_port = FreeRTOS_htons( 50000 );
+    xDestinationAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
+    xDestinationAddress.sin_port = FreeRTOS_htons(5008);
 
 #ifdef UDP_SEND_TEST
     Socket_t xSocket;
@@ -141,7 +141,10 @@ void remoteTask(void *pvParameters)
     FreeRTOS_setsockopt( xListeningSocket, 0, FREERTOS_SO_RCVTIMEO,
                          &xTimeOut, sizeof( xTimeOut ) );
 
-
+    /* Bind the socket, but pass in NULL to let FreeRTOS+TCP choose the port number.
+    See the next source code snipped for an example of how to bind to a specific
+    port number. */
+    FreeRTOS_bind(xListeningSocket, &xDestinationAddress, xSize);
 #endif
 
     /*-------------------------------------------------------------------------------------*/
@@ -160,13 +163,13 @@ void remoteTask(void *pvParameters)
     else {
         LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
     }
-
+    while(!(FreeRTOS_connect(xListeningSocket, &xDestinationAddress, sizeof(xDestinationAddress))));
     /* try to connect */
-    ret = 1;
-    do
-    {
-        ret = FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize);
-    } while(ret != 0);
+    ret = 0;
+//    do
+//    {
+//        ret = FreeRTOS_connect(xListeningSocket, &xDestinationAddress, xSize);
+//    } while(ret != 0);
 
     if((ret == pdFREERTOS_ERRNO_EBADF) || (ret == (-1 * pdFREERTOS_ERRNO_EBADF))) {
         ERROR_PRINT("FreeRTOS_connect failed: pdFREERTOS_ERRNO_EBADF \n");
@@ -224,7 +227,7 @@ void remoteTask(void *pvParameters)
 
         /* Send the string to the UDP socket */
         sendSocketData((uint8_t *)cString, strlen(cString));
-        readSocketData(recvData, sizeof(recvData));
+ //       readSocketData(recvData, sizeof(recvData));
 
         ulCount++;
         /*-----------------------------------------------------------------------*/
