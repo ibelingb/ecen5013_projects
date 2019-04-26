@@ -31,6 +31,16 @@
 #define LOG_LOOP_TIME_SEC       (0)
 #define LOG_LOOP_TIME_NSEC      (5e-3 * 1e9)
 
+#ifndef __linux__
+#include "FreeRTOS.h"
+#define SOLENOID_TASK_DELAY_SEC         (0.5)
+#define LIGHT_TASK_DELAY_SEC            (0.5)
+#define REMOTE_TASK_DELAY_SEC           (0.5)
+#define OBSERVER_TASK_DELAY_SEC         (0.5)
+#define MOISTURE_TASK_DELAY_SEC         (0.5)
+#define THREAD_MUTEX_DELAY              (( TickType_t ) 10)
+#endif
+
 /**
  * @brief generic setup of posix timer
  * 

@@ -1,15 +1,15 @@
 /***********************************************************************************
- * @author Brian Ibeling
- * brian.ibeling@colorado.edu
+ * @author Josh Malburg
+ * joshua.malburg@colorado.edu
  * Advanced Embedded Software Development
  * ECEN5013 - Rick Heidebrecht
- * @date March 14, 2019
+ * @date April 25, 2019
  * arm-linux-gnueabi (Buildroot)
  * gcc (Ubuntu)
  ************************************************************************************
  *
- * @file lightSensor.c
- * @brief Remote client applciation to interface with remoteThread from sensor application
+ * @file simpleServer.c
+ * @brief simple server that waits for a client then prints received bytes
  *
  ************************************************************************************
  */
@@ -105,7 +105,7 @@ int main( int argc, char *argv[] )
 	   	while(gExit)
 	   	{
 
-	   	   	n = read(newsockfd,buffer, 5);
+	   	   	n = read(newsockfd,buffer, 32);
 	   
 		   	if (n < 0) {
 		      	printf("ERROR reading from socket\n");
