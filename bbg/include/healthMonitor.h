@@ -74,7 +74,7 @@ void set_sig_handlers(void);
     status.processId = Id;\
     status.taskState = STATE_RUNNING;\
     if(xQueueSend(queue, ( void *)&status, QUEUE_WAIT_DELAY) != pdPASS)\
-	{ ERRNO_PRINT("SEND_STATUS_MSG fail\n"); }\
+	{ ERROR_PRINT("SEND_STATUS_MSG fail\n"); }\
 })
 #endif
 

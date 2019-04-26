@@ -203,10 +203,8 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     pui8MAC[4] = ((ui32User1 >>  8) & 0xff);
     pui8MAC[5] = ((ui32User1 >> 16) & 0xff);
 
-    uint8_t ucMACAddress[ 6 ] = { 0x00, 0x1a, 0xb6, 0x03, 0x59, 0x89 };
-
     /* Program the hardware with its MAC address (for filtering) */
-    EMACAddrSet(EMAC0_BASE, 0, ucMACAddress);
+    EMACAddrSet(EMAC0_BASE, 0, pui8MAC);
 
     /*----------------------------------------------------------------------------*/
     /* Clear, Enable Interrupts  */
@@ -216,15 +214,15 @@ BaseType_t InitMACPHY(uint32_t sysClk)
     EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
     EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR2);
 
-//    /* Configure and enable the link status change interrupt in the PHY */
-//    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR);
-//    ui16Val |= (EPHY_SCR_INTEN_EXT | EPHY_SCR_INTOE_EXT);
-//    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR, ui16Val);
-//    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1, (EPHY_MISR1_LINKSTATEN |
-//                 EPHY_MISR1_SPEEDEN | EPHY_MISR1_DUPLEXMEN | EPHY_MISR1_ANCEN));
-//
-//    /* Read the PHY interrupt status to clear any stray events */
-//    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
+    /* Configure and enable the link status change interrupt in the PHY */
+    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR);
+    ui16Val |= (EPHY_SCR_INTEN_EXT | EPHY_SCR_INTOE_EXT);
+    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_SCR, ui16Val);
+    EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1, (EPHY_MISR1_LINKSTATEN |
+                 EPHY_MISR1_SPEEDEN | EPHY_MISR1_DUPLEXMEN | EPHY_MISR1_ANCEN));
+
+    /* Read the PHY interrupt status to clear any stray events */
+    ui16Val = EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_MISR1);
 
     /* Wait for the link to become active */
     while((EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMSR) & EPHY_BMSR_LINKSTAT) == 0)
@@ -277,7 +275,6 @@ void prvEMACHandlerTask( void *pvParameters )
     {
         /* get interrupt msg */
         if(xQueueReceive(g_pInterrupt, (void *)&ulISREvents, xDelay) != pdFALSE) {
-            printMACIntStatus(ulISREvents);
 
             /* check for RX interrupt */
             if(ulISREvents & EMAC_INT_RECEIVE)

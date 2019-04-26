@@ -37,6 +37,11 @@
 #include "driverlib/uart.h"
 #include "uartstdio.h"
 
+#include "FreeRTOS.h"
+#include "semphr.h"
+
+static SemaphoreHandle_t lockMutex;
+
 //*****************************************************************************
 //
 //! \addtogroup uartstdio_api
@@ -400,6 +405,7 @@ UARTStdioConfig(uint32_t ui32PortNum, uint32_t ui32Baud, uint32_t ui32SrcClock)
     MAP_IntEnable(g_ui32UARTInt[ui32PortNum]);
 #endif
 
+    lockMutex = xSemaphoreCreateMutex();
     //
     // Enable the UART operation.
     //
@@ -1295,17 +1301,25 @@ UARTprintf(const char *pcString, ...)
 {
     va_list vaArgP;
 
-    //
-    // Start the varargs processing.
-    //
-    va_start(vaArgP, pcString);
 
-    UARTvprintf(pcString, vaArgP);
+    /* try to get semaphore */
+    if( xSemaphoreTake( lockMutex, (TickType_t)10 ) == pdTRUE )
+    {
+        //
+        // Start the varargs processing.
+        //
+        va_start(vaArgP, pcString);
 
-    //
-    // We're finished with the varargs now.
-    //
-    va_end(vaArgP);
+        UARTvprintf(pcString, vaArgP);
+
+        //
+        // We're finished with the varargs now.
+        //
+        va_end(vaArgP);
+
+        /* release mutex */
+        xSemaphoreGive(lockMutex);
+    }
 }
 
 //*****************************************************************************
