@@ -25,6 +25,8 @@
 #include "healthMonitor.h"
 #include "logger.h"
 #include "lightThread.h"
+#include "packet.h"
+#include "my_debug.h"
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
@@ -32,8 +34,7 @@
 #include "task.h"
 #include "semphr.h"
 
-#include "packet.h"
-#include "my_debug.h"
+
 
 /*---------------------------------------------------------------------------------*/
 #define DEFAULT_POWER_STATE         (APDS9301_CTRL_POWERUP)
