@@ -82,6 +82,16 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },        
+        {
+            "label": "HOST-BUILD-SIMPLESERVER",
+            "type": "shell",
+            "command": "make clean all TARGET=simpleServer PLATFORM=HOST",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         },
         {
             "label": "HOST-BUILD-HEALTHMONITOR",
