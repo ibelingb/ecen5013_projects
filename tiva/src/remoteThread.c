@@ -433,10 +433,133 @@ void remoteDataTask(void *pvParameters)
  */
 void remoteCmdTask(void *pvParameters)
 {
+    uint8_t count = 0;
+    RemoteDataPacket sensorData;
+    RemoteCmdPacket cmdMsg;
+    keepAlive = 1;
+    static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
+    struct freertos_sockaddr xServerAddress;
+    socklen_t xSize = sizeof(struct freertos_sockaddr);
+    uint8_t connectionLost;
+    BaseType_t ret;
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
+    Socket_t xClientSocket;
 
-    /*clear struct */
-    //memset(&sensorData, 0,sizeof(RemoteDataPacket));
-    //readSocketData(&xClientSocket, recvData, sizeof(recvData));
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
+    INFO_PRINT("THREAD CREATED, remoteDataTask #: %d\n\r", getTaskNum());
+
+    /* clear structure */
+    memset(&sensorData, 0,sizeof(RemoteDataPacket));
+
+    /* Set destination */
+    xServerAddress.sin_addr = FreeRTOS_inet_addr(SERVER_IP_ADDRESS_STR);
+    xServerAddress.sin_port = FreeRTOS_htons(CMD_PORT);
+
+    /* create TCP socket */
+    xClientSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+    if(xClientSocket == FREERTOS_INVALID_SOCKET) {
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+        ERROR_PRINT("ERROR remoteDataTask: Failed to create socket\n");
+        vTaskDelay(2000);
+    }
+    else {
+        /* set timeouts */
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_SNDTIMEO, &xTimeOut, sizeof(xTimeOut));
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_RCVTIMEO, &xTimeOut, sizeof(xTimeOut));
+
+        /* Bind the socket */
+        if(FreeRTOS_bind(xClientSocket, &xServerAddress, xSize) != 0) {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+            ERROR_PRINT("ERROR remoteDataTask: Failed to create socket\n");
+            vTaskDelay(2000);
+        }
+        /*--------------------------------------------------------------------------*/
+        /* Socket Created Successfully! */
+        /*--------------------------------------------------------------------------*/
+        else {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
+
+            /* set before entering so loop tries to connect */
+            connectionLost = 1;
+
+            /* send status msgs to Control Node */
+            while(keepAlive)
+            {
+                ++count;
+
+                /*--------------------------------------------------------------------------*/
+                /* Connect Lost State */
+                /*--------------------------------------------------------------------------*/
+                if(connectionLost) {
+                    ret = 0;
+                    do {
+                        ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        printConnectionStatus(ret);
+                    } while(ret != 0);
+                    connectionLost = 0;
+                }
+                /*--------------------------------------------------------------------------*/
+                /* Connected State */
+                /*--------------------------------------------------------------------------*/
+                else {
+
+                    if(readSocketData(&xClientSocket, (uint8_t *)&cmdMsg, sizeof(RemoteCmdPacket)) == sizeof(RemoteCmdPacket))
+                    {
+                        /* process cmdMsg */
+                        if((cmdMsg.cmd ==  REMOTE_WATERPLANT) ||
+                                (cmdMsg.cmd == REMOTE_SETMOISTURE_LOWTHRES) ||
+                                (cmdMsg.cmd == REMOTE_SETMOISTURE_HIGHTHRES))
+                        {
+                            /* try to read sensor data from shmem */
+                            if(xSemaphoreTake(info.shmemMutex, THREAD_MUTEX_DELAY) == pdTRUE)
+                            {
+                                /* write data to shmem */
+                                if(info.pShmem != NULL) {
+                                    switch (cmdMsg.cmd)
+                                    {
+                                    case REMOTE_WATERPLANT:
+                                        info.pShmem->solenoidData.cmd = (cmdMsg.cmd == REMOTE_WATERPLANT);
+                                        break;
+                                    case REMOTE_SETMOISTURE_LOWTHRES:
+                                        info.pShmem->moistData.lowThreshold = cmdMsg.data;
+                                        break;
+                                    case REMOTE_SETMOISTURE_HIGHTHRES:
+                                        info.pShmem->moistData.highThreshold = cmdMsg.data;
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                }
+
+                                /* release mutex ASAP so others can use */
+                                xSemaphoreGive(info.shmemMutex);
+                            }
+                            else {
+                                LOG_REMOTE_CLIENT_EVENT(REMOTE_SHMEM_ERROR);
+                                ERROR_PRINT("failed to write cmd to shmem\n");
+                                while(1){};
+                            }
+                        }
+
+                        /* for diagnostics */
+                        if(DIAGNOISTIC_PRINTS) {
+                            INFO_PRINT("Received cmd: %d from Control Node\n");
+                        }
+                    }
+                }
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+            }
+        }
+
+        /* gracefully shutdown socket */
+        FreeRTOS_shutdown( xClientSocket, FREERTOS_SHUT_RDWR );
+
+        /* The socket has shut down and is safe to close */
+        FreeRTOS_closesocket( xClientSocket );
+    }
     INFO_PRINT("remoteCmdTask Exiting\n");
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
     vTaskDelete(NULL);
