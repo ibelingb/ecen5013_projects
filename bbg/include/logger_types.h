@@ -34,7 +34,7 @@ typedef enum {
 #define FRAME_STOP_BYTE		('>')
 #endif
 
-typedef enum {
+typedef enum  __attribute__ ((__packed__)) {
 	LOG_MSG_NONE = 0,
 	LOG_MSG_SYSTEM_ID = 1,
 	LOG_MSG_SYSTEM_VERSION = 2,

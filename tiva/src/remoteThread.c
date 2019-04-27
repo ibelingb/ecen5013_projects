@@ -179,7 +179,7 @@ void remoteStatusTask(void *pvParameters)
                     /* get thread status msgs */
                     if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE) {
                         /* send status msgs to Control Node */
-                        if(sendSocketData(&xClientSocket, (uint8_t *)&statusMsg, sizeof(statusMsg)) == pdFREERTOS_ERRNO_ENOTCONN) {
+                        if(sendSocketData(&xClientSocket, (uint8_t *)&statusMsg, sizeof(TaskStatusPacket)) == pdFREERTOS_ERRNO_ENOTCONN) {
                             connectionLost = 1;
                         }
                         else {
@@ -287,11 +287,14 @@ void remoteLogTask(void *pvParameters)
                     if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
                     {
                         /* Transmit data to Control Node */
-                        if(sendSocketData(&xClientSocket, (uint8_t *)&logMsg, sizeof(logMsg)) == pdFREERTOS_ERRNO_ENOTCONN) {
+                        if(sendSocketData(&xClientSocket, (uint8_t *)&logMsg, sizeof(LogMsgPacket)) == pdFREERTOS_ERRNO_ENOTCONN) {
                             connectionLost = 1;
                         }
                         /* for diagnostics */
-                        if(DIAGNOISTIC_PRINTS) {PRINT_LOG_MSG_HEADER(&logMsg);}
+                        if(DIAGNOISTIC_PRINTS) {
+                            INFO_PRINT("sending bytes: %d, logMsg_e size: %d\n", sizeof(LogMsgPacket), sizeof(logMsg_e));
+                            PRINT_LOG_MSG_HEADER(&logMsg);
+                        }
                     }
                     else {
                         LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
