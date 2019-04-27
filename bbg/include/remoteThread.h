@@ -20,6 +20,9 @@
 #ifndef REMOTE_THREAD_H_
 #define REMOTE_THREAD_H_
 
+
+#ifdef __linux__
+
 #include <stdint.h>
 #include <signal.h>
 
@@ -27,6 +30,8 @@
 #include "remoteStatusThread.h"
 #include "remoteDataThread.h"
 #include "remoteCmdThread.h"
+
+#endif
 
 #define LOG_PORT    (5001)
 #define STATUS_PORT (5002)
@@ -40,6 +45,7 @@ typedef enum {
   REMOTE_EVENT_CMD_RECV,
   REMOTE_EVENT_INVALID_RECV,
   REMOTE_LOG_QUEUE_ERROR,
+  REMOTE_SHMEM_ERROR,
   REMOTE_STATUS_QUEUE_ERROR,
   REMOTE_SERVER_SOCKET_ERROR,
   REMOTE_CLIENT_SOCKET_ERROR,
@@ -49,6 +55,9 @@ typedef enum {
   REMOTE_EVENT_EXITING,
   REMOTE_EVENT_END
 } RemoteEvent_e;
+
+void remoteTask(void *pvParameters);
+void killRemoteTask(void);
 
 /*---------------------------------------------------------------------------------*/
 #endif /* REMOTE_THREAD_H_ */

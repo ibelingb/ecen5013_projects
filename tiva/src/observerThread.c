@@ -137,6 +137,7 @@ void observerTask(void *pvParameters)
         vTaskDelay(REMOTE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
     LOG_OBSERVER_EVENT(OBSERVE_EVENT_EXITING);
+    vTaskDelete(NULL);
 }
 
 /*---------------------------------------------------------------------------------*/

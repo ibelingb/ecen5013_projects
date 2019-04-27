@@ -117,6 +117,8 @@ void lightTask(void *pvParameters)
         /* sleep */
         vTaskDelay(LIGHT_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
+    LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_EXITING);
+    vTaskDelete(NULL);
 }
 
 /*---------------------------------------------------------------------------------*/

@@ -26,6 +26,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>include/cmn_timer.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/cmn_timer.h</locationURI>
+		</link>
+		<link>
 			<name>include/healthMonitor.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/healthMonitor.h</locationURI>
@@ -64,6 +69,11 @@
 			<name>include/packet.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/packet.h</locationURI>
+		</link>
+		<link>
+			<name>include/remoteThread.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/bbg/include/remoteThread.h</locationURI>
 		</link>
 		<link>
 			<name>src/conversion.c</name>
