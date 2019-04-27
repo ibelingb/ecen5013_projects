@@ -4,9 +4,12 @@
  * https://github.com/jspicer-ltu/Tiva-C-Embedded/tree/master/Experiment17-I2C
  */
 
+/* standard library includes */
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+/* Tivaware includes */
 #include "hw_types.h"
 #include "hw_ints.h"
 #include "hw_memmap.h"
@@ -16,9 +19,14 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
-#include "uartstdio.h"
 
+/* app specific includes */
+#include "uartstdio.h"
 #include "my_debug.h"
+
+/* FreeRTOS includes */
+#include "FreeRTOS.h"
+#include "task.h"
 
 //*****************************************************************************
 //
@@ -101,21 +109,31 @@ int8_t initI2c(uint32_t sysClock)
 
 int8_t sendIicByte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
 {
+    uint8_t cnt;
+
     /* Validate input */
     if(pData == NULL){
         ERROR_PRINT("TIVA I2C sendIic() received NULL pointer for data to write.\n");
         return -1;
     }
-
     /* set slave address */
     I2CMasterSlaveAddrSet(I2C2_BASE, slaveAddr, false);
 
     /* send reg address */
+    taskENTER_CRITICAL();
     I2CMasterDataPut(I2C2_BASE, reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 
     /* Wait for I2C to become available */
-    while(!I2CMasterBusy(I2C2_BASE));
+    cnt = 0;
+    while(++cnt < 50) {
+        if(cnt == 1) {
+            taskEXIT_CRITICAL();
+        }
+        if(!I2CMasterBusy(I2C2_BASE)){
+            break;
+        }
+    }
     while(I2CMasterBusy(I2C2_BASE));
 
     /* Write data to I2C Device */
