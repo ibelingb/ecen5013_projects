@@ -43,6 +43,7 @@
 
 #define MSG_QUEUE_MSG_SIZE        (sizeof(LogMsgPacket)) // bytes
 #define CMD_MSG_QUEUE_MSG_SIZE    (sizeof(RemoteCmdPacket)) // bytes
+#define DATA_MSG_QUEUE_MSG_SIZE   (sizeof(RemoteDataPacket)) // bytes
 #define MSG_QUEUE_DEPTH           (20) // total messages
 #define LOG_MSG_FILENAME_SIZE     (32) // bytes
 #define LOG_MSG_PAYLOAD_SIZE      (128) // bytes

@@ -158,7 +158,7 @@ void* remoteDataThreadHandler(void* threadInfo)
   // TODO: TBD
 
   while(aliveFlag) {
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_DATA, STATUS_OK, ERROR_CODE_USER_NONE0);
+    //SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_DATA, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
     /* Accept Client Connection for Sensor data */
@@ -215,6 +215,7 @@ void* remoteDataThreadHandler(void* threadInfo)
     else {
       /* Log data received from Remote Node */
       // TODO
+      printf("Data packet received: Lux: %f | Moist: %f\n", dataPacket.luxData, dataPacket.moistureData);
 
       /* Pass received data to main thread */
       mq_send(dataMsgQueue, (char *)&dataPacket, sizeof(struct RemoteDataPacket), 1);

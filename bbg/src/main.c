@@ -185,6 +185,7 @@ int main(int argc, char *argv[]){
 
   /*** initialize rest of IPC resources ***/
   /* Initialize Data MQ to receive sensor data from RemoteNode */
+  mqAttr.mq_msgsize = DATA_MSG_QUEUE_MSG_SIZE;
   dataMsgQueue = mq_open(dataMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
   if(dataMsgQueue == -1)
   {
@@ -193,10 +194,7 @@ int main(int argc, char *argv[]){
   }
 
   /* Initialize Cmd MQ to send commands to RemoteNode */
-  mqAttr.mq_flags   = 0;
-  mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH;
   mqAttr.mq_msgsize = CMD_MSG_QUEUE_MSG_SIZE;
-  mqAttr.mq_curmsgs = 0;
   cmdMsgQueue = mq_open(cmdMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
   if(cmdMsgQueue == -1)
   {
@@ -204,13 +202,9 @@ int main(int argc, char *argv[]){
     return EXIT_FAILURE;
   }
 
-  /* Define MQ attributes */
-  mqAttr.mq_flags   = 0;
+  /* Create MessageQueue to receive thread status from all children */
   mqAttr.mq_maxmsg  = STATUS_MSG_QUEUE_DEPTH;
   mqAttr.mq_msgsize = STATUS_MSG_QUEUE_MSG_SIZE;
-  mqAttr.mq_curmsgs = 0;
-
-  /* Create MessageQueue to receive thread status from all children */
   heartbeatMsgQueue = mq_open(heartbeatMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
   if(heartbeatMsgQueue == -1)
   {

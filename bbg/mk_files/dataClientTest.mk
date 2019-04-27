@@ -11,5 +11,5 @@
 #*****************************************************************************
 
 # source files
-SRCS += src/remoteClient.c
+SRCS += src/remoteDataClient.c
 PLATFORM=LINUX
