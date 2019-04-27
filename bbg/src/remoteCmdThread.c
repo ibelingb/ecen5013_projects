@@ -64,8 +64,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
   size_t cmdPacketSize = sizeof(struct RemoteCmdPacket);
-  ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
-  uint8_t cliConn = 0;
+  ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */  
   uint8_t ind;
 	sigset_t mask;
 
@@ -143,13 +142,13 @@ void* remoteCmdThreadHandler(void* threadInfo)
 
   /* Listen for Client Connection */
   if(listen(sockfdCmdServer, MAX_CLIENTS) == -1) {
-    ERROR_PRINT("remoteCmdThread failed to successfully listen for Sensor Client connection - exiting.\n");
+    ERROR_PRINT("remoteCmdThread failed to successfully listen for Cmd Client connection - exiting.\n");
     LOG_REMOTE_CMD_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Log remoteCmdThread successfully created */
-  INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", CMD_PORT);
+  INFO_PRINT("Created remoteCmdThread to listen on port {%d}\n", CMD_PORT);
   MUTED_PRINT("remoteCmdThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE_CMD);
 
   /* BIST/Power-on Test 
@@ -166,12 +165,11 @@ void* remoteCmdThreadHandler(void* threadInfo)
     sigwait(&set, &signum);
 
     /* If cmd received, transmit packet to Remote Node */
-    status = mq_receive(cmdMsgQueue, (char *)&cmdPacket, cmdPacketSize, NULL);
-    if(status == cmdPacketSize)
+    if(mq_receive(cmdMsgQueue, (char *)&cmdPacket, cmdPacketSize, NULL) == cmdPacketSize)
     {
-      printf("remoteCmd received\n");
-      if(cliConn != 0) {
-        send(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
+      if(clientResponse != 0) {
+        status = send(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
+        printf("remoteCmd sent. Cmd Packet: cmd: %d | Data: %d | Status: %d\n", cmdPacket.cmd, cmdPacket.data, status);
       }
       else {
         ERROR_PRINT("Failed to send CmdPacket to Remote Node - client socket connection unavailable\n");
@@ -200,11 +198,19 @@ void* remoteCmdThreadHandler(void* threadInfo)
         /* Log remoteCmdThread successfully Connected to client */
         printf("Connected remoteCmdThread to external Client on port %d.\n", CMD_PORT);
         LOG_REMOTE_CMD_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
-        cliConn = 1;
 
         /* Update Socket Client connections to be non-blocking */
         setsockopt(sockfdCmdClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
       }
+    } 
+
+    /* Read from socket to determine if client disconnect occured */
+    clientResponse = recv(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
+    if(clientResponse == 0) {
+      /* Handle disconnect from client socket */
+      printf("remoteCmdThread connection lost with client on port %d.\n", CMD_PORT);
+      LOG_REMOTE_CMD_EVENT(REMOTE_EVENT_CNCT_LOST);
+      continue;
     }
   }
 
