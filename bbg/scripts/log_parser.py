@@ -47,37 +47,30 @@ class parseState_e(IntEnum):
 
 
 class logMsg_e(IntEnum):
-    NONE = 0
-    SYSTEM_ID = 1
-    SYSTEM_VERSION = 2
-    LOGGER_INITIALIZED = 3
-    GPIO_INITIALIZED = 4
-    SYSTEM_INITIALIZED = 5
-    SYSTEM_HALTED = 6
-    INFO = 7
-    WARNING = 8
-    ERROR = 9
-    PROFILING_STARTED = 10
-    PROFILING_RESULT = 11
-    COMPLETED = 12
-    DATA_RECEIVED = 13
-    DATA_ANALYSIS_STARTED = 14
-    DATA_ALPHA_COUNT = 15
-    DATA_NUM_COUNT = 16
-    DATA_PUNC_COUNT = 17
-    DATA_MISC_COUNT = 18
-    DATA_ANALYSIS_COMPLETED = 19
-    HEARTBEAT = 20
-    CORE_DUMP = 21
-    THREAD_STATUS = 22
-    LIGHT_SENSOR_EVENT = 23
-    TEMP_SENSOR_EVENT = 24
-    REMOTE_HANDLING_EVENT = 25
-    REMOTE_CMD_EVENT = 26
-    LOG_EVENT = 27
-    MAIN_EVENT = 28
-    END = 29
-
+    NONE = 0,
+    SYSTEM_ID = 1,
+    SYSTEM_VERSION = 2,
+    LOGGER_INITIALIZED = 3,
+    SYSTEM_INITIALIZED = 5,
+    SYSTEM_HALTED = 6,
+    INFO = 7,
+    WARNING = 8,
+    ERROR = 9,
+    HEARTBEAT = 10, 
+    THREAD_STATUS = 11, 
+    LIGHT_SENSOR_EVENT = 12, 
+    TEMP_SENSOR_EVENT = 13, 
+    REMOTE_LOG_EVENT = 14, 
+    REMOTE_STATUS_EVENT = 15, 
+    REMOTE_DATA_EVENT = 16, 
+    REMOTE_CMD_EVENT = 17, 
+    LOG_EVENT = 18, 
+    MAIN_EVENT = 19, 
+    SOLENOID_EVENT = 20, 
+    MOIST_EVENT = 21, 
+    OBSERVER_EVENT = 22, 
+    REMOTE_CLIENT_EVENT = 23, 
+    END = 24
 
 class funcType_e(IntEnum):
     MY_MEMMOVE = 0
@@ -261,7 +254,13 @@ def print_message(item):
             print(LightEvent_e(int(item.payload, 16)).name, end="")
         elif item.eventId == logMsg_e.TEMP_SENSOR_EVENT:
             print(TempEvent_e(int(item.payload, 16)).name, end="")
-        elif item.eventId == logMsg_e.REMOTE_HANDLING_EVENT:
+        elif item.eventId == logMsg_e.REMOTE_LOG_EVENT:
+            print(RemoteEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.REMOTE_STATUS_EVENT:
+            print(RemoteEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.REMOTE_DATA_EVENT:
+            print(RemoteEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.REMOTE_CMD_EVENT:
             print(RemoteEvent_e(int(item.payload, 16)).name, end="")
         elif item.eventId == logMsg_e.REMOTE_CMD_EVENT:
             print(RemoteCmd_e(int(item.payload, 16)).name, end="")
@@ -383,7 +382,8 @@ while parseState != parseState_e.PARSE_DONE:
     elif parseState == parseState_e.PARSE_PAYLOAD:
 
         if myLogItem.payloadLength != 0:
-            if myLogItem.eventId == logMsg_e.PROFILING_RESULT:
+            #if myLogItem.eventId == logMsg_e.PROFILING_RESULT:
+            if myLogItem.eventId == logMsg_e.END:
                 myProfileData = ProfileData()
 
                 myProfileData.funcType = struct.unpack("=l",  log_file.read(4))

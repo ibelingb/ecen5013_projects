@@ -89,19 +89,19 @@ void* remoteStatusThreadHandler(void* threadInfo)
   }
   pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
-  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_STARTED);
+  LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_STARTED);
 
   /* Open FDs for Main and Logging Message queues */
   logMsgQueue = mq_open(sensorInfo.logMsgQueueName, O_RDWR, 0666, mqAttr);
   hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, mqAttr);
   if(logMsgQueue == -1){
     ERROR_PRINT("remoteStatusThread Failed to Open Logging MessageQueue - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_LOG_QUEUE_ERROR);
+    LOG_REMOTE_STATUS_EVENT(REMOTE_LOG_QUEUE_ERROR);
     return NULL;
   }
   if(hbMsgQueue == -1) {
     ERROR_PRINT("remoteStatusThread Failed to Open heartbeat MessageQueue - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_STATUS_QUEUE_ERROR);
+    LOG_REMOTE_STATUS_EVENT(REMOTE_STATUS_QUEUE_ERROR);
     return NULL;
   }
 
@@ -110,7 +110,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
   sockfdStatusServer = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfdStatusServer == -1){
     ERROR_PRINT("remoteStatusThread failed to create Data Socket - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    LOG_REMOTE_STATUS_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
@@ -129,14 +129,14 @@ void* remoteStatusThreadHandler(void* threadInfo)
   servAddr.sin_port = htons((int)STATUS_PORT);
   if(bind(sockfdStatusServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
     ERROR_PRINT("remoteStatusThread failed to bind Data Socket - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    LOG_REMOTE_STATUS_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
   /* Listen for Client Connection */
   if(listen(sockfdStatusServer, MAX_CLIENTS) == -1) {
     ERROR_PRINT("remoteStatusThread failed to successfully listen for Sensor Client connection - exiting.\n");
-    LOG_REMOTE_HANDLING_EVENT(REMOTE_SERVER_SOCKET_ERROR);
+    LOG_REMOTE_STATUS_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
 
@@ -166,12 +166,12 @@ void* remoteStatusThreadHandler(void* threadInfo)
 
         /* Report error if client fails to connect to server */
         ERROR_PRINT("remoteStatusThread failed to accept client connection for socket - exiting.\n");
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
+        LOG_REMOTE_STATUS_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
         continue;
       } else if(sockfdStatusClient > 0) {
         /* Log remoteStatusThread successfully Connected to client */
         printf("Connected remoteStatusThread to external Client on port %d.\n", STATUS_PORT);
-        LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
+        LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_CNCT_ACCEPTED);
 
         /* Update Socket Client connections to be non-blocking */
         setsockopt(sockfdStatusClient, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
@@ -189,12 +189,12 @@ void* remoteStatusThreadHandler(void* threadInfo)
 
       /* Handle error with receiving data from client socket */
       ERROR_PRINT("remoteStatusThread failed to handle incoming status packet from remote node.\n");
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
+      LOG_REMOTE_STATUS_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       continue;
     } else if(clientResponse == 0) { 
       /* Handle disconnect from client socket */
       printf("remoteStatusThread connection lost with client on port %d.\n", STATUS_PORT);
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_CNCT_LOST);
+      LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_CNCT_LOST);
       continue;
     }
 
@@ -202,7 +202,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
     if(clientResponse != statusPacketSize){
       ERROR_PRINT("remoteStatusThread received cmd of invalid length from remote client.\n"
              "Expected {%d} | Received {%d}", statusPacketSize, clientResponse);
-      LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
+      LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
 
@@ -212,7 +212,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
   }
 
   /* Thread Cleanup */
-  LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_EXITING);
+  LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_EXITING);
   ERROR_PRINT("Remote thread exiting\n");
   timer_delete(timerid);
   mq_close(logMsgQueue);
