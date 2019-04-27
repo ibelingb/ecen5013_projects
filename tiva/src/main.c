@@ -84,7 +84,6 @@ uint32_t g_sysClk;
 void initUART(void);
 int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process);
 
-
 /*---------------------------------------------------------------------------------*/
 int main(void)
 {
@@ -112,7 +111,7 @@ int main(void)
     }
 
     /* create log queue */
-    QueueHandle_t logQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct LogMsgPacket));
+    QueueHandle_t logQueue = xQueueCreate(LOG_QUEUE_LENGTH, sizeof(struct LogMsgPacket));
     if(logQueue == 0) {
         return EXIT_FAILURE;
         /* TODO - don't want to return, what to do?? */

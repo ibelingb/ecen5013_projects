@@ -30,6 +30,7 @@
 #include "my_debug.h"
 #include "healthMonitor.h"
 #include "logger.h"
+#include "main.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"
@@ -84,13 +85,13 @@ void remoteTask(void *pvParameters)
         /*------------------------------------------------------------------------------------*/
 
         xTaskCreate(remoteStatusTask, (const portCHAR *)"RemoteStatus", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteStatusTaskHandle);
-        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        setTaskNum(remoteStatusTaskHandle, PID_REMOTE_CLIENT_STATUS);
         xTaskCreate(remoteLogTask, (const portCHAR *)"RemoteLog", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteLogTaskHandle);
-//        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        setTaskNum(remoteLogTaskHandle, PID_REMOTE_CLIENT_LOG);
         xTaskCreate(remoteCmdTask, (const portCHAR *)"RemoteCmd", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteCmdTaskHandle);
-//        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        setTaskNum(remoteCmdTaskHandle, PID_REMOTE_CLIENT_CMD);
         xTaskCreate(remoteDataTask, (const portCHAR *)"RemoteData", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteDataTaskHandle);
-//        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        setTaskNum(remoteDataTaskHandle, PID_REMOTE_CLIENT_DATA);
     }
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
     INFO_PRINT("remoteTask Exiting\n");
@@ -122,7 +123,7 @@ void remoteStatusTask(void *pvParameters)
     memset(&statusMsg, 0,sizeof(TaskStatusPacket));
 
     /* Set destination */
-    xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
+    xServerAddress.sin_addr = FreeRTOS_inet_addr(SERVER_IP_ADDRESS_STR);
     xServerAddress.sin_port = FreeRTOS_htons(STATUS_PORT);
 
     /* create TCP socket */
@@ -183,7 +184,7 @@ void remoteStatusTask(void *pvParameters)
                         }
                         else {
                             /* for diagnostics */
-                            if(DIAGNOISTIC_PRINTS) {PRINT_STATUS_MSG_HEADER(&statusMsg);}
+                            //if(DIAGNOISTIC_PRINTS) {PRINT_STATUS_MSG_HEADER(&statusMsg);}
                         }
                     }
                     else {
@@ -229,7 +230,7 @@ void remoteLogTask(void *pvParameters)
     memset(&logMsg, 0,sizeof(LogMsgPacket));
 
     /* Set destination */
-    xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
+    xServerAddress.sin_addr = FreeRTOS_inet_addr(SERVER_IP_ADDRESS_STR);
     xServerAddress.sin_port = FreeRTOS_htons(LOG_PORT);
 
     /* create TCP socket */
@@ -283,14 +284,14 @@ void remoteLogTask(void *pvParameters)
                 /*--------------------------------------------------------------------------*/
                 else {
                     /* get log msgs */
-                    if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE) {
-                        /* for development (verify queue send/recv) */
-                        PRINT_LOG_MSG_HEADER(&logMsg);
-
+                    if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
+                    {
                         /* Transmit data to Control Node */
                         if(sendSocketData(&xClientSocket, (uint8_t *)&logMsg, sizeof(logMsg)) == pdFREERTOS_ERRNO_ENOTCONN) {
                             connectionLost = 1;
                         }
+                        /* for diagnostics */
+                        if(DIAGNOISTIC_PRINTS) {PRINT_LOG_MSG_HEADER(&logMsg);}
                     }
                     else {
                         LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
@@ -334,7 +335,7 @@ void remoteDataTask(void *pvParameters)
     memset(&sensorData, 0,sizeof(RemoteDataPacket));
 
     /* Set destination */
-    xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
+    xServerAddress.sin_addr = FreeRTOS_inet_addr(SERVER_IP_ADDRESS_STR);
     xServerAddress.sin_port = FreeRTOS_htons(DATA_PORT);
 
     /* create TCP socket */
@@ -394,7 +395,6 @@ void remoteDataTask(void *pvParameters)
                         if(info.pShmem != NULL) {
                             sensorData.luxData = info.pShmem->lightData.apds9301_luxData;
                             sensorData.moistureData = info.pShmem->moistData.moistureLevel;
-                            INFO_PRINT("Sensor data, luxData: %f, moistureData: %f\n", sensorData.luxData, sensorData.moistureData);
                         }
 
                         /* release mutex ASAP so others can use */
@@ -404,10 +404,14 @@ void remoteDataTask(void *pvParameters)
                         if(sendSocketData(&xClientSocket, (uint8_t *)&sensorData, sizeof(sensorData)) == pdFREERTOS_ERRNO_ENOTCONN) {
                             connectionLost = 1;
                         }
+                        /* for diagnostics */
+                        if(DIAGNOISTIC_PRINTS) {
+                            //INFO_PRINT("Sensor data, luxData: %d, moistureData: %d\n", (int16_t)sensorData.luxData, (int16_t)sensorData.moistureData);
+                        }
                     }
                 }
             }
-            vTaskDelay(100);
+            vTaskDelay(500);
         }
 
         /* gracefully shutdown socket */
