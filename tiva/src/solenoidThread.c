@@ -106,6 +106,7 @@ void solenoidTask(void *pvParameters)
         }
 
         /* sleep */
+        LOG_HEARTBEAT();
         vTaskDelay(SOLENOID_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
     LOG_SOLENOID_EVENT(SOLE_EVENT_EXITING);

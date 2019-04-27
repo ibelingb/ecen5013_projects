@@ -223,7 +223,7 @@ int8_t setTaskNum(TaskHandle_t xHandle, ProcessId_e process)
 {
     TaskStatus_t xTaskDetails;
 
-    /* got get struct w/ num in it */
+    /* go get struct w/ num in it */
     vTaskGetInfo(xHandle, &xTaskDetails, pdTRUE, eInvalid );
 
     /* update number in our structure */
@@ -246,6 +246,7 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
     {
         /* Print out the network configuration, which may have come from a DHCP
         server. */
+        INFO_PRINT("NETWORK UP...\n");
         FreeRTOS_GetAddressConfiguration( &ulIPAddress, &ulNetMask, &ulGatewayAddress, &ulDNSServerAddress );
         FreeRTOS_inet_ntoa( ulIPAddress, cBuffer );
         INFO_PRINT( "\r\n\r\nIP Address: %s\r\n", cBuffer);

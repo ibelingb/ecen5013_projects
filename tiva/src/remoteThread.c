@@ -46,11 +46,14 @@
 #include "task.h"
 #include "semphr.h"
 
-
+#define DIAGNOISTIC_PRINTS  (1)
 
 /*---------------------------------------------------------------------------------*/
-static uint8_t keepAlive;   /* global to kill thread */
-static Socket_t xClientSocket;
+static uint8_t keepAlive;
+static TaskHandle_t remoteStatusTaskHandle = NULL;
+static TaskHandle_t remoteLogTaskHandle = NULL;
+static TaskHandle_t remoteCmdTaskHandle = NULL;
+static TaskHandle_t remoteDataTaskHandle = NULL;
 
 /*---------------------------------------------------------------------------------*/
 BaseType_t InitIPStack(void);
@@ -58,152 +61,363 @@ BaseType_t sendSocketData(Socket_t *pSocket, uint8_t *pData, size_t length);
 BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length);
 void printConnectionStatus(BaseType_t ret);
 
+void remoteStatusTask(void *pvParameters);
+void remoteLogTask(void *pvParameters);
+void remoteCmdTask(void *pvParameters);
+void remoteDataTask(void *pvParameters);
+
 /*---------------------------------------------------------------------------------*/
 void remoteTask(void *pvParameters)
 {
-    uint8_t count = 0;
-    const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
-    TaskStatusPacket statusMsg;
-    LogMsgPacket logMsg;
-    RemoteDataPacket sensorData;
-    keepAlive = 1;
-
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
-    MUTED_PRINT("Remote Task #: %d\n\r", getTaskNum());
+    INFO_PRINT("THREAD CREATED, remoteTask #: %d\n\r", getTaskNum());
 
     /*-------------------------------------------------------------------------------------*/
-    /* set up socket  */
+    /* Initialize IP Stack and Network Driver  */
     /*-------------------------------------------------------------------------------------*/
     if(InitIPStack() != pdPASS) {
         INFO_PRINT("InitIPStack() failed\n");
     }
+    else {
+        /*------------------------------------------------------------------------------------*/
+        /* create child threads */
+        /*------------------------------------------------------------------------------------*/
 
+        xTaskCreate(remoteStatusTask, (const portCHAR *)"RemoteStatus", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteStatusTaskHandle);
+        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        xTaskCreate(remoteLogTask, (const portCHAR *)"RemoteLog", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteLogTaskHandle);
+//        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        xTaskCreate(remoteCmdTask, (const portCHAR *)"RemoteCmd", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteCmdTaskHandle);
+//        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+        xTaskCreate(remoteDataTask, (const portCHAR *)"RemoteData", configMINIMAL_STACK_SIZE, pvParameters, 1, &remoteDataTaskHandle);
+//        //setTaskNum(observerTaskHandle, PID_OBSERVER);
+    }
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
+    INFO_PRINT("remoteTask Exiting\n");
+    vTaskDelete(NULL);
+}
+
+/*---------------------------------------------------------------------------------*/
+/*
+ *
+ */
+void remoteStatusTask(void *pvParameters)
+{
+    uint8_t count = 0;
+    const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
+    TaskStatusPacket statusMsg;
+    keepAlive = 1;
     static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     struct freertos_sockaddr xServerAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
     uint8_t connectionLost;
     BaseType_t ret;
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
+    Socket_t xClientSocket;
+
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
+    INFO_PRINT("THREAD CREATED, remoteStatusTask #: %d\n\r", getTaskNum());
+
+    /*clear struct */
+    memset(&statusMsg, 0,sizeof(TaskStatusPacket));
+
+    /* Set destination */
+    xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
+    xServerAddress.sin_port = FreeRTOS_htons(STATUS_PORT);
+
+    /* create TCP socket */
+    xClientSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+    if(xClientSocket == FREERTOS_INVALID_SOCKET) {
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+        ERROR_PRINT("ERROR remoteStatusTask: Failed to create socket\n");
+        vTaskDelay(2000);
+    }
+    else {
+        /* set timeouts */
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_SNDTIMEO, &xTimeOut, sizeof(xTimeOut));
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_RCVTIMEO, &xTimeOut, sizeof(xTimeOut));
+
+        /* Bind the socket */
+        if(FreeRTOS_bind(xClientSocket, &xServerAddress, xSize) != 0) {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+            ERROR_PRINT("ERROR remoteStatusTask: Failed to create socket\n");
+            vTaskDelay(2000);
+        }
+        /*--------------------------------------------------------------------------*/
+        /* Socket Created Successfully! */
+        /*--------------------------------------------------------------------------*/
+        else {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
+
+            /* set before entering so loop tries to connect */
+            connectionLost = 1;
+
+            /* send status msgs to Control Node */
+            while(keepAlive)
+            {
+                ++count;
+
+                /*--------------------------------------------------------------------------*/
+                /* Connect Lost State */
+                /*--------------------------------------------------------------------------*/
+                if(connectionLost) {
+                    ret = 0;
+                    do {
+                        ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        printConnectionStatus(ret);
+                    } while(ret != 0);
+                    connectionLost = 0;
+                }
+                /*--------------------------------------------------------------------------*/
+                /* Connected State */
+                /*--------------------------------------------------------------------------*/
+                else {
+                    /* get thread status msgs */
+                    if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE) {
+                        /* send status msgs to Control Node */
+                        if(sendSocketData(&xClientSocket, (uint8_t *)&statusMsg, sizeof(statusMsg)) == pdFREERTOS_ERRNO_ENOTCONN) {
+                            connectionLost = 1;
+                        }
+                        else {
+                            /* for diagnostics */
+                            if(DIAGNOISTIC_PRINTS) {PRINT_STATUS_MSG_HEADER(&statusMsg);}
+                        }
+                    }
+                    else {
+                        LOG_REMOTE_CLIENT_EVENT(REMOTE_STATUS_QUEUE_ERROR);
+                    }
+                }
+            }
+        }
+
+        /* gracefully shutdown socket */
+        FreeRTOS_shutdown( xClientSocket, FREERTOS_SHUT_RDWR );
+
+        /* The socket has shut down and is safe to close */
+        FreeRTOS_closesocket( xClientSocket );
+    }
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
+    INFO_PRINT("remoteStatusTask Exiting\n");
+    vTaskDelete(NULL);
+}
+
+/*---------------------------------------------------------------------------------*/
+/*
+ *
+ */
+void remoteLogTask(void *pvParameters)
+{
+    uint8_t count = 0;
+    const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
+    LogMsgPacket logMsg;
+    keepAlive = 1;
+    static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
+    struct freertos_sockaddr xServerAddress;
+    socklen_t xSize = sizeof(struct freertos_sockaddr);
+    uint8_t connectionLost;
+    BaseType_t ret;
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
+    Socket_t xClientSocket;
+
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
+    INFO_PRINT("THREAD CREATED, remoteLogTask #: %d\n\r", getTaskNum());
+
+    /* clear structure */
+    memset(&logMsg, 0,sizeof(LogMsgPacket));
+
+    /* Set destination */
+    xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
+    xServerAddress.sin_port = FreeRTOS_htons(LOG_PORT);
+
+    /* create TCP socket */
+    xClientSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+    if(xClientSocket == FREERTOS_INVALID_SOCKET) {
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+        ERROR_PRINT("ERROR remoteStatusTask: Failed to create socket\n");
+        vTaskDelay(2000);
+    }
+    else {
+        /* set timeouts */
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_SNDTIMEO, &xTimeOut, sizeof(xTimeOut));
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_RCVTIMEO, &xTimeOut, sizeof(xTimeOut));
+
+        /* Bind the socket */
+        if(FreeRTOS_bind(xClientSocket, &xServerAddress, xSize) != 0) {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+            ERROR_PRINT("ERROR remoteLogTask: Failed to create socket\n");
+            vTaskDelay(2000);
+        }
+        /*--------------------------------------------------------------------------*/
+        /* Socket Created Successfully! */
+        /*--------------------------------------------------------------------------*/
+        else {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
+
+            /* set before entering so loop tries to connect */
+            connectionLost = 1;
+
+            /* send status msgs to Control Node */
+            while(keepAlive)
+            {
+                ++count;
+
+                /*--------------------------------------------------------------------------*/
+                /* Connect Lost State */
+                /*--------------------------------------------------------------------------*/
+                if(connectionLost) {
+                    ret = 0;
+                    do {
+                        ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        printConnectionStatus(ret);
+                    } while(ret != 0);
+                    connectionLost = 0;
+                }
+                /*--------------------------------------------------------------------------*/
+                /* Connected State */
+                /*--------------------------------------------------------------------------*/
+                else {
+                    /* get log msgs */
+                    if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE) {
+                        /* for development (verify queue send/recv) */
+                        PRINT_LOG_MSG_HEADER(&logMsg);
+
+                        /* Transmit data to Control Node */
+                        if(sendSocketData(&xClientSocket, (uint8_t *)&logMsg, sizeof(logMsg)) == pdFREERTOS_ERRNO_ENOTCONN) {
+                            connectionLost = 1;
+                        }
+                    }
+                    else {
+                        LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
+                    }
+                }
+            }
+        }
+
+        /* gracefully shutdown socket */
+        FreeRTOS_shutdown( xClientSocket, FREERTOS_SHUT_RDWR );
+
+        /* The socket has shut down and is safe to close */
+        FreeRTOS_closesocket( xClientSocket );
+    }
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
+    INFO_PRINT("remoteLogTask Exiting\n");
+    vTaskDelete(NULL);
+}
+
+/*---------------------------------------------------------------------------------*/
+/*
+ *
+ */
+void remoteDataTask(void *pvParameters)
+{
+    uint8_t count = 0;
+    RemoteDataPacket sensorData;
+    keepAlive = 1;
+    static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
+    struct freertos_sockaddr xServerAddress;
+    socklen_t xSize = sizeof(struct freertos_sockaddr);
+    uint8_t connectionLost;
+    BaseType_t ret;
+    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
+    Socket_t xClientSocket;
+
+    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
+    INFO_PRINT("THREAD CREATED, remoteDataTask #: %d\n\r", getTaskNum());
+
+    /* clear structure */
+    memset(&sensorData, 0,sizeof(RemoteDataPacket));
 
     /* Set destination */
     xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
     xServerAddress.sin_port = FreeRTOS_htons(DATA_PORT);
 
     /* create TCP socket */
-    xClientSocket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP );
-
-    /* Check for errors */
-    configASSERT( xClientSocket != FREERTOS_INVALID_SOCKET );
-
-    /* set timeouts and checksum flag */
-    FreeRTOS_setsockopt( xClientSocket, 0, FREERTOS_SO_SNDTIMEO,
-                         &xTimeOut, sizeof( xTimeOut ) );
-    FreeRTOS_setsockopt( xClientSocket, 0, FREERTOS_SO_RCVTIMEO,
-                         &xTimeOut, sizeof( xTimeOut ) );
-
-    /* Bind the socket, but pass in NULL to let FreeRTOS+TCP choose the port number.
-    See the next source code snipped for an example of how to bind to a specific
-    port number. */
-    FreeRTOS_bind(xClientSocket, &xServerAddress, xSize);
-
-    /*-------------------------------------------------------------------------------------*/
-
-    /* set portion of statusMsg that does not change */
-    memset(&logMsg, 0,sizeof(LogMsgPacket));
-
-    /* get status queue handle, etc */
-    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
-
-    /* TODO - set BIST error in logMsg if necessary */
-    LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
-    if(0) {
-        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
+    xClientSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+    if(xClientSocket == FREERTOS_INVALID_SOCKET) {
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+        ERROR_PRINT("ERROR remoteDataTask: Failed to create socket\n");
+        vTaskDelay(2000);
     }
     else {
-        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
-    }
+        /* set timeouts */
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_SNDTIMEO, &xTimeOut, sizeof(xTimeOut));
+        FreeRTOS_setsockopt(xClientSocket, 0, FREERTOS_SO_RCVTIMEO, &xTimeOut, sizeof(xTimeOut));
 
-    /* send data, log and status msgs to Control Node */
-    connectionLost = 1;
-    while(keepAlive)
-    {
-        ++count;
-
-        /*--------------------------------------------------------------------------*/
-        /* Connect Lost State */
-        /*--------------------------------------------------------------------------*/
-        if(connectionLost) {
-
-            ret = 0;
-            do {
-                ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
-                printConnectionStatus(ret);
-            } while(ret != 0);
-            connectionLost = 0;
+        /* Bind the socket */
+        if(FreeRTOS_bind(xClientSocket, &xServerAddress, xSize) != 0) {
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
+            ERROR_PRINT("ERROR remoteDataTask: Failed to create socket\n");
+            vTaskDelay(2000);
         }
         /*--------------------------------------------------------------------------*/
-        /* Connected State */
+        /* Socket Created Successfully! */
         /*--------------------------------------------------------------------------*/
         else {
-            /* try to read sensor data from shmem */
-            /* TODO - need to restrict how offet this is sent */
-            if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
+            LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
+
+            /* set before entering so loop tries to connect */
+            connectionLost = 1;
+
+            /* send status msgs to Control Node */
+            while(keepAlive)
             {
-                /* read data from shmem */
-                if(info.pShmem != NULL)
-                {
-                    sensorData.luxData = info.pShmem->lightData.apds9301_luxData;
-                    sensorData.moistureData = info.pShmem->moistData.moistureLevel;
+                ++count;
+
+                /*--------------------------------------------------------------------------*/
+                /* Connect Lost State */
+                /*--------------------------------------------------------------------------*/
+                if(connectionLost) {
+                    ret = 0;
+                    do {
+                        ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        printConnectionStatus(ret);
+                    } while(ret != 0);
+                    connectionLost = 0;
                 }
+                /*--------------------------------------------------------------------------*/
+                /* Connected State */
+                /*--------------------------------------------------------------------------*/
+                else {
+                    /* try to read sensor data from shmem */
+                    if(xSemaphoreTake(info.shmemMutex, THREAD_MUTEX_DELAY) == pdTRUE)
+                    {
+                        /* read data from shmem */
+                        if(info.pShmem != NULL) {
+                            sensorData.luxData = info.pShmem->lightData.apds9301_luxData;
+                            sensorData.moistureData = info.pShmem->moistData.moistureLevel;
+                            INFO_PRINT("Sensor data, luxData: %f, moistureData: %f\n", sensorData.luxData, sensorData.moistureData);
+                        }
 
-                /* release mutex ASAP so others can use */
-                xSemaphoreGive(info.shmemMutex);
+                        /* release mutex ASAP so others can use */
+                        xSemaphoreGive(info.shmemMutex);
 
-                /* Transmit data to Control Node */
-                if(sendSocketData(&xClientSocket, (uint8_t *)&sensorData, sizeof(sensorData)) == pdFREERTOS_ERRNO_ENOTCONN) {
-                    connectionLost = 1;
+                        /* Transmit data to Control Node */
+                        if(sendSocketData(&xClientSocket, (uint8_t *)&sensorData, sizeof(sensorData)) == pdFREERTOS_ERRNO_ENOTCONN) {
+                            connectionLost = 1;
+                        }
+                    }
                 }
             }
-            else {
-                /* mutex timeout occurred */
-                LOG_REMOTE_CLIENT_EVENT(REMOTE_SHMEM_ERROR);
-            }
-
-     //     readSocketData(&xClientSocket, recvData, sizeof(recvData));
-
-
-            /*-----------------------------------------------------------------------*/
-            /* get thread status msgs */
-            if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
-            {
-                /* for development (verify queue send/recv) */
-                //PRINT_STATUS_MSG_HEADER(&statusMsg);
-
-                /* TODO - send status msgs to Control Node */
-            }
-            else {
-                LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
-            }
-
-            /* get log msgs */
-            if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
-            {
-                /* for development (verify queue send/recv) */
-                PRINT_LOG_MSG_HEADER(&logMsg);
-
-                /* TODO - send log msgs to Control Node */
-            }
-            else {
-                LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
-            }
+            vTaskDelay(100);
         }
+
+        /* gracefully shutdown socket */
+        FreeRTOS_shutdown( xClientSocket, FREERTOS_SHUT_RDWR );
+
+        /* The socket has shut down and is safe to close */
+        FreeRTOS_closesocket( xClientSocket );
     }
-
-    /* gracefully shutdown socket */
-    FreeRTOS_shutdown( xClientSocket, FREERTOS_SHUT_RDWR );
-
-    /* The socket has shut down and is safe to close. */
-    FreeRTOS_closesocket( xClientSocket );
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
+    INFO_PRINT("remoteDataTask Exiting\n");
     vTaskDelete(NULL);
 }
 
@@ -213,147 +427,13 @@ void remoteTask(void *pvParameters)
  */
 void remoteCmdTask(void *pvParameters)
 {
-    uint8_t count = 0;
-    const TickType_t xDelay = LOG_QUEUE_RECV_WAIT_DELAY / portTICK_PERIOD_MS;
-    TaskStatusPacket statusMsg;
-    LogMsgPacket logMsg;
-    RemoteDataPacket sensorData;
-    keepAlive = 1;
 
-    LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
-    MUTED_PRINT("Remote Task #: %d\n\r", getTaskNum());
-
-    /*-------------------------------------------------------------------------------------*/
-    /* set up socket  */
-    /*-------------------------------------------------------------------------------------*/
-    InitIPStack();
-
-    static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
-    struct freertos_sockaddr xServerAddress;
-    socklen_t xSize = sizeof(struct freertos_sockaddr);
-    uint8_t connectionLost;
-    BaseType_t ret;
-
-    /* Set destination */
-    xServerAddress.sin_addr = FreeRTOS_inet_addr( "10.0.0.93" );
-    xServerAddress.sin_port = FreeRTOS_htons(DATA_PORT);
-
-    /* create TCP socket */
-    xClientSocket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP );
-
-    /* Check for errors */
-    configASSERT( xClientSocket != FREERTOS_INVALID_SOCKET );
-
-    /* set timeouts and checksum flag */
-    FreeRTOS_setsockopt( xClientSocket, 0, FREERTOS_SO_SNDTIMEO,
-                         &xTimeOut, sizeof( xTimeOut ) );
-    FreeRTOS_setsockopt( xClientSocket, 0, FREERTOS_SO_RCVTIMEO,
-                         &xTimeOut, sizeof( xTimeOut ) );
-
-    /* Bind the socket, but pass in NULL to let FreeRTOS+TCP choose the port number.
-    See the next source code snipped for an example of how to bind to a specific
-    port number. */
-    FreeRTOS_bind(xClientSocket, &xServerAddress, xSize);
-
-    /*-------------------------------------------------------------------------------------*/
-
-    /* set portion of statusMsg that does not change */
-    memset(&logMsg, 0,sizeof(LogMsgPacket));
-
-    /* get status queue handle, etc */
-    SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
-
-    /* TODO - set BIST error in logMsg if necessary */
-    LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
-    if(0) {
-        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
-    }
-    else {
-        LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
-    }
-
-    /* send data, log and status msgs to Control Node */
-    connectionLost = 1;
-    while(keepAlive)
-    {
-        ++count;
-
-        /*--------------------------------------------------------------------------*/
-        /* Connect Lost State */
-        /*--------------------------------------------------------------------------*/
-        if(connectionLost) {
-
-            ret = 0;
-            do {
-                ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
-                printConnectionStatus(ret);
-            } while(ret != 0);
-            connectionLost = 0;
-        }
-        /*--------------------------------------------------------------------------*/
-        /* Connected State */
-        /*--------------------------------------------------------------------------*/
-        else {
-            /* try to read sensor data from shmem */
-            /* TODO - need to restrict how offet this is sent */
-            if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
-            {
-                /* read data from shmem */
-                if(info.pShmem != NULL)
-                {
-                    sensorData.luxData = info.pShmem->lightData.apds9301_luxData;
-                    sensorData.moistureData = info.pShmem->moistData.moistureLevel;
-                }
-
-                /* release mutex ASAP so others can use */
-                xSemaphoreGive(info.shmemMutex);
-
-                /* Transmit data to Control Node */
-                if(sendSocketData(&xClientSocket, (uint8_t *)&sensorData, sizeof(sensorData)) == pdFREERTOS_ERRNO_ENOTCONN) {
-                    connectionLost = 1;
-                }
-            }
-            else {
-                /* mutex timeout occurred */
-                LOG_REMOTE_CLIENT_EVENT(REMOTE_SHMEM_ERROR);
-            }
-
-     //     readSocketData(&xClientSocket, recvData, sizeof(recvData));
-
-
-            /*-----------------------------------------------------------------------*/
-            /* get thread status msgs */
-            if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE)
-            {
-                /* for development (verify queue send/recv) */
-                //PRINT_STATUS_MSG_HEADER(&statusMsg);
-
-                /* TODO - send status msgs to Control Node */
-            }
-            else {
-                LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
-            }
-
-            /* get log msgs */
-            if(xQueueReceive(info.logFd, (void *)&logMsg, xDelay) != pdFALSE)
-            {
-                /* for development (verify queue send/recv) */
-                PRINT_LOG_MSG_HEADER(&logMsg);
-
-                /* TODO - send log msgs to Control Node */
-            }
-            else {
-                LOG_REMOTE_CLIENT_EVENT(REMOTE_LOG_QUEUE_ERROR);
-            }
-        }
-    }
-
-    /* gracefully shutdown socket */
-    FreeRTOS_shutdown( xClientSocket, FREERTOS_SHUT_RDWR );
-
-    /* The socket has shut down and is safe to close. */
-    FreeRTOS_closesocket( xClientSocket );
+    /*clear struct */
+    //memset(&sensorData, 0,sizeof(RemoteDataPacket));
+    //readSocketData(&xClientSocket, recvData, sizeof(recvData));
+    INFO_PRINT("remoteCmdTask Exiting\n");
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_EXITING);
+    vTaskDelete(NULL);
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -388,9 +468,6 @@ BaseType_t InitIPStack(void)
 
     ret = FreeRTOS_IPInit(ucIPAddress, ucNetMask, ucGatewayAddress,
                           ucDNSServerAddress, ucMACAddress);
-    if(ret != pdPASS) {
-        ERROR_PRINT("IPInit error\n");
-    }
     return ret;
 }
 

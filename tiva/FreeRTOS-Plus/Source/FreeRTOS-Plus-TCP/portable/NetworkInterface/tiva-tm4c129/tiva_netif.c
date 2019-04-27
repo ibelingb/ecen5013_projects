@@ -473,4 +473,5 @@ void printPHYIntStatus(uint32_t phyIsr1Status, uint32_t phyIsr2Status)
     if(phyIsr2Status & EPHY_MISR2_JABBEREN) {
         INFO_PRINT(", EPHY_MISR2_JABBEREN");
     }
+    INFO_PRINT("\ns");
 }

@@ -817,9 +817,7 @@ const uint32_t ulMandatoryOptions = 2ul; /* DHCP server address, and the correct
 				}
 			}
 		}
-		FreeRTOS_printf(("releasing buffer\n"));
 		FreeRTOS_ReleaseUDPPayloadBuffer( ( void * ) pucUDPPayload );
-        FreeRTOS_printf(("released buffer\n"));
 	}
 
 	return xReturn;
