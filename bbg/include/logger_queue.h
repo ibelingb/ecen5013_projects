@@ -23,8 +23,8 @@
 
 #ifndef __linux__
 #include "task.h"
-#define LOG_QUEUE_SEND_WAIT_DELAY   ((TickType_t) (10  / portTICK_PERIOD_MS))
-#define LOG_QUEUE_RECV_WAIT_DELAY   ((TickType_t) (10  / portTICK_PERIOD_MS))
+#define LOG_QUEUE_SEND_WAIT_DELAY   ((TickType_t) (100  / portTICK_PERIOD_MS))
+#define LOG_QUEUE_RECV_WAIT_DELAY   ((TickType_t) (10000  / portTICK_PERIOD_MS))
 #endif
 
 /**

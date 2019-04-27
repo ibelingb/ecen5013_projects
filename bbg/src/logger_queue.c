@@ -104,7 +104,7 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	    if(xQueueSend(logFd, ( void *)&newItem, LOG_QUEUE_SEND_WAIT_DELAY) != pdPASS)
 	#endif
 	{
-        ERROR_PRINT("mq_receive failed, err#%d (%s)\n\r", errno, strerror(errno));
+        ERROR_PRINT("mq_send failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;
     }
 	return LOG_STATUS_OK;

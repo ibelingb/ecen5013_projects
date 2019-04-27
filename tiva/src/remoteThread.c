@@ -184,7 +184,7 @@ void remoteStatusTask(void *pvParameters)
                         }
                         else {
                             /* for diagnostics */
-                            //if(DIAGNOISTIC_PRINTS) {PRINT_STATUS_MSG_HEADER(&statusMsg);}
+                            if(DIAGNOISTIC_PRINTS) {PRINT_STATUS_MSG_HEADER(&statusMsg);}
                         }
                     }
                     else {
@@ -292,7 +292,6 @@ void remoteLogTask(void *pvParameters)
                         }
                         /* for diagnostics */
                         if(DIAGNOISTIC_PRINTS) {
-                            INFO_PRINT("sending bytes: %d, logMsg_e size: %d\n", sizeof(LogMsgPacket), sizeof(logMsg_e));
                             PRINT_LOG_MSG_HEADER(&logMsg);
                         }
                     }
@@ -409,12 +408,12 @@ void remoteDataTask(void *pvParameters)
                         }
                         /* for diagnostics */
                         if(DIAGNOISTIC_PRINTS) {
-                            //INFO_PRINT("Sensor data, luxData: %d, moistureData: %d\n", (int16_t)sensorData.luxData, (int16_t)sensorData.moistureData);
+                            INFO_PRINT("Sensor data, luxData: %d, moistureData: %d\n", (int16_t)sensorData.luxData, (int16_t)sensorData.moistureData);
                         }
                     }
                 }
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
-            vTaskDelay(500);
         }
 
         /* gracefully shutdown socket */

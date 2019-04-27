@@ -37,7 +37,7 @@
 #define STATUS_PORT             (5002)
 #define CMD_PORT                (5003)
 #define DATA_PORT               (5004)
-#define SERVER_IP_ADDRESS_STR   ("10.0.0.93")
+#define SERVER_IP_ADDRESS_STR   ("10.0.0.87")
 
 typedef enum {
   REMOTE_EVENT_STARTED = 0,
