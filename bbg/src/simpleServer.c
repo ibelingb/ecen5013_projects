@@ -10,6 +10,9 @@
  *
  * @file simpleServer.c
  * @brief simple server that waits for a client then prints received bytes
+ * 
+ * reference:
+ * https://stackoverflow.com/questions/12730477/close-is-not-closing-socket-properly
  *
  ************************************************************************************
  */
@@ -34,13 +37,15 @@
 #define THREAD_COUNT		(3)
 
 /* global to kill loop */
-uint8_t gExit = 1;
+static uint8_t gExit = 1;
 pthread_t gThreads[THREAD_COUNT];
 
 void sigintHandler(int sig);
 void* getRemoteStatusTask(void* threadInfo);
 void* getRemoteLogTask(void* threadInfo);
 void* getRemoteDataTask(void* threadInfo);
+int getSO_ERROR(int fd);
+void closeSocket(int fd);
 
 int main( int argc, char *argv[] ) 
 {
@@ -95,10 +100,10 @@ void* getRemoteStatusTask(void* threadInfo)
   	fcntl(myServerSocketFd, F_SETFL, socketDataFlags | O_NONBLOCK);
    
    	if (myServerSocketFd < 0) {
-      	perror("ERROR opening socket");
+      	perror("getRemoteStatusTask ERROR opening socket");
       	exit(1);
    	}
-   	printf("socket created\n");
+   	printf("getRemoteStatusTask socket created\n");
    	
    	/* Initialize socket structure */
    	bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -109,32 +114,32 @@ void* getRemoteStatusTask(void* threadInfo)
    
    	/* Now bind the host address using bind() call.*/
    	if (bind(myServerSocketFd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-      	perror("ERROR on binding");
+      	perror("getRemoteStatusTask ERROR on binding");
       	exit(1);
    	}
-   	printf("socket bound\n");   
+   	printf("getRemoteStatusTask socket bound\n");   
    	/* Now start listening for the clients, here process will
      * go in sleep mode and will wait for the incoming connection
    	 */
-   	printf("listening...\n");
+   	printf("getRemoteStatusTask listening...\n");
    	listen(myServerSocketFd, 50);
    	clilen = sizeof(cli_addr);
 
    	/* Update Socket Client connections to be non-blocking */
   	struct timeval timeout;
-  	timeout.tv_usec = 1000;
+  	timeout.tv_usec = 10000;
   	timeout.tv_sec = 0;
 
    	/* Accept actual connection from the client */
    	noConnection = 1;
-   	while(noConnection && gExit)
+   	while(noConnection && (gExit != 0))
    	{
    		statusSocketFd = accept(myServerSocketFd, (struct sockaddr *)&cli_addr, &clilen);
 			if(statusSocketFd == -1) {
           continue;
       }
    		inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
-			printf("connection accepted from: %s\n", str);	
+			printf("getRemoteStatusTask connection accepted from: %s\n", str);	
    		if (statusSocketFd > 0) {
    			noConnection = 0;
    		}
@@ -144,12 +149,12 @@ void* getRemoteStatusTask(void* threadInfo)
    		/* Update Socket Client connections to be non-blocking */
 	    setsockopt(myServerSocketFd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
 
-	   	while(gExit)
+	   	while((gExit != 0))
 	   	{
 	   	   	n = read(statusSocketFd, &statusMsg, sizeof(statusMsg));
 	   
 		   	if (n < 0) {
-		      	printf("ERROR reading from socket\n");
+		      	printf("getRemoteStatusTask ERROR reading from socket\n");
 		      	continue;
 		   	}
 		   	PRINT_STATUS_MSG_HEADER(&statusMsg);
@@ -157,8 +162,9 @@ void* getRemoteStatusTask(void* threadInfo)
    	}
 
     /* Cleanup */
-    printf("closing socket, exiting\n");
-  	close(myServerSocketFd);
+    printf("closing getRemoteStatusTask socket, exiting\n");
+  	closeSocket(myServerSocketFd);
+		closeSocket(statusSocketFd);
     
    return 0;
 }
@@ -188,10 +194,10 @@ void* getRemoteLogTask(void* threadInfo)
   	fcntl(myServerSocketFd, F_SETFL, socketDataFlags | O_NONBLOCK);
    
    	if (myServerSocketFd < 0) {
-      	perror("ERROR opening socket");
+      	perror("getRemoteLogTask ERROR opening socket");
       	exit(1);
    	}
-   	printf("socket created\n");
+   	printf("getRemoteLogTask socket created\n");
    	
    	/* Initialize socket structure */
    	bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -202,32 +208,32 @@ void* getRemoteLogTask(void* threadInfo)
    
    	/* Now bind the host address using bind() call.*/
    	if (bind(myServerSocketFd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-      	perror("ERROR on binding");
+      	perror("getRemoteLogTask ERROR on binding");
       	exit(1);
    	}
-   	printf("socket bound\n");   
+   	printf("getRemoteLogTask socket bound\n");   
    	/* Now start listening for the clients, here process will
      * go in sleep mode and will wait for the incoming connection
    	 */
-   	printf("listening...\n");
+   	printf("getRemoteLogTask listening...\n");
    	listen(myServerSocketFd, 50);
    	clilen = sizeof(cli_addr);
 
    	/* Update Socket Client connections to be non-blocking */
   	struct timeval timeout;
-  	timeout.tv_usec = 1000;
+  	timeout.tv_usec = 10000;
   	timeout.tv_sec = 0;
 
    	/* Accept actual connection from the client */
    	noConnection = 1;
-   	while(noConnection && gExit)
+   	while(noConnection && (gExit != 0))
    	{
    			statusSocketFd = accept(myServerSocketFd, (struct sockaddr *)&cli_addr, &clilen);
 				if(statusSocketFd == -1) {
           	continue;
       	}
    			inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
-				printf("connection accepted from: %s\n", str);	
+				printf("getRemoteLogTask connection accepted from: %s\n", str);	
    			if (statusSocketFd > 0) {
    					noConnection = 0;
    			}
@@ -237,12 +243,13 @@ void* getRemoteLogTask(void* threadInfo)
    			/* Update Socket Client connections to be non-blocking */
 	    	setsockopt(myServerSocketFd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(struct timeval));
 
-	   		while(gExit)
+	   		while((gExit != 0))
 	   		{
 	   	   		n = read(statusSocketFd, &logMsg, sizeof(LogMsgPacket));
 	   
-		   			if (n < 0) {
-		      			printf("ERROR reading from socket\n");
+		   			if (n != sizeof(LogMsgPacket)) {
+		      			INFO_PRINT("ERROR reading from getRemoteLogTask socket, expected: %u, got: %d, logMsg_e size: %u\n", 
+								(uint16_t)sizeof(LogMsgPacket), n, (uint16_t)sizeof(logMsg_e));
 		      			continue;
 		   			}
 		   			PRINT_LOG_MSG_HEADER(&logMsg);
@@ -250,10 +257,10 @@ void* getRemoteLogTask(void* threadInfo)
    	}
 
     /* Cleanup */
-    printf("closing socket, exiting\n");
-  	close(myServerSocketFd);
+    printf("closing getRemoteLogTask socket, exiting\n");
+  	closeSocket(myServerSocketFd);
+		closeSocket(statusSocketFd);
     
-
 	  return NULL;
 }
 void* getRemoteDataTask(void* threadInfo)
@@ -282,10 +289,10 @@ void* getRemoteDataTask(void* threadInfo)
   	fcntl(myServerSocketFd, F_SETFL, socketDataFlags | O_NONBLOCK);
    
    	if (myServerSocketFd < 0) {
-      	perror("ERROR opening socket");
+      	perror("getRemoteDataTask ERROR opening socket");
       	exit(1);
    	}
-   	printf("socket created\n");
+   	printf("getRemoteDataTask socket created\n");
    	
    	/* Initialize socket structure */
    	bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -296,32 +303,32 @@ void* getRemoteDataTask(void* threadInfo)
    
    	/* Now bind the host address using bind() call.*/
    	if (bind(myServerSocketFd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-      	perror("ERROR on binding");
+      	perror("getRemoteDataTask ERROR on binding");
       	exit(1);
    	}
-   	printf("socket bound\n");   
+   	printf("getRemoteDataTask socket bound\n");   
    	/* Now start listening for the clients, here process will
      * go in sleep mode and will wait for the incoming connection
    	 */
-   	printf("listening...\n");
+   	printf("getRemoteDataTask listening...\n");
    	listen(myServerSocketFd, 50);
    	clilen = sizeof(cli_addr);
 
    	/* Update Socket Client connections to be non-blocking */
   	struct timeval timeout;
-  	timeout.tv_usec = 1000;
+  	timeout.tv_usec = 10000;
   	timeout.tv_sec = 0;
 
    	/* Accept actual connection from the client */
    	noConnection = 1;
-   	while(noConnection && gExit)
+   	while(noConnection && (gExit != 0))
    	{
    			statusSocketFd = accept(myServerSocketFd, (struct sockaddr *)&cli_addr, &clilen);
 				if(statusSocketFd == -1) {
 						continue;
 				}				 
    			inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
-				printf("connection accepted from: %s\n", str);	
+				printf("getRemoteDataTask, connection accepted from: %s\n", str);	
    			if (statusSocketFd > 0) {
    					noConnection = 0;
    			}
@@ -333,12 +340,12 @@ void* getRemoteDataTask(void* threadInfo)
 
 	    	/* If connection is established then start communicating */
 	   		bzero(buffer,256);
-	   		while(gExit)
+	   		while((gExit != 0))
 	   		{
 	   	   		n = read(statusSocketFd, &dataMsg, sizeof(RemoteDataPacket));
 	   
 						if (n < 0) {
-								printf("ERROR reading from socket\n");
+								printf("ERROR reading from getRemoteDataTask socket\n");
 								continue;
 						}
 		   			printf("Sensor data,luxData: %f, moistureData: %f\n", dataMsg.luxData, dataMsg.moistureData);
@@ -346,8 +353,9 @@ void* getRemoteDataTask(void* threadInfo)
    	}
 
     /* Cleanup */
-    printf("closing socket, exiting\n");
-  	close(myServerSocketFd);
+    printf("closing getRemoteDataTask socket, exiting\n");
+  	closeSocket(myServerSocketFd);
+		closeSocket(statusSocketFd);
     
    	return 0;
 }
@@ -367,4 +375,25 @@ void sigintHandler(int sig)
 		printf("kill loop\n");
   	/* Trigger while-loop in main to exit; cleanup allocated resources */
   	gExit = 0;
+}
+
+int getSO_ERROR(int fd) {
+   int err = 1;
+   socklen_t len = sizeof err;
+   if (-1 == getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len))
+      ERRNO_PRINT("getSO_ERROR");
+   if (err)
+      errno = err;              // set errno to the socket SO_ERROR
+   return err;
+}
+
+void closeSocket(int fd) {      // *not* the Windows closesocket()
+   if (fd >= 0) {
+      getSO_ERROR(fd); // first clear any errors, which can cause close to fail
+      if (shutdown(fd, SHUT_RDWR) < 0) // secondly, terminate the 'reliable' delivery
+         if (errno != ENOTCONN && errno != EINVAL) // SGI causes EINVAL
+            ERRNO_PRINT("shutdown\n");
+      if (close(fd) < 0) // finally call close()
+         ERRNO_PRINT("close");
+   }
 }

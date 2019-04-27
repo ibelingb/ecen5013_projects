@@ -5,15 +5,53 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Host-SimpleServer",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/shua/ecen5013_project1/bbg/simpleServer",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/shua/ecen5013_project1/bbg",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Host-Main",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/shua/ecen5013_project1/bbg/main",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/shua/ecen5013_project1/bbg",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "name": "Remote-Main",
             "type": "cppdbg",
             "request": "launch",
             "miDebuggerServerAddress": "10.0.0.87:6666",
             "miDebuggerPath": "/home/shua/tools_workspace/dropb/buildroot/output/host/bin/arm-linux-gdb",
-            "program": "/home/shua/ecen5013_project1/main",
+            "program": "/home/shua/ecen5013_project1/bbg/main",
             "args": [],
             "stopAtEntry": true,
-            "cwd": "/home/shua/ecen5013_project1",
+            "cwd": "/home/shua/ecen5013_project1/bbg",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

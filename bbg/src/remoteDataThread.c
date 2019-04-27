@@ -240,7 +240,7 @@ void remoteDataSigHandler(int signo, siginfo_t *info, void *extra)
 {
   if((info != NULL) && (extra != NULL))
   {
-    INFO_PRINT("remoteSigHandler, signum: %d\n",info->si_signo);
+    INFO_PRINT("remoteDataSigHandler, signum: %d\n",info->si_signo);
     aliveFlag = 0;
   }
 }
