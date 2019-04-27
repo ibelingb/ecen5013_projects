@@ -130,7 +130,7 @@ void* getRemoteStatusTask(void* threadInfo)
    	while(noConnection && gExit)
    	{
    		statusSocketFd = accept(myServerSocketFd, (struct sockaddr *)&cli_addr, &clilen);
-			if(errno == EWOULDBLOCK) {
+			if(statusSocketFd == -1) {
           continue;
       }
    		inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
@@ -223,7 +223,7 @@ void* getRemoteLogTask(void* threadInfo)
    	while(noConnection && gExit)
    	{
    			statusSocketFd = accept(myServerSocketFd, (struct sockaddr *)&cli_addr, &clilen);
-				if(errno == EWOULDBLOCK) {
+				if(statusSocketFd == -1) {
           	continue;
       	}
    			inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
@@ -317,7 +317,7 @@ void* getRemoteDataTask(void* threadInfo)
    	while(noConnection && gExit)
    	{
    			statusSocketFd = accept(myServerSocketFd, (struct sockaddr *)&cli_addr, &clilen);
-				if(errno == EWOULDBLOCK) {
+				if(statusSocketFd == -1) {
 						continue;
 				}				 
    			inet_ntop(AF_INET, &(cli_addr.sin_addr), str, strLen);
@@ -364,7 +364,7 @@ void* getRemoteDataTask(void* threadInfo)
  */
 void sigintHandler(int sig)
 {
-	printf("kill loop\n");
+		printf("kill loop\n");
   	/* Trigger while-loop in main to exit; cleanup allocated resources */
   	gExit = 0;
 }
