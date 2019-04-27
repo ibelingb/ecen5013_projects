@@ -151,7 +151,7 @@ void* getRemoteStatusTask(void* threadInfo)
 
 	   	while((gExit != 0))
 	   	{
-	   	   	n = read(statusSocketFd, &statusMsg, sizeof(statusMsg));
+	   	   	n = recv(statusSocketFd, &statusMsg, sizeof(statusMsg), 0);
 	   
 		   	if (n < 0) {
 		      	printf("getRemoteStatusTask ERROR reading from socket\n");
@@ -245,7 +245,7 @@ void* getRemoteLogTask(void* threadInfo)
 
 	   		while((gExit != 0))
 	   		{
-	   	   		n = read(statusSocketFd, &logMsg, sizeof(LogMsgPacket));
+	   	   		n = recv(statusSocketFd, &logMsg, sizeof(LogMsgPacket), 0);
 	   
 		   			if (n != sizeof(LogMsgPacket)) {
 		      			INFO_PRINT("ERROR reading from getRemoteLogTask socket, expected: %u, got: %d, logMsg_e size: %u\n", 
@@ -342,7 +342,7 @@ void* getRemoteDataTask(void* threadInfo)
 	   		bzero(buffer,256);
 	   		while((gExit != 0))
 	   		{
-	   	   		n = read(statusSocketFd, &dataMsg, sizeof(RemoteDataPacket));
+	   	   		n = recv(statusSocketFd, &dataMsg, sizeof(RemoteDataPacket), 0);
 	   
 						if (n < 0) {
 								printf("ERROR reading from getRemoteDataTask socket\n");
