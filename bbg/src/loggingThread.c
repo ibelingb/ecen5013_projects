@@ -59,6 +59,8 @@ void* logThreadHandler(void* threadInfo)
     logItem_t logItem, prevLogItem;
     uint8_t filename[64];
     uint8_t payload[128];
+
+    memset(&logItem, 0, sizeof(logItem_t));
     logItem.pFilename = filename;
     logItem.pPayload = payload;
     logItem.logMsgId = LOG_MSG_INFO;
@@ -110,7 +112,6 @@ void* logThreadHandler(void* threadInfo)
     /* Clear memory objects */
     memset(&set, 0, sizeof(sigset_t));
     memset(&timerid, 0, sizeof(timer_t));
-    memset(&logItem, 0, sizeof(logItem_t));
 
     timer_interval.tv_nsec = LOG_LOOP_TIME_NSEC;
     timer_interval.tv_sec = LOG_LOOP_TIME_SEC;
