@@ -123,7 +123,6 @@ void moistureTask(void *pvParameters)
         }
 
         /* sleep */
-        LOG_HEARTBEAT();
         vTaskDelay(MOISTURE_TASK_DELAY_SEC * configTICK_RATE_HZ);
     }
     LOG_MOISTURE_EVENT(MOIST_EVENT_EXITING);
