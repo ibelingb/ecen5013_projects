@@ -169,7 +169,8 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
         /* skip threads not reporting status */
         if((ind == PID_TEMP) || (ind == PID_REMOTE_CLIENT) ||
          (ind == PID_REMOTE_CLIENT_CMD) || (ind == PID_REMOTE_CLIENT_LOG) || 
-         (ind == PID_REMOTE_CLIENT_STATUS) || (ind == PID_REMOTE_CLIENT_DATA)) {
+         (ind == PID_REMOTE_CLIENT_STATUS) || (ind == PID_REMOTE_CLIENT_DATA) ||
+         (ind == PID_END)) {
              continue;
          }
 

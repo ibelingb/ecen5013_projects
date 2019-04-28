@@ -215,7 +215,7 @@ void* remoteDataThreadHandler(void* threadInfo)
     else {
       /* Log data received from Remote Node */
       // TODO
-      printf("Data packet received: Lux: %f | Moist: %f\n", dataPacket.luxData, dataPacket.moistureData);
+      MUTED_PRINT("Data packet received: Lux: %f | Moist: %f\n", dataPacket.luxData, dataPacket.moistureData);
 
       /* Pass received data to main thread */
       mq_send(dataMsgQueue, (char *)&dataPacket, sizeof(struct RemoteDataPacket), 1);

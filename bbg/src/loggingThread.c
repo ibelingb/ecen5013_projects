@@ -144,6 +144,7 @@ void* logThreadHandler(void* threadInfo)
 
             /* check if queue is empty */
             if(ret == LOG_STATUS_TIMEOUT) {
+                MUTED_PRINT("timeout\n");
                 noMsgRecvd = 1;
             }
             /* check for other queue read errors */
@@ -153,26 +154,36 @@ void* logThreadHandler(void* threadInfo)
                 SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
                 ++statusMsgCount;
             }
-            /* verify msg is unique */
-            else if ((prevLogItem.logMsgId != logItem.logMsgId) || (prevLogItem.time != logItem.time) || 
-                    (prevLogItem.checksum != logItem.checksum))
-            {
-                ++logMsgCount;
-                MUTED_PRINT("Logger successfully dequeued msg, count: %d\n", logMsgCount);
-                MUTED_PRINT("Recvd LOGITEM MsgId: %d, from sourceId: %d at %d usec\n\r", 
-                logItem.logMsgId, logItem.sourceId, logItem.time);
-            
-                /* if read from queue successful, right to file */
-                if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
-                {
-                    ERROR_PRINT("log_dequeue_item error\n");
-                    SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-                    LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
-                    ++statusMsgCount;
-                }
-                prevLogItem = logItem;
-            } 
 
+            else 
+            {
+                MUTED_PRINT("Logger successfully dequeued msg, count: %d\n", logMsgCount);
+
+                /* verify msg is unique */
+                if ((prevLogItem.logMsgId != logItem.logMsgId) || (prevLogItem.time != logItem.time) || 
+                    (prevLogItem.checksum != logItem.checksum))
+                {
+                    ++logMsgCount;
+
+                    MUTED_PRINT("NEW Msg Recvd, MsgId: %d, from sourceId: %d at %d usec\n\r", 
+                    logItem.logMsgId, logItem.sourceId, logItem.time);
+                
+                    /* if read from queue successful, right to file */
+                    MUTED_PRINT("writing log msg to file\n");
+                    if(0)//LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+                    {
+                        ERROR_PRINT("log_dequeue_item error\n");
+                        SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+                        LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
+                        ++statusMsgCount;
+                    }
+                    else {
+                        MUTED_PRINT("successfully wrote log msg to file\n");
+                    }
+                    prevLogItem = logItem;
+                } 
+            }
+            
             /* calculate delta time (since last status msg TX) */
             clock_gettime(CLOCK_REALTIME, &currentTime);
             deltaTime = (currentTime.tv_sec - lastStatusMsgTime.tv_sec) + ((currentTime.tv_nsec - lastStatusMsgTime.tv_nsec) * 1e-9);
@@ -186,7 +197,7 @@ void* logThreadHandler(void* threadInfo)
             }
 
             /* if processed too many, exit*/
-            if(logMsgCount > 16) {
+            if(logMsgCount > (NUM_THREADS + NUM_REMOTE_REPORTING_THREADS) * 20) {
                 INFO_PRINT("max log processing limit reached\n");
                 noMsgRecvd = 1;
             }

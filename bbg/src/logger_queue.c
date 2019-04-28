@@ -34,6 +34,7 @@
 #include "logger_queue.h"
 #include "packet.h"
 #include "conversion.h"
+#include "healthMonitor.h"
 
 /*---------------------------------------------------------------------------------*/
 /* globals */
@@ -95,7 +96,7 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	
 	/* copy filename string */
     if(pLogItem->pFilename == NULL) {
-            ERROR_PRINT("Null ptr in log_queue_item, pFilename\n");
+            ERROR_PRINT("Null ptr in log_queue_item, pFilename from %s\n", getPidString(pLogItem->sourceId));
             return LOG_STATUS_NOTOK;
     }
     else {
@@ -105,13 +106,15 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 
 
 	/* copy payload */
-    if(pLogItem->pPayload == NULL) {
-            ERROR_PRINT("Null ptr in log_queue_item, pPayload\n");
-            return LOG_STATUS_NOTOK;
-    }
-    else {
-        if(memcpy(newItem.payload, pLogItem->pPayload, pLogItem->payloadLength) == NULL)
-            return LOG_STATUS_NOTOK;
+    if(pLogItem->payloadLength > 0) {
+        if(pLogItem->pPayload == NULL) {
+                ERROR_PRINT("Null ptr in log_queue_item, pPayload from %s\n", getPidString(pLogItem->sourceId));
+                return LOG_STATUS_NOTOK;
+        }
+        else {
+            if(memcpy(newItem.payload, pLogItem->pPayload, pLogItem->payloadLength) == NULL)
+                return LOG_STATUS_NOTOK;
+        }
     }
 
 	/* send, use 7 as priority */
@@ -211,7 +214,7 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 		
 		/* copy filename string */
         if(pLogItem->pFilename == NULL) {
-		    ERROR_PRINT("Null ptr in log_dequeue_item, pFilename\n");
+		    ERROR_PRINT("Null ptr in log_dequeue_item, pFilename from %s\n", getPidString(pLogItem->sourceId));
             return LOG_STATUS_NOTOK;
         }
         else {
@@ -221,15 +224,18 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
         }
 
 		/* copy payload */
-        if(pLogItem->pPayload == NULL) {
-            ERROR_PRINT("Null ptr in log_dequeue_item, pPayload\n");
-            return LOG_STATUS_NOTOK;
-        }
-        else {
-		    if(memcpy(pLogItem->pPayload, newItem.payload, pLogItem->payloadLength) == NULL) {
+        if(pLogItem->payloadLength > 0) {
+            if(pLogItem->pPayload == NULL) {
+                ERROR_PRINT("Null ptr in log_dequeue_item, pPayload from %s\n", getPidString(pLogItem->sourceId));
                 return LOG_STATUS_NOTOK;
             }
-        }	    
+            else {
+                if(memcpy(pLogItem->pPayload, newItem.payload, pLogItem->payloadLength) == NULL) {
+                    return LOG_STATUS_NOTOK;
+                }
+            }	
+        }
+    
 		return LOG_STATUS_OK;
 	}
 	return LOG_STATUS_NOTOK;
