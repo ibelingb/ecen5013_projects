@@ -25,6 +25,7 @@ typedef enum {
     LOG_STATUS_OK,
     LOG_STATUS_UNINITIALIZED,
     LOG_STATUS_BUF_FULL,
+	LOG_STATUS_TIMEOUT,
     LOG_STATUS_END
 } LogStatus_e;
 

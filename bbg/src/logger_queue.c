@@ -149,15 +149,16 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
         /* check queue length diagonistics */
         mq_getattr(logQueue, &Attr);
         MUTED_PRINT("logMsgQueue count:%ld\n", Attr.mq_curmsgs);
-        if(Attr.mq_curmsgs > ((MSG_QUEUE_DEPTH * 3) / 4)) {
-            if(Attr.mq_curmsgs >= MSG_QUEUE_DEPTH - 1) {
+        if(Attr.mq_curmsgs > ((LOG_MSG_QUEUE_DEPTH * 3) / 4)) {
+            if(Attr.mq_curmsgs >= LOG_MSG_QUEUE_DEPTH - 1) {
                 ERROR_PRINT("logQueue full\n");
             }
             WARN_PRINT("logQueue have 3/4 full \n");
         }
 
         clock_gettime(CLOCK_REALTIME, &rxTimeout);
-        rxTimeout.tv_sec += 1;
+        rxTimeout.tv_sec += 0;
+        rxTimeout.tv_nsec = 0;
 
         /* read oldest highest priority queue */
         bytesRead = mq_timedreceive(logQueue, (char *)&newItem, sizeof(LogMsgPacket), NULL, &rxTimeout);
@@ -168,8 +169,8 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
     {
         if((errno == EINTR) || (errno == ETIMEDOUT))
 		{
-			MUTED_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
-			return LOG_STATUS_OK;
+			INFO_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
+			return LOG_STATUS_TIMEOUT;
 		}
 		ERROR_PRINT("Queue Receive failed, err#%d (%s)\n\r", errno, strerror(errno));
         return LOG_STATUS_NOTOK;

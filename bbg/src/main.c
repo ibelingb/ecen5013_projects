@@ -69,7 +69,6 @@ static mqd_t cmdMsgQueue;
 static timer_t waterTimerid;
 uint32_t waterCyclePeriodHours = 0;
 float luxData, moistureData = 0;
-static mqd_t heartbeatMsgQueue;
 
 /* Variables to track system operating state */
 ControlLoopState_e controlLoopState = IDLE;
@@ -86,7 +85,7 @@ int main(int argc, char *argv[]){
   LogMsgPacket logPacket;
   struct mq_attr mqAttr;
   mqd_t logMsgQueue;
-
+  mqd_t heartbeatMsgQueue;
   mqd_t dataMsgQueue;
   char ind;
   uint8_t newError;
@@ -146,13 +145,13 @@ int main(int argc, char *argv[]){
 
   /* Define MQ attributes */
   mqAttr.mq_flags   = 0;
-  mqAttr.mq_maxmsg  = MSG_QUEUE_DEPTH;
-  mqAttr.mq_msgsize = MSG_QUEUE_MSG_SIZE;
+  mqAttr.mq_maxmsg  = LOG_MSG_QUEUE_DEPTH;
+  mqAttr.mq_msgsize = LOG_MSG_QUEUE_MSG_SIZE;
   mqAttr.mq_curmsgs = 0;
 
   /*** get logger up and running before initializing the rest of the system ***/
   /* Create MessageQueue for logger to receive log messages */
-  logMsgQueue = mq_open(logMsgQueueName, O_CREAT, 0666, &mqAttr);
+  logMsgQueue = mq_open(logMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
   if(logMsgQueue == -1)
   {
     ERROR_PRINT("ERROR: main() failed to create MessageQueue for Logger - exiting.\n");
@@ -196,7 +195,7 @@ int main(int argc, char *argv[]){
 
   /* Initialize Cmd MQ to send commands to RemoteNode */
   mqAttr.mq_msgsize = CMD_MSG_QUEUE_MSG_SIZE;
-  cmdMsgQueue = mq_open(cmdMsgQueueName, O_CREAT | O_RDWR, 0666, &mqAttr);
+  cmdMsgQueue = mq_open(cmdMsgQueueName, O_CREAT | O_RDWR | O_NONBLOCK, 0666, &mqAttr);
   if(cmdMsgQueue == -1)
   {
     ERROR_PRINT("ERROR: main() failed to create MessageQueue for Main Cmd handling - exiting.\n");

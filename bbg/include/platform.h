@@ -18,5 +18,6 @@
 #define PLATFORM_H_
 
 #define NUM_THREADS (5)
+#define NUM_REMOTE_REPORTING_THREADS (4)
 
 #endif /* PLATFORM_H_ */

@@ -52,7 +52,7 @@ void* logThreadHandler(void* threadInfo)
     sigset_t set;
     int signum = SIGALRM;
     struct timespec timer_interval;
-    uint8_t ind, statusMsgCount;
+    uint8_t ind, statusMsgCount, logMsgCount;
 	sigset_t mask;
 
     /* instantiate temp msg variable for dequeuing */
@@ -66,13 +66,15 @@ void* logThreadHandler(void* threadInfo)
 
     /* used to stop dequeue/write loop */
     uint8_t exitFlag = 1;
+    uint8_t noMsgRecvd;
+    uint8_t ret;
 
     /* add start msg to log msg queue */
     LOG_LOG_EVENT(LOG_EVENT_STARTED);
     MUTED_PRINT("log tid: %d\n",(pid_t)syscall(SYS_gettid));
 
     /* main status msg queue */
-    hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR, 0666, NULL);
+    hbMsgQueue = mq_open(sensorInfo.heartbeatMsgQueueName, O_RDWR | O_NONBLOCK, 0666, NULL);
     if(hbMsgQueue == -1) {
         printf("ERROR: loggingThread Failed to Open heartbeat MessageQueue - exiting.\n");
         LOG_LOG_EVENT(LOG_EVENT_SHMEM_ERROR);
@@ -118,50 +120,71 @@ void* logThreadHandler(void* threadInfo)
     /* keep dequeuing and writing msgs until self decides to exit */
     while(exitFlag)
     {
-        /* wait on signal timer */
-        sigwait(&set, &signum);
+        INFO_PRINT("logging is alive\n");
+
+        /* read all messages until none */
+        noMsgRecvd = 0;
+        logMsgCount = 0;
         statusMsgCount = 0;
-        MUTED_PRINT("logging is alive\n");
+        do {
+            /* if signaled to exit, shove log exit command
+            * (2nd highest priority) in buffer and set exit flag */
+            if(aliveFlag == 0)
+            {
+                LOG_LOG_EVENT(LOG_EVENT_EXITING);
+                INFO_PRINT("logger exit triggered\n");
+                exitFlag = 0;
+            }
 
-        /* if signaled to exit, shove log exit command
-         * (2nd highest priority) in buffer and set exit flag */
-        if(aliveFlag == 0)
-        {
-            LOG_LOG_EVENT(LOG_EVENT_EXITING);
-            INFO_PRINT("logger exit triggered\n");
-            exitFlag = 0;
-        }
+            /* dequeue a msg */
+            ret = LOG_DEQUEUE_ITEM(&logItem);
 
-        /* dequeue a msg */
-        if(LOG_DEQUEUE_ITEM(&logItem) != LOG_STATUS_OK)
-        {
-            ERROR_PRINT("log_dequeue_item error\n");
-            SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-            ++statusMsgCount;
-        }
-        else if ((prevLogItem.logMsgId != logItem.logMsgId) || (prevLogItem.time != logItem.time)
-     || (prevLogItem.checksum != logItem.checksum))
-        {
-            /* if read from queue successful, right to file */
-            if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+            /* check if queue is empty */
+            if(ret == LOG_STATUS_TIMEOUT) {
+                noMsgRecvd = 1;
+            }
+            /* check for other queue read errors */
+            else if(ret != LOG_STATUS_OK)
             {
                 ERROR_PRINT("log_dequeue_item error\n");
                 SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-                LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
                 ++statusMsgCount;
             }
-            prevLogItem = logItem;
-        }
-        clock_gettime(CLOCK_REALTIME, &currentTime);
-        deltaTime = (currentTime.tv_sec - lastStatusMsgTime.tv_sec) + ((currentTime.tv_nsec - lastStatusMsgTime.tv_nsec) * 1e-9);
+            /* verify msg is unique */
+            else if ((prevLogItem.logMsgId != logItem.logMsgId) || (prevLogItem.time != logItem.time) || 
+                    (prevLogItem.checksum != logItem.checksum))
+            {
+                ++logMsgCount;
+                INFO_PRINT("Logger successfully dequeued msg, count: %d\n", logMsgCount);
+                INFO_PRINT("Recvd LOGITEM MsgId: %d, from sourceId: %d at %d usec\n\r", 
+                logItem.logMsgId, logItem.sourceId, logItem.time);
+            
+                /* if read from queue successful, right to file */
+                if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+                {
+                    ERROR_PRINT("log_dequeue_item error\n");
+                    SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+                    LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
+                    ++statusMsgCount;
+                }
+                prevLogItem = logItem;
+            } 
 
-        /* only send OK status at rate of other threads 
-         * and if we didn't send error status yet */
-        if((deltaTime > otherThreadTime) && (statusMsgCount == 0)) {
-            SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_OK, ERROR_CODE_USER_NONE0);
-            ++statusMsgCount;
-            clock_gettime(CLOCK_REALTIME, &lastStatusMsgTime);
-        }
+            /* calculate delta time (since last status msg TX) */
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+            deltaTime = (currentTime.tv_sec - lastStatusMsgTime.tv_sec) + ((currentTime.tv_nsec - lastStatusMsgTime.tv_nsec) * 1e-9);
+
+            /* only send OK status at rate of other threads 
+            * and if we didn't send error status yet */
+            if((deltaTime > otherThreadTime) && (statusMsgCount == 0)) {
+                SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_OK, ERROR_CODE_USER_NONE0);
+                ++statusMsgCount;
+                clock_gettime(CLOCK_REALTIME, &lastStatusMsgTime);
+            }
+        } while((noMsgRecvd == 0) && (exitFlag));
+
+        /* wait on signal timer */
+        sigwait(&set, &signum);
     }
 
     /* clean up */

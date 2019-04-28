@@ -39,15 +39,15 @@
  * normal circumstances, but to make run for miscellaneous error status
  * msgs, going to double length; monitor will print diagnostic 
  * messages if queue is 75% or full */
-#define STATUS_MSG_QUEUE_DEPTH      ((NUM_THREADS * 2) * (100 / 50)) // total messages
+#define STATUS_MSG_QUEUE_DEPTH      (((NUM_THREADS + NUM_REMOTE_REPORTING_THREADS) * 2) * (100 / 50)) // total messages
 
-#define MSG_QUEUE_MSG_SIZE        (sizeof(LogMsgPacket)) // bytes
-#define CMD_MSG_QUEUE_MSG_SIZE    (sizeof(RemoteCmdPacket)) // bytes
-#define DATA_MSG_QUEUE_MSG_SIZE   (sizeof(RemoteDataPacket)) // bytes
-#define MSG_QUEUE_DEPTH           (20) // total messages
-#define LOG_MSG_FILENAME_SIZE     (32) // bytes
-#define LOG_MSG_PAYLOAD_SIZE      (128) // bytes
-#define IPC_NAME_SIZE             (30)
+#define LOG_MSG_QUEUE_MSG_SIZE      (sizeof(LogMsgPacket)) // bytes
+#define CMD_MSG_QUEUE_MSG_SIZE      (sizeof(RemoteCmdPacket)) // bytes
+#define DATA_MSG_QUEUE_MSG_SIZE     (sizeof(RemoteDataPacket)) // bytes
+#define LOG_MSG_QUEUE_DEPTH         ((NUM_THREADS + NUM_REMOTE_REPORTING_THREADS) * 4) // total messages
+#define LOG_MSG_FILENAME_SIZE       (32) // bytes
+#define LOG_MSG_PAYLOAD_SIZE        (128) // bytes
+#define IPC_NAME_SIZE               (30)
 
 #define SOIL_MOISTURE_MAX (100)
 #define SOIL_SATURATION_THRES (60) // Soil saturation threshold
