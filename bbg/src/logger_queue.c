@@ -72,6 +72,10 @@ uint8_t init_queue_logger(void *pArg)
 /*---------------------------------------------------------------------------------*/
 uint8_t log_queue_item(logItem_t *pLogItem)
 {
+    if(pLogItem == NULL) {
+        return LOG_STATUS_NOTOK;
+    }
+
 	LogMsgPacket newItem;
 	#ifdef __linux__
 	    if(logQueue < 0)
@@ -128,6 +132,9 @@ uint8_t log_queue_flush(void)
 /*---------------------------------------------------------------------------------*/
 uint8_t log_dequeue_item(logItem_t *pLogItem)
 {
+    if(pLogItem == NULL) {
+        return LOG_STATUS_NOTOK;
+    }
 	LogMsgPacket newItem;
 	size_t bytesRead;
 
@@ -190,13 +197,25 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 		pLogItem->checksum = newItem.checksum;
 		
 		/* copy filename string */
-		if(strcpy((char *)pLogItem->pFilename, (char *)newItem.filename) == NULL)
-			return LOG_STATUS_NOTOK;
+        if(pLogItem->pFilename != NULL) {
+		    if(strcpy((char *)pLogItem->pFilename, (char *)newItem.filename) == NULL)
+			    return LOG_STATUS_NOTOK;
+        }
+        else {
+            ERROR_PRINT("Null ptr in log_dequeue_item\n");
+            return LOG_STATUS_NOTOK;
+        }
 
 		/* copy payload */
-		if(memcpy(pLogItem->pPayload, newItem.payload, pLogItem->payloadLength) == NULL)
-			return LOG_STATUS_NOTOK;
-			
+        if(pLogItem->pPayload != NULL) {
+		    if(memcpy(pLogItem->pPayload, newItem.payload, pLogItem->payloadLength) == NULL) {
+                return LOG_STATUS_NOTOK;
+            }
+        }
+        else {
+            ERROR_PRINT("Null ptr in log_dequeue_item\n");
+            return LOG_STATUS_NOTOK;
+        }	    
 		return LOG_STATUS_OK;
 	}
 	return LOG_STATUS_NOTOK;
