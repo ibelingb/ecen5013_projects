@@ -31,6 +31,13 @@
 #include "remoteDataThread.h"
 #include "remoteCmdThread.h"
 
+#else
+
+extern uint8_t g_dataSocketLost;
+extern uint8_t g_logSocketLost;
+extern uint8_t g_statusSocketLost;
+extern uint8_t g_cmdSocketLost;
+
 #endif
 
 #define LOG_PORT                (5001)
@@ -38,6 +45,8 @@
 #define CMD_PORT                (5003)
 #define DATA_PORT               (5004)
 #define SERVER_IP_ADDRESS_STR   ("10.0.0.87")
+
+
 
 typedef enum {
   REMOTE_EVENT_STARTED = 0,

@@ -447,7 +447,7 @@ void displayCommandMenu()
  * @return success of failure via EXIT_SUCCESS or EXIT_FAILURE
  */
 int8_t handleConsoleCmd(uint32_t userInput) {
-  bool txCmd = false;
+  RemoteCmd_e txCmd = REMOTE_CMD_END;
   uint32_t data = 0;
 
   if(gCurrentCmd != 0) {
@@ -496,11 +496,11 @@ int8_t handleConsoleCmd(uint32_t userInput) {
       case CMD_EN_DEV2 :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
         printf("CMD_EN_DEV2\n");
-        txCmd = true;
+        txCmd = REMOTE_ENDEV2;
         break;
       case CMD_DS_DEV2 :
         printf("CMD_DS_DEV2\n");
-        txCmd = true;
+        txCmd = REMOTE_DSDEV2;
         break;
       case CMD_SETMOISTURE_LOWTHRES:
         printf("CMD_SETMOISTURE_LOWTHRES\n");
@@ -513,7 +513,7 @@ int8_t handleConsoleCmd(uint32_t userInput) {
                         "Max value: {%d} | Received value: {%d}\n", SOIL_MOISTURE_MAX, data);
           }
           else {
-            txCmd = true;
+            txCmd = REMOTE_SETMOISTURE_LOWTHRES;
           }
         }
         break;
@@ -529,7 +529,7 @@ int8_t handleConsoleCmd(uint32_t userInput) {
                         "Max value: {%d} | Received value: {%d}\n", SOIL_MOISTURE_MAX, data);
           }
           else {
-            txCmd = true;
+            txCmd = REMOTE_SETMOISTURE_HIGHTHRES;
           }
         }
         break;
@@ -552,9 +552,9 @@ int8_t handleConsoleCmd(uint32_t userInput) {
   }
 
   /* If cmd received needs to be transmitted to the TIVA, populate packet and send */
-  if(txCmd) {
+  if(txCmd != REMOTE_CMD_END) {
     RemoteCmdPacket cmdPacket = {0};
-    cmdPacket.cmd = userInput;
+    cmdPacket.cmd = txCmd;
     cmdPacket.data = data;
 
     printf("Cmd TX: cmd: %d | data: %d\n", cmdPacket.cmd, cmdPacket.data);

@@ -191,7 +191,7 @@ typedef enum ConsoleCmd_e
   CMD_MAX_CMDS
 } ConsoleCmd_e;
 
-typedef enum {
+typedef enum __attribute__ ((__packed__)) {
   LIGHTCMD_GETLUXDATA,
   LIGHTCMD_GETPOWERCTRL,
   LIGHTCMD_GETDEVPARTNO,
@@ -208,7 +208,8 @@ typedef enum {
   REMOTE_DSDEV2,
   REMOTE_SETMOISTURE_LOWTHRES,
   REMOTE_SETMOISTURE_HIGHTHRES,
-  MAX_CMDS
+  MAX_CMDS,
+  REMOTE_CMD_END
 } RemoteCmd_e;
 
 typedef enum ControlLoopState_e {
