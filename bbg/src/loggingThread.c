@@ -121,7 +121,7 @@ void* logThreadHandler(void* threadInfo)
     /* keep dequeuing and writing msgs until self decides to exit */
     while(exitFlag)
     {
-        INFO_PRINT("logging is alive\n");
+        MUTED_PRINT("logging is alive\n");
 
         /* read all messages until none */
         noMsgRecvd = 0;
@@ -161,14 +161,14 @@ void* logThreadHandler(void* threadInfo)
                 INFO_PRINT("Recvd LOGITEM MsgId: %d, from sourceId: %d at %d usec\n\r", 
                 logItem.logMsgId, logItem.sourceId, logItem.time);
             
-                // /* if read from queue successful, right to file */
-                // if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
-                // {
-                //     ERROR_PRINT("log_dequeue_item error\n");
-                //     SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-                //     LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
-                //     ++statusMsgCount;
-                // }
+                /* if read from queue successful, right to file */
+                if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+                {
+                    ERROR_PRINT("log_dequeue_item error\n");
+                    SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+                    LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
+                    ++statusMsgCount;
+                }
                 prevLogItem = logItem;
             } 
 

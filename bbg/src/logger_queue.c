@@ -94,12 +94,25 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	newItem.checksum = pLogItem->checksum;
 	
 	/* copy filename string */
-	if(strcpy((char *)newItem.filename, (char *)pLogItem->pFilename) == NULL)
-		return LOG_STATUS_NOTOK;
+    if(pLogItem->pFilename == NULL) {
+            ERROR_PRINT("Null ptr in log_dequeue_item\n");
+            return LOG_STATUS_NOTOK;
+    }
+    else {
+        if(strcpy((char *)newItem.filename, (char *)pLogItem->pFilename) == NULL)
+            return LOG_STATUS_NOTOK;
+    }
+
 
 	/* copy payload */
-	if(memcpy(newItem.payload, pLogItem->pPayload, pLogItem->payloadLength) == NULL)
-		return LOG_STATUS_NOTOK;
+    if(pLogItem->pPayload == NULL) {
+            ERROR_PRINT("Null ptr in log_dequeue_item\n");
+            return LOG_STATUS_NOTOK;
+    }
+    else {
+        if(memcpy(newItem.payload, pLogItem->pPayload, pLogItem->payloadLength) == NULL)
+            return LOG_STATUS_NOTOK;
+    }
 
 	/* send, use 7 as priority */
 	#ifdef __linux__
