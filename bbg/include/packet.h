@@ -59,7 +59,7 @@
 /*** ENUM DEFINITIONS ***/
 
 
-typedef enum ProcessId_e
+typedef enum __attribute__ ((__packed__)) ProcessId_e 
 {
   PID_LOGGING = 0,
   PID_REMOTE_CMD,
@@ -80,7 +80,7 @@ typedef enum ProcessId_e
 } ProcessId_e;
 
 /* set by main, not self */
-typedef enum TaskState_e
+typedef enum __attribute__ ((__packed__))  TaskState_e 
 {
   STATE_IDLE = 0,
   STATE_RUNNING,
@@ -89,7 +89,8 @@ typedef enum TaskState_e
 } TaskState_e;
 
 /* set by self, reported to main */
-typedef enum TaskStatus_e {
+typedef enum __attribute__ ((__packed__)) TaskStatus_e 
+{
   STATUS_OK = 0,
   STATUS_ERROR,
   STATUS_TERMINATED,
