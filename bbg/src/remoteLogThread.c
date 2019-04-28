@@ -141,7 +141,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   }
 
   /* Log remoteLogThread successfully created */
-  INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", LOG_PORT);
+  INFO_PRINT("Created remoteLogThread to listen on port {%d}\n", LOG_PORT);
   MUTED_PRINT("remoteLogThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE_LOG);
 
   /* BIST/Power-on Test 

@@ -49,8 +49,8 @@
 #define LOG_MSG_PAYLOAD_SIZE      (128) // bytes
 #define IPC_NAME_SIZE             (30)
 
-#define SOIL_MOISTURE_MAX (900)
-#define SOIL_SATURATION_THRES (600) // Soil saturation threshold
+#define SOIL_MOISTURE_MAX (100)
+#define SOIL_SATURATION_THRES (60) // Soil saturation threshold
 
 /* Identifies start of a packet */
 #define PKT_HEADER (0xABCD)

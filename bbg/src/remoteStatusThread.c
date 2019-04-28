@@ -141,7 +141,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
   }
 
   /* Log remoteStatusThread successfully created */
-  INFO_PRINT("Created remoteSensorThread to listen on port {%d}\n", STATUS_PORT);
+  INFO_PRINT("Created remoteStatusThread to listen on port {%d}\n", STATUS_PORT);
   MUTED_PRINT("remoteStatusThread started successfully, pid: %d, SIGRTMIN+PID_e: %d\n",(pid_t)syscall(SYS_gettid), SIGRTMIN + PID_REMOTE_STATUS);
 
   /* BIST/Power-on Test 

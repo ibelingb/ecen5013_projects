@@ -204,7 +204,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
       }
     } 
 
-    /* Read from socket to determine if client disconnect occured */
+    /* Read from socket to determine if client disconnect occurred */
     clientResponse = recv(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
     if(clientResponse == 0) {
       /* Handle disconnect from client socket */
