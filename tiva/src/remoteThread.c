@@ -606,10 +606,10 @@ BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
 
     if(ret == 0) {
         ERROR_PRINT("readSocketData TIMEOUT\n");
-        return RETURN_ERROR;
+        return ret;
     }
     if(ret == length) {
-        return RETURN_SUCCESS;
+        return ret;
     }
 
     /* FreeRTOS uses negative value to not interfere with read length */
@@ -630,7 +630,7 @@ BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
         /* Socket invalid, not TCP or not bound */
         ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINVAL(invalid socket) \n");
     }
-    return RETURN_ERROR;
+    return ret;
 }
 
 /*---------------------------------------------------------------------------------*/
