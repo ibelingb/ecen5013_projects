@@ -33,7 +33,7 @@
 #endif 
 
 
-#define PRINT_NONE_ALSO             // for testing
+//#define PRINT_NONE_ALSO             // for testing
 //#define PRINT_ALL_STATUS_FIELDS     // for testing
 
 #ifdef __linux__
@@ -166,7 +166,7 @@ __attribute__((always_inline)) inline void PRINT_STATUS_MSG_HEADER(TaskStatusPac
         getPidString(pStatus->processId), pStatus->timestamp);
     else if((pStatus->errorCode >= ERROR_CODE_USER_NONE0) && (pStatus->errorCode <= ERROR_CODE_USER_NONE7))
     #ifdef PRINT_NONE_ALSO
-        UARTprintf("recvd error(%d) w/ CoA = NONE from %s at %d usec\n\r", pStatus->errorCode,
+        UARTprintf("recvd status(%d) w/ CoA = NONE from %s at %d usec\n\r", pStatus->errorCode,
         getPidString(pStatus->processId), pStatus->timestamp);
     #else
         ;
