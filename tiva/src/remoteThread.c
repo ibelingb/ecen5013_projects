@@ -47,7 +47,7 @@
 #include "task.h"
 #include "semphr.h"
 
-#define DIAGNOISTIC_PRINTS  (1)
+#define DIAGNOISTIC_PRINTS  (0)
 
 /*---------------------------------------------------------------------------------*/
 static uint8_t keepAlive;
@@ -537,9 +537,9 @@ void remoteCmdTask(void *pvParameters)
                         }
 
                         /* for diagnostics */
-                        if(DIAGNOISTIC_PRINTS) {
-                            INFO_PRINT("Received cmd: %d from Control Node\n");
-                        }
+                        //if(DIAGNOISTIC_PRINTS) {
+                            INFO_PRINT("Received cmd: %d from Control Node\n", cmdMsg.cmd);
+                        //}
                     }
                 }
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
