@@ -169,7 +169,7 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
     {
         if((errno == EINTR) || (errno == ETIMEDOUT))
 		{
-			INFO_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
+			MUTED_PRINT("mq_timedreceive timeout or interrupted: err#%d (%s)\n\r", errno, strerror(errno));
 			return LOG_STATUS_TIMEOUT;
 		}
 		ERROR_PRINT("Queue Receive failed, err#%d (%s)\n\r", errno, strerror(errno));
