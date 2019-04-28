@@ -605,7 +605,7 @@ BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
     ret = FreeRTOS_recv(*pSocket, pData, length, 0);
 
     if(ret == 0) {
-        ERROR_PRINT("readSocketData TIMEOUT\n");
+//        ERROR_PRINT("readSocketData TIMEOUT\n");
         return ret;
     }
     if(ret == length) {
