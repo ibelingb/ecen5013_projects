@@ -169,6 +169,7 @@ void remoteStatusTask(void *pvParameters)
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        INFO_PRINT("remoteStatusTask ");
                         printConnectionStatus(ret);
                     } while(ret != 0);
                     g_statusSocketLost = 0;
@@ -272,6 +273,7 @@ void remoteLogTask(void *pvParameters)
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        INFO_PRINT("remoteLogTask ");
                         printConnectionStatus(ret);
                     } while(ret != 0);
                     g_logSocketLost = 0;
@@ -375,6 +377,7 @@ void remoteDataTask(void *pvParameters)
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        INFO_PRINT("remoteDataTask ");
                         printConnectionStatus(ret);
                     } while(ret != 0);
                     g_dataSocketLost = 0;
@@ -438,7 +441,7 @@ void remoteCmdTask(void *pvParameters)
     Socket_t xClientSocket;
 
     LOG_REMOTE_CLIENT_EVENT(REMOTE_EVENT_STARTED);
-    INFO_PRINT("THREAD CREATED, remoteDataTask #: %d\n\r", getTaskNum());
+    INFO_PRINT("THREAD CREATED, remoteCmdTask #: %d\n\r", getTaskNum());
 
     /* clear structure */
     memset(&sensorData, 0,sizeof(RemoteDataPacket));
@@ -452,7 +455,7 @@ void remoteCmdTask(void *pvParameters)
     if(xClientSocket == FREERTOS_INVALID_SOCKET) {
         LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
         LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
-        ERROR_PRINT("ERROR remoteDataTask: Failed to create socket\n");
+        ERROR_PRINT("ERROR remoteCmdTask: Failed to create socket\n");
         vTaskDelay(2000);
     }
     else {
@@ -464,7 +467,7 @@ void remoteCmdTask(void *pvParameters)
         if(FreeRTOS_bind(xClientSocket, &xServerAddress, xSize) != 0) {
             LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
             LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_ERROR);
-            ERROR_PRINT("ERROR remoteDataTask: Failed to create socket\n");
+            ERROR_PRINT("ERROR remoteCmdTask: Failed to create socket\n");
             vTaskDelay(2000);
         }
         /*--------------------------------------------------------------------------*/
@@ -486,6 +489,7 @@ void remoteCmdTask(void *pvParameters)
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
+                        INFO_PRINT("remoteCmdTask ");
                         printConnectionStatus(ret);
                     } while(ret != 0);
                     g_cmdSocketLost = 0;
@@ -531,15 +535,15 @@ void remoteCmdTask(void *pvParameters)
                             }
                             else {
                                 LOG_REMOTE_CLIENT_EVENT(REMOTE_SHMEM_ERROR);
-                                ERROR_PRINT("failed to write cmd to shmem\n");
+                                ERROR_PRINT("remoteCmdTask, failed to write cmd to shmem\n");
                                 while(1){};
                             }
                         }
 
                         /* for diagnostics */
-                        //if(DIAGNOISTIC_PRINTS) {
+                        if(DIAGNOISTIC_PRINTS) {
                             INFO_PRINT("Received cmd: %d from Control Node\n", cmdMsg.cmd);
-                        //}
+                        }
                     }
                 }
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
