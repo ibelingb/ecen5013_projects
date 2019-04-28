@@ -152,7 +152,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   // TODO: TBD
 
   while(aliveFlag) {
-    //SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_LOG, STATUS_OK, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_LOG, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
     /* Accept Client Connection for Log data */

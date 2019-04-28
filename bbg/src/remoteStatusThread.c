@@ -151,7 +151,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
   // TODO: TBD
 
   while(aliveFlag) {
-    //SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_STATUS, STATUS_OK, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_STATUS, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
     /* Accept Client Connection for Sensor data */

@@ -92,7 +92,6 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     if((pQueue == NULL) || (pExit == NULL) || (newError == NULL)) {
         return EXIT_FAILURE;
     }
-    INFO_PRINT("health monitor entered, pExit: %d\n", *pExit);
 
     /* determine state of threads (alive, zombie, etc) */
     for(ind = 0; ind < NUM_THREADS; ++ind) {
@@ -190,7 +189,6 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
             threadMissingCount[ind] += missingFlag[ind];
         }
     }
-    INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
     if(prevErrorCount != errorCount) {
         *newError = 1;
         MUTED_PRINT("prevErrorCount: %d, errorCount: %d\n", prevErrorCount, errorCount);

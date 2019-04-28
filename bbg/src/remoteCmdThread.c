@@ -161,7 +161,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
   int status = 0;
 
   while(aliveFlag) {
-    //SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_CMD, STATUS_OK, ERROR_CODE_USER_NONE0);
+    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_CMD, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
     /* If cmd received, transmit packet to Remote Node */

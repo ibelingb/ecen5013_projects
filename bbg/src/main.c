@@ -342,7 +342,7 @@ int main(int argc, char *argv[]){
     //LOG_HEARTBEAT();
 
     newError = 0;
-    monitorHealth(&heartbeatMsgQueue, &gExit, &newError); // TODO: Need to update - Causing seg fault on shutdown
+    monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
     MUTED_PRINT("newError: %d\n", newError);
     setStatusLed(newError);
 
