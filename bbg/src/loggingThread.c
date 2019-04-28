@@ -158,8 +158,8 @@ void* logThreadHandler(void* threadInfo)
                     (prevLogItem.checksum != logItem.checksum))
             {
                 ++logMsgCount;
-                INFO_PRINT("Logger successfully dequeued msg, count: %d\n", logMsgCount);
-                INFO_PRINT("Recvd LOGITEM MsgId: %d, from sourceId: %d at %d usec\n\r", 
+                MUTED_PRINT("Logger successfully dequeued msg, count: %d\n", logMsgCount);
+                MUTED_PRINT("Recvd LOGITEM MsgId: %d, from sourceId: %d at %d usec\n\r", 
                 logItem.logMsgId, logItem.sourceId, logItem.time);
             
                 /* if read from queue successful, right to file */
