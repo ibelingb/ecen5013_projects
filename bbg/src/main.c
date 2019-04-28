@@ -124,7 +124,7 @@ int main(int argc, char *argv[]){
   /* Initialize created structs and packets to be 0-filled */
   memset(&sensorThreadInfo, 0, sizeof(struct SensorThreadInfo));
   memset(&logThreadInfo,    0, sizeof(struct LogThreadInfo));
-  memset(&logPacket,        0, sizeof(struct LogMsgPacket));
+  memset(&logPacket,        0, sizeof(LogMsgPacket));
   memset(&mqAttr,           0, sizeof(struct mq_attr));
 
   /* Ensure MQs properly cleaned up before starting */
@@ -396,7 +396,6 @@ int main(int argc, char *argv[]){
  */
 void sigintHandler(int sig){
   /* Send signal to all children threads to terminate */
-  pthread_kill(gThreads[0], SIGRTMIN + (uint8_t)PID_LOGGING);
   pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE_LOG);
   pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_REMOTE_STATUS);
   pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_REMOTE_DATA);

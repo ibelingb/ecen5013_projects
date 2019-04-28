@@ -62,7 +62,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   int sockfdLogServer, sockfdLogClient, socketLogFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
-  size_t logPacketSize = sizeof(struct LogMsgPacket);
+  size_t logPacketSize = sizeof(LogMsgPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
