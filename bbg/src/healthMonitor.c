@@ -81,8 +81,8 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
 {
     TaskStatusPacket status;
     MainAction_e action;
-    static uint8_t threadMissingCount[NUM_THREADS + 1];     /* 1 is to provide slot for PID_END enum value */
-    uint8_t missingFlag[NUM_THREADS + 1];                   /* 1 is to provide slot for PID_END enum value */
+    static uint8_t threadMissingCount[PID_END + 1];     /* 1 is to provide slot for PID_END enum value */
+    uint8_t missingFlag[PID_END + 1];                   /* 1 is to provide slot for PID_END enum value */
     uint8_t ind, msgCount;
     struct mq_attr Attr;
     static uint8_t errorCount = 0;

@@ -77,6 +77,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));
   memset(&timerid, 0, sizeof(timer_t));
+  memset(&tmpItem, 0, sizeof(logItem_t));
   timer_interval.tv_nsec = REMOTE_LOOP_TIME_NSEC;
   timer_interval.tv_sec = REMOTE_LOOP_TIME_SEC;
   setupTimer(&set, &timerid, signum, &timer_interval);
@@ -216,7 +217,9 @@ void* remoteLogThreadHandler(void* threadInfo)
     tmpItem.pFilename = (uint8_t *)&logPacket.filename;
 
     /* Write received log packet from RemoteNode to logger */
-    LOG_ITEM(&tmpItem);
+    if(LOG_ITEM(&tmpItem) != LOG_STATUS_OK) {
+      INFO_PRINT("LOG_ITEM write error\n");
+    }
   }
 
   /* Thread Cleanup */

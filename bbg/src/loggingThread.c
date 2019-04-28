@@ -110,6 +110,7 @@ void* logThreadHandler(void* threadInfo)
     /* Clear memory objects */
     memset(&set, 0, sizeof(sigset_t));
     memset(&timerid, 0, sizeof(timer_t));
+    memset(&logItem, 0, sizeof(logItem_t));
 
     timer_interval.tv_nsec = LOG_LOOP_TIME_NSEC;
     timer_interval.tv_sec = LOG_LOOP_TIME_SEC;
@@ -136,6 +137,12 @@ void* logThreadHandler(void* threadInfo)
                 exitFlag = 0;
             }
 
+            /* check if queue is empty */
+            if(logMsgCount > 8) {
+                INFO_PRINT("max log processing limit reached\n");
+                noMsgRecvd = 1;
+            }
+
             /* dequeue a msg */
             ret = LOG_DEQUEUE_ITEM(&logItem);
 
@@ -159,14 +166,14 @@ void* logThreadHandler(void* threadInfo)
                 INFO_PRINT("Recvd LOGITEM MsgId: %d, from sourceId: %d at %d usec\n\r", 
                 logItem.logMsgId, logItem.sourceId, logItem.time);
             
-                /* if read from queue successful, right to file */
-                if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
-                {
-                    ERROR_PRINT("log_dequeue_item error\n");
-                    SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
-                    LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
-                    ++statusMsgCount;
-                }
+                // /* if read from queue successful, right to file */
+                // if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+                // {
+                //     ERROR_PRINT("log_dequeue_item error\n");
+                //     SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
+                //     LOG_LOG_EVENT(LOG_EVENT_WRITE_LOGFILE_ERROR);
+                //     ++statusMsgCount;
+                // }
                 prevLogItem = logItem;
             } 
 

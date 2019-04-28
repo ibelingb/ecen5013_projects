@@ -38,11 +38,12 @@
 #define DEBUG_TEST_ALL_MSG_TYPES (0)
 
 #define LOG_MSG_QUEUE
-#define LOG
+//#define LOG
 
 #ifndef LOG
     #define LOG_FLUSH()
     #define LOG_INIT(threadArgs)			(LOG_STATUS_OK)
+    #define LOG_ITEM(pLogItem)              (LOG_STATUS_OK)
     #define LOG_DEQUEUE_ITEM(pLogItem)		(LOG_STATUS_OK)
     #define LOG_WRITE_ITEM(pLogItem, fd)	(LOG_STATUS_OK)
     #define LOG_LOGGER_INITIALIZED()		/* implemented */
