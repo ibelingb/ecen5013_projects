@@ -239,7 +239,7 @@ typedef struct TaskStatusPacket {
   uint8_t errorCode;
 } TaskStatusPacket;
 
-typedef struct __attribute__ ((__packed__))
+typedef struct
 {
     logMsg_e logMsgId;
     uint8_t filename[LOG_MSG_FILENAME_SIZE];
@@ -249,8 +249,6 @@ typedef struct __attribute__ ((__packed__))
     uint8_t payload[LOG_MSG_PAYLOAD_SIZE];
 	  uint16_t sourceId;
 	  uint32_t checksum;
-
-	
 } LogMsgPacket;
 
 typedef struct RemoteCmdPacket

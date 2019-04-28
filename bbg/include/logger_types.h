@@ -61,7 +61,7 @@ typedef enum  __attribute__ ((__packed__)) {
 	LOG_MSG_END = 24
 } logMsg_e;
 
-typedef struct __attribute__ ((__packed__)) {
+typedef struct {
 	logMsg_e logMsgId;
 	uint8_t *pFilename;
 	uint16_t lineNum;

@@ -66,6 +66,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
+  logItem_t tmpItem;
 
   /* timer variables */
   timer_t timerid;
@@ -205,9 +206,17 @@ void* remoteLogThreadHandler(void* threadInfo)
       LOG_REMOTE_LOG_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
+    tmpItem.logMsgId = logPacket.logMsgId;
+    tmpItem.lineNum = logPacket.lineNum;
+    tmpItem.checksum = logPacket.checksum;
+    tmpItem.payloadLength = logPacket.payloadLength;
+    tmpItem.time = logPacket.timestamp;
+    tmpItem.sourceId = logPacket.sourceId;
+    tmpItem.pPayload = (uint8_t *)&logPacket.payload;
+    tmpItem.pFilename = (uint8_t *)&logPacket.filename;
 
     /* Write received log packet from RemoteNode to logger */
-    LOG_ITEM((logItem_t*)&logPacket);
+    LOG_ITEM(&tmpItem);
   }
 
   /* Thread Cleanup */
