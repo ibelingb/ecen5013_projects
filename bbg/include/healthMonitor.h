@@ -106,12 +106,16 @@ __attribute__((always_inline)) inline const char *getPidString(ProcessId_e procI
             return "PID_OBSERVER";
         case PID_SOLENOID:
             return "PID_SOLENOID";
-        case PID_CONSOLE:
-            return "PID_COSOLE";
         case PID_REMOTE_CLIENT:
             return "PID_CLIENT";
-        case PID_SYSMON:
-            return "PID_SYSMON";
+        case PID_REMOTE_CLIENT_CMD:
+            return "PID_REMOTE_CLIENT_CMD";
+        case PID_REMOTE_CLIENT_LOG:
+            return "PID_REMOTE_CLIENT_LOG";
+        case PID_REMOTE_CLIENT_STATUS:
+            return "PID_REMOTE_CLIENT_STATUS";
+        case PID_REMOTE_CLIENT_DATA:
+            return "PID_REMOTE_CLIENT_DATA";
         default:
             return "PID_END";
     }

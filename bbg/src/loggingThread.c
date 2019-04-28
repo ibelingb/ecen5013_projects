@@ -36,18 +36,6 @@
 static uint8_t aliveFlag = 1;
 
 /*---------------------------------------------------------------------------------*/
-void loggingSigHandler(int signo, siginfo_t *info, void *extra)
-{
-	INFO_PRINT("loggingSigHandler, signum: %d\n",info->si_signo);
-    aliveFlag = 0;
-}
-
-void logGetAliveFlag(uint8_t *pAlive)
-{
-  if(pAlive != NULL)
-    *pAlive = aliveFlag;
-}
-
 void* logThreadHandler(void* threadInfo)
 {
     SensorThreadInfo sensorInfo = *(SensorThreadInfo *)threadInfo;
@@ -65,7 +53,7 @@ void* logThreadHandler(void* threadInfo)
     int signum = SIGALRM;
     struct timespec timer_interval;
     uint8_t ind, statusMsgCount;
-	  sigset_t mask;
+	sigset_t mask;
 
     /* instantiate temp msg variable for dequeuing */
     logItem_t logItem, prevLogItem;
@@ -178,10 +166,24 @@ void* logThreadHandler(void* threadInfo)
 
     /* clean up */
     timer_delete(timerid);
-    mq_close(hbMsgQueue);
     close(logFd);
+    mq_close(hbMsgQueue);
     ERROR_PRINT("logger thread exiting\n");
     return NULL;
 }
 /*---------------------------------------------------------------------------------*/
+void loggingSigHandler(int signo, siginfo_t *info, void *extra)
+{
+    if((info != NULL) && (extra != NULL))
+    {
+	    INFO_PRINT("loggingSigHandler, signum: %d\n",info->si_signo);
+    }
+    aliveFlag = 0;
+}
 
+/*---------------------------------------------------------------------------------*/
+void logGetAliveFlag(uint8_t *pAlive)
+{
+  if(pAlive != NULL)
+    *pAlive = aliveFlag;
+}

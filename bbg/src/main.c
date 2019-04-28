@@ -69,6 +69,7 @@ static mqd_t cmdMsgQueue;
 static timer_t waterTimerid;
 uint32_t waterCyclePeriodHours = 0;
 float luxData, moistureData = 0;
+static mqd_t heartbeatMsgQueue;
 
 /* Variables to track system operating state */
 ControlLoopState_e controlLoopState = IDLE;
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]){
   LogMsgPacket logPacket;
   struct mq_attr mqAttr;
   mqd_t logMsgQueue;
-  mqd_t heartbeatMsgQueue;
+
   mqd_t dataMsgQueue;
   char ind;
   uint8_t newError;
@@ -341,25 +342,32 @@ int main(int argc, char *argv[]){
     //LOG_HEARTBEAT();
 
     newError = 0;
-    //monitorHealth(&heartbeatMsgQueue, &gExit, &newError); // TODO: Need to update - Causing seg fault on shutdown
+    monitorHealth(&heartbeatMsgQueue, &gExit, &newError); // TODO: Need to update - Causing seg fault on shutdown
     MUTED_PRINT("newError: %d\n", newError);
     setStatusLed(newError);
 
     /* wait on signal timer */
     sigwait(&set, &signum);
   }
+  INFO_PRINT("Main loop exited\n");
   LOG_SYSTEM_HALTED();
 
   /* wait to kill log so exit msgs get logged */
   usleep(MAIN_LOG_EXIT_DELAY);
+  sleep(3);
 
   /* Kill logger; delay to allow Log Exiting to be written to log */
+  INFO_PRINT("killing logger %d\n", __libc_current_sigrtmax());
   pthread_kill(gThreads[0], SIGRTMIN + (uint8_t)PID_LOGGING);
+  INFO_PRINT("kill signal sent\n");
   usleep(MAIN_LOG_EXIT_DELAY);
+  sleep(1);
 
   /* join to clean up children */
-  for(ind = 0; ind < NUM_THREADS; ++ind)
+  for(ind = 0; ind < NUM_THREADS; ++ind) {
     pthread_join(gThreads[(uint8_t)ind], NULL);
+  }
+  
   
   /* Cleanup */
   printf("main() Cleanup.\n");
@@ -388,15 +396,15 @@ int main(int argc, char *argv[]){
  */
 void sigintHandler(int sig){
   /* Send signal to all children threads to terminate */
+  pthread_kill(gThreads[0], SIGRTMIN + (uint8_t)PID_LOGGING);
   pthread_kill(gThreads[1], SIGRTMIN + (uint8_t)PID_REMOTE_LOG);
   pthread_kill(gThreads[2], SIGRTMIN + (uint8_t)PID_REMOTE_STATUS);
   pthread_kill(gThreads[3], SIGRTMIN + (uint8_t)PID_REMOTE_DATA);
   pthread_kill(gThreads[4], SIGRTMIN + (uint8_t)PID_REMOTE_CMD);
-  printf("\nDelay to allow threads to terminate gracefully and log exit events...\n\n");
-  sleep(3);
-
-  /* Trigger while-loop in main to exit; cleanup allocated resources */
   gExit = 0;
+  
+  /* Trigger while-loop in main to exit; cleanup allocated resources */
+
 }
 
 /*---------------------------------------------------------------------------------*/

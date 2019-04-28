@@ -38,8 +38,7 @@
 /* private functions */
 int8_t getStatusMsg(mqd_t *pQueue, TaskStatusPacket *pPacket);
 MainAction_e callArbitor(TaskStatusPacket *pStatus);
-MainAction_e lightErrorArbitor(TaskStatusPacket *pStatus);
-MainAction_e tempErrorArbitor(TaskStatusPacket *pStatus);
+MainAction_e sensorErrorArbitor(TaskStatusPacket *pStatus);
 MainAction_e remoteErrorArbitor(TaskStatusPacket *pStatus);
 MainAction_e loggingErrorArbitor(TaskStatusPacket *pStatus);
 void processAction(ProcessId_e processId, MainAction_e action, uint8_t *pExit);
@@ -90,9 +89,10 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
     static uint8_t prevErrorCount;
     prevErrorCount = errorCount;
 
-    if((pQueue == NULL) || (pExit == NULL)) {
+    if((pQueue == NULL) || (pExit == NULL) || (newError == NULL)) {
         return EXIT_FAILURE;
     }
+    INFO_PRINT("health monitor entered, pExit: %d\n", *pExit);
 
     /* determine state of threads (alive, zombie, etc) */
     for(ind = 0; ind < NUM_THREADS; ++ind) {
@@ -129,8 +129,16 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
             missingFlag[status.processId] = 0;             
             threadMissingCount[status.processId] = 0;
 
+            
+            /* skip threads not reporting status */
+            if((ind == PID_TEMP) || (ind == PID_REMOTE_CLIENT) ||
+            (ind == PID_REMOTE_CLIENT_CMD) || (ind == PID_REMOTE_CLIENT_LOG) || 
+            (ind == PID_REMOTE_CLIENT_STATUS) || (ind == PID_REMOTE_CLIENT_DATA)) {
+                continue;
+            }
+
             /* determine error course of action */
-            if(status.processId != PID_END)
+            else if(status.processId != PID_END)
             {
                 ++msgCount;
                 if(status.taskStatus == STATUS_ERROR)
@@ -144,21 +152,30 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
             {
                 ERROR_PRINT("Stopped processing status msgs, some how health monitor got behind\n");
                 break;
+            }                
+        }
+        if(*pExit == 0) {
+            INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
+            if(prevErrorCount != errorCount) {
+                *newError = 1;
             }
-            if(*pExit == 0) {
-                INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
-                if(prevErrorCount != errorCount) {
-                    *newError = 1;
-                }
-                return EXIT_SUCCESS;
-            }
-                
+            return EXIT_SUCCESS;
         }
     } while (status.processId != PID_END);
 
-    /* update missingCount */
-    for(ind = 0; ind < NUM_THREADS; ++ind) {
-        /* if missing exceeds limit, set error status to timeout and call arbitor again */
+    /* after we've processed all status messages, let's check the missing
+     * count to see if we need to to set timeout error */
+    for(ind = 0; ind < PID_END; ++ind) 
+    {
+        /* skip threads not reporting status */
+        if((ind == PID_TEMP) || (ind == PID_REMOTE_CLIENT) ||
+         (ind == PID_REMOTE_CLIENT_CMD) || (ind == PID_REMOTE_CLIENT_LOG) || 
+         (ind == PID_REMOTE_CLIENT_STATUS) || (ind == PID_REMOTE_CLIENT_DATA)) {
+             continue;
+         }
+
+        /* if missing exceeds limit, 
+        set error status to timeout and call arbitor again */
         if(threadMissingCount[ind] >= THREAD_MISSING_COUNT) {
             threadMissingCount[ind] = THREAD_MISSING_COUNT;
             status.processId = ind;
@@ -173,7 +190,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
             threadMissingCount[ind] += missingFlag[ind];
         }
     }
-    MUTED_PRINT("health monitor exiting, pExit: %d\n", *pExit);
+    INFO_PRINT("health monitor exiting, pExit: %d\n", *pExit);
     if(prevErrorCount != errorCount) {
         *newError = 1;
         MUTED_PRINT("prevErrorCount: %d, errorCount: %d\n", prevErrorCount, errorCount);
@@ -218,14 +235,14 @@ int8_t threadKiller(ProcessId_e Id)
 
     /* set signal(s) used to kill other threads */
     if(Id == PID_END){
-        MUTED_PRINT("main says kill all\n");
-        for(ind = 0; ind < NUM_THREADS; ++ind)
+        INFO_PRINT("main says kill all\n");
+        for(ind = 0; ind < NUM_THREADS - 1; ++ind)
             sigqueue(getpid(), SIGRTMIN + ind, sigargs);
         
     }
     else {
         /* kill some thread */
-        MUTED_PRINT("main says kill id#%d\n", Id);
+        INFO_PRINT("main says kill id#%d\n", Id);
         sigqueue(getpid(), SIGRTMIN + Id, sigargs);
     }
     return EXIT_SUCCESS;
@@ -292,20 +309,15 @@ MainAction_e callArbitor(TaskStatusPacket *pStatus)
 
     switch(pStatus->processId){
         case PID_LIGHT:
-            action = lightErrorArbitor(pStatus);
-        break;
         case PID_TEMP:
-            action = tempErrorArbitor(pStatus);
+        case PID_MOISTURE:
+        case PID_OBSERVER:
+        case PID_SOLENOID:
+            action = sensorErrorArbitor(pStatus);
         break;
         case PID_REMOTE_LOG:
-            action = remoteErrorArbitor(pStatus);
-        break;
         case PID_REMOTE_STATUS:
-            action = remoteErrorArbitor(pStatus);
-        break;
         case PID_REMOTE_DATA:
-            action = remoteErrorArbitor(pStatus);
-        break;
         case PID_REMOTE_CMD:
             action = remoteErrorArbitor(pStatus);
         break;
@@ -320,75 +332,12 @@ MainAction_e callArbitor(TaskStatusPacket *pStatus)
     return action;
 }
 /**
- * @brief determine course of action of error for light thread
+ * @brief determine course of action of error for sensor threads
  * 
  * @param errorCode 
  * @return MainAction_e 
  */
-MainAction_e lightErrorArbitor(TaskStatusPacket *pStatus)
-{
-    MainAction_e action;
-
-    switch(pStatus->errorCode){
-        /* do nothing */
-        case ERROR_CODE_USER_NONE0:
-        case ERROR_CODE_USER_NONE1:
-        case ERROR_CODE_USER_NONE2:
-        case ERROR_CODE_USER_NONE3:
-        case ERROR_CODE_USER_NONE4:
-        case ERROR_CODE_USER_NONE5:
-        case ERROR_CODE_USER_NONE6:
-        case ERROR_CODE_USER_NONE7:
-            action = MAIN_ACTION_NONE;
-            break;
-
-        /* just notify */
-        case ERROR_CODE_TIMEOUT:
-        case ERROR_CODE_USER_NOTIFY0:
-        case ERROR_CODE_USER_NOTIFY1:
-        case ERROR_CODE_USER_NOTIFY2:
-        case ERROR_CODE_USER_NOTIFY3:
-        case ERROR_CODE_USER_NOTIFY4:
-        case ERROR_CODE_USER_NOTIFY5:
-        case ERROR_CODE_USER_NOTIFY6:
-        case ERROR_CODE_USER_NOTIFY7:
-            action = MAIN_ACTION_NOTIFY_USER_ONLY;
-            break;       
-
-        /* kill thread */
-        case ERROR_CODE_USER_TERMTHREAD0:
-        case ERROR_CODE_USER_TERMTHREAD1:
-        case ERROR_CODE_USER_TERMTHREAD2:
-        case ERROR_CODE_USER_TERMTHREAD3:
-        case ERROR_CODE_USER_TERMTHREAD4:
-        case ERROR_CODE_USER_TERMTHREAD5:
-        case ERROR_CODE_USER_TERMTHREAD6:
-        case ERROR_CODE_USER_TERMTHREAD7:
-            action = MAIN_ACTION_TERMINATE_THREAD;
-            break;
-
-        /* kill all */
-        case ERROR_CODE_USER_TERMALL0:
-        case ERROR_CODE_USER_TERMALL1:
-        case ERROR_CODE_USER_TERMALL2:
-        case ERROR_CODE_USER_TERMALL3:
-        case ERROR_CODE_USER_TERMALL4:
-        case ERROR_CODE_USER_TERMALL5:
-        case ERROR_CODE_USER_TERMALL6:
-        case ERROR_CODE_USER_TERMALL7:
-        default:
-            action = MAIN_ACTION_TERMINATE_ALL;
-            break;
-    }
-    return action;
-}
-/**
- * @brief determine course of action of error for temp thread
- * 
- * @param errorCode 
- * @return MainAction_e 
- */
-MainAction_e tempErrorArbitor(TaskStatusPacket *pStatus)
+MainAction_e sensorErrorArbitor(TaskStatusPacket *pStatus)
 {
     MainAction_e action;
 
