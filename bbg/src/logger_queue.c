@@ -95,7 +95,7 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 	
 	/* copy filename string */
     if(pLogItem->pFilename == NULL) {
-            ERROR_PRINT("Null ptr in log_dequeue_item\n");
+            ERROR_PRINT("Null ptr in log_queue_item, pFilename\n");
             return LOG_STATUS_NOTOK;
     }
     else {
@@ -106,7 +106,7 @@ uint8_t log_queue_item(logItem_t *pLogItem)
 
 	/* copy payload */
     if(pLogItem->pPayload == NULL) {
-            ERROR_PRINT("Null ptr in log_dequeue_item\n");
+            ERROR_PRINT("Null ptr in log_queue_item, pPayload\n");
             return LOG_STATUS_NOTOK;
     }
     else {
@@ -210,24 +210,25 @@ uint8_t log_dequeue_item(logItem_t *pLogItem)
 		pLogItem->checksum = newItem.checksum;
 		
 		/* copy filename string */
-        if(pLogItem->pFilename != NULL) {
-		    if(strcpy((char *)pLogItem->pFilename, (char *)newItem.filename) == NULL)
-			    return LOG_STATUS_NOTOK;
+        if(pLogItem->pFilename == NULL) {
+		    ERROR_PRINT("Null ptr in log_dequeue_item, pFilename\n");
+            return LOG_STATUS_NOTOK;
         }
         else {
-            ERROR_PRINT("Null ptr in log_dequeue_item\n");
-            return LOG_STATUS_NOTOK;
+            if(strcpy((char *)pLogItem->pFilename, (char *)newItem.filename) == NULL) {
+                return LOG_STATUS_NOTOK;
+            }	    
         }
 
 		/* copy payload */
-        if(pLogItem->pPayload != NULL) {
+        if(pLogItem->pPayload == NULL) {
+            ERROR_PRINT("Null ptr in log_dequeue_item, pPayload\n");
+            return LOG_STATUS_NOTOK;
+        }
+        else {
 		    if(memcpy(pLogItem->pPayload, newItem.payload, pLogItem->payloadLength) == NULL) {
                 return LOG_STATUS_NOTOK;
             }
-        }
-        else {
-            ERROR_PRINT("Null ptr in log_dequeue_item\n");
-            return LOG_STATUS_NOTOK;
         }	    
 		return LOG_STATUS_OK;
 	}
