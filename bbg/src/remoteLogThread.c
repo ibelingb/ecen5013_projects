@@ -55,14 +55,14 @@ void* remoteLogThreadHandler(void* threadInfo)
   }
 
   sensorInfo = *(SensorThreadInfo *)threadInfo;
-  logItem_t logPacket = {0};
+  LogMsgPacket logPacket = {0};
   mqd_t logMsgQueue; /* logger MessageQueue */
   mqd_t hbMsgQueue;  /* main heartbeat MessageQueue */
   struct mq_attr mqAttr;
   int sockfdLogServer, sockfdLogClient, socketLogFlags;
   struct sockaddr_in servAddr, cliAddr;
   unsigned int cliLen = sizeof(cliAddr);
-  size_t logPacketSize = sizeof(struct logItem_t);
+  size_t logPacketSize = sizeof(struct LogMsgPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
   uint8_t ind;
 	sigset_t mask;
@@ -109,7 +109,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   /* Create Server Socket Interfaces */
   sockfdLogServer = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfdLogServer == -1){
-    ERROR_PRINT("remoteLogThread failed to create Data Socket - exiting.\n");
+    ERROR_PRINT("remoteLogThread failed to create Log Socket - exiting.\n");
     LOG_REMOTE_LOG_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
@@ -128,7 +128,7 @@ void* remoteLogThreadHandler(void* threadInfo)
   servAddr.sin_addr.s_addr = INADDR_ANY;
   servAddr.sin_port = htons((int)LOG_PORT);
   if(bind(sockfdLogServer, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
-    ERROR_PRINT("remoteLogThread failed to bind Data Socket - exiting.\n");
+    ERROR_PRINT("remoteLogThread failed to bind Log Socket - exiting.\n");
     LOG_REMOTE_LOG_EVENT(REMOTE_SERVER_SOCKET_ERROR);
     return NULL;
   }
@@ -151,10 +151,10 @@ void* remoteLogThreadHandler(void* threadInfo)
   // TODO: TBD
 
   while(aliveFlag) {
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_LOG, STATUS_OK, ERROR_CODE_USER_NONE0);
+    //SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_LOG, STATUS_OK, ERROR_CODE_USER_NONE0);
     sigwait(&set, &signum);
 
-    /* Accept Client Connection for Sensor data */
+    /* Accept Client Connection for Log data */
     if(clientResponse == 0)
     {
       sockfdLogClient = accept(sockfdLogServer, (struct sockaddr*)&cliAddr, &cliLen);
@@ -201,13 +201,13 @@ void* remoteLogThreadHandler(void* threadInfo)
     /* Verify bytes received is the expected size for a logPacket */
     if(clientResponse != logPacketSize){
       ERROR_PRINT("remoteLogThread received cmd of invalid length from remote client.\n"
-             "Expected {%d} | Received {%d}", logPacketSize, clientResponse);
+                  "Expected {%d} | Received {%d}", logPacketSize, clientResponse);
       LOG_REMOTE_LOG_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
 
     /* Write received log packet from RemoteNode to logger */
-    LOG_WRITE_ITEM(&logPacket, logMsgQueue);
+    LOG_ITEM((logItem_t*)&logPacket);
   }
 
   /* Thread Cleanup */
