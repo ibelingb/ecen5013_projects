@@ -126,8 +126,9 @@ void* logThreadHandler(void* threadInfo)
         /* read all messages until none */
         noMsgRecvd = 0;
         logMsgCount = 0;
-        statusMsgCount = 0;
         do {
+            statusMsgCount = 0;
+
             /* if signaled to exit, shove log exit command
             * (2nd highest priority) in buffer and set exit flag */
             if(aliveFlag == 0)
@@ -135,12 +136,6 @@ void* logThreadHandler(void* threadInfo)
                 LOG_LOG_EVENT(LOG_EVENT_EXITING);
                 INFO_PRINT("logger exit triggered\n");
                 exitFlag = 0;
-            }
-
-            /* check if queue is empty */
-            if(logMsgCount > 8) {
-                INFO_PRINT("max log processing limit reached\n");
-                noMsgRecvd = 1;
             }
 
             /* dequeue a msg */
@@ -187,6 +182,12 @@ void* logThreadHandler(void* threadInfo)
                 SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_OK, ERROR_CODE_USER_NONE0);
                 ++statusMsgCount;
                 clock_gettime(CLOCK_REALTIME, &lastStatusMsgTime);
+            }
+
+            /* if processed too many, exit*/
+            if(logMsgCount > 16) {
+                INFO_PRINT("max log processing limit reached\n");
+                noMsgRecvd = 1;
             }
         } while((noMsgRecvd == 0) && (exitFlag));
 
