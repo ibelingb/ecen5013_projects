@@ -56,6 +56,11 @@ static TaskHandle_t remoteLogTaskHandle = NULL;
 static TaskHandle_t remoteCmdTaskHandle = NULL;
 static TaskHandle_t remoteDataTaskHandle = NULL;
 
+uint8_t g_dataSocketLost = 1;
+uint8_t g_logSocketLost = 1;
+uint8_t g_statusSocketLost = 1;
+uint8_t g_cmdSocketLost = 1;
+
 /*---------------------------------------------------------------------------------*/
 BaseType_t InitIPStack(void);
 BaseType_t sendSocketData(Socket_t *pSocket, uint8_t *pData, size_t length);
@@ -111,7 +116,6 @@ void remoteStatusTask(void *pvParameters)
     static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     struct freertos_sockaddr xServerAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
-    uint8_t connectionLost;
     BaseType_t ret;
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
     Socket_t xClientSocket;
@@ -153,9 +157,6 @@ void remoteStatusTask(void *pvParameters)
             LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
             LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
 
-            /* set before entering so loop tries to connect */
-            connectionLost = 1;
-
             /* send status msgs to Control Node */
             while(keepAlive)
             {
@@ -164,13 +165,13 @@ void remoteStatusTask(void *pvParameters)
                 /*--------------------------------------------------------------------------*/
                 /* Connect Lost State */
                 /*--------------------------------------------------------------------------*/
-                if(connectionLost) {
+                if(g_statusSocketLost) {
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
                         printConnectionStatus(ret);
                     } while(ret != 0);
-                    connectionLost = 0;
+                    g_statusSocketLost = 0;
                 }
                 /*--------------------------------------------------------------------------*/
                 /* Connected State */
@@ -180,7 +181,7 @@ void remoteStatusTask(void *pvParameters)
                     if(xQueueReceive(info.statusFd, (void *)&statusMsg, xDelay) != pdFALSE) {
                         /* send status msgs to Control Node */
                         if(sendSocketData(&xClientSocket, (uint8_t *)&statusMsg, sizeof(TaskStatusPacket)) == pdFREERTOS_ERRNO_ENOTCONN) {
-                            connectionLost = 1;
+                            g_statusSocketLost = 1;
                         }
                         else {
                             /* for diagnostics */
@@ -218,7 +219,6 @@ void remoteLogTask(void *pvParameters)
     static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     struct freertos_sockaddr xServerAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
-    uint8_t connectionLost;
     BaseType_t ret;
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
     Socket_t xClientSocket;
@@ -260,9 +260,6 @@ void remoteLogTask(void *pvParameters)
             LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
             LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
 
-            /* set before entering so loop tries to connect */
-            connectionLost = 1;
-
             /* send status msgs to Control Node */
             while(keepAlive)
             {
@@ -271,13 +268,13 @@ void remoteLogTask(void *pvParameters)
                 /*--------------------------------------------------------------------------*/
                 /* Connect Lost State */
                 /*--------------------------------------------------------------------------*/
-                if(connectionLost) {
+                if(g_logSocketLost) {
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
                         printConnectionStatus(ret);
                     } while(ret != 0);
-                    connectionLost = 0;
+                    g_logSocketLost = 0;
                 }
                 /*--------------------------------------------------------------------------*/
                 /* Connected State */
@@ -288,7 +285,7 @@ void remoteLogTask(void *pvParameters)
                     {
                         /* Transmit data to Control Node */
                         if(sendSocketData(&xClientSocket, (uint8_t *)&logMsg, sizeof(LogMsgPacket)) == pdFREERTOS_ERRNO_ENOTCONN) {
-                            connectionLost = 1;
+                            g_logSocketLost = 1;
                         }
                         /* for diagnostics */
                         if(DIAGNOISTIC_PRINTS) {
@@ -325,7 +322,6 @@ void remoteDataTask(void *pvParameters)
     static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     struct freertos_sockaddr xServerAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
-    uint8_t connectionLost;
     BaseType_t ret;
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
     Socket_t xClientSocket;
@@ -367,9 +363,6 @@ void remoteDataTask(void *pvParameters)
             LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
             LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
 
-            /* set before entering so loop tries to connect */
-            connectionLost = 1;
-
             /* send status msgs to Control Node */
             while(keepAlive)
             {
@@ -378,13 +371,13 @@ void remoteDataTask(void *pvParameters)
                 /*--------------------------------------------------------------------------*/
                 /* Connect Lost State */
                 /*--------------------------------------------------------------------------*/
-                if(connectionLost) {
+                if(g_dataSocketLost) {
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
                         printConnectionStatus(ret);
                     } while(ret != 0);
-                    connectionLost = 0;
+                    g_dataSocketLost = 0;
                 }
                 /*--------------------------------------------------------------------------*/
                 /* Connected State */
@@ -404,7 +397,7 @@ void remoteDataTask(void *pvParameters)
 
                         /* Transmit data to Control Node */
                         if(sendSocketData(&xClientSocket, (uint8_t *)&sensorData, sizeof(sensorData)) == pdFREERTOS_ERRNO_ENOTCONN) {
-                            connectionLost = 1;
+                            g_dataSocketLost = 1;
                         }
                         /* for diagnostics */
                         if(DIAGNOISTIC_PRINTS) {
@@ -440,7 +433,6 @@ void remoteCmdTask(void *pvParameters)
     static const TickType_t xTimeOut = pdMS_TO_TICKS(5000);
     struct freertos_sockaddr xServerAddress;
     socklen_t xSize = sizeof(struct freertos_sockaddr);
-    uint8_t connectionLost;
     BaseType_t ret;
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
     Socket_t xClientSocket;
@@ -482,9 +474,6 @@ void remoteCmdTask(void *pvParameters)
             LOG_REMOTE_CLIENT_EVENT(REMOTE_BIST_COMPLETE);
             LOG_REMOTE_CLIENT_EVENT(REMOTE_INIT_SUCCESS);
 
-            /* set before entering so loop tries to connect */
-            connectionLost = 1;
-
             /* send status msgs to Control Node */
             while(keepAlive)
             {
@@ -493,20 +482,23 @@ void remoteCmdTask(void *pvParameters)
                 /*--------------------------------------------------------------------------*/
                 /* Connect Lost State */
                 /*--------------------------------------------------------------------------*/
-                if(connectionLost) {
+                if(g_cmdSocketLost) {
                     ret = 0;
                     do {
                         ret = FreeRTOS_connect(xClientSocket, &xServerAddress, xSize);
                         printConnectionStatus(ret);
                     } while(ret != 0);
-                    connectionLost = 0;
+                    g_cmdSocketLost = 0;
                 }
                 /*--------------------------------------------------------------------------*/
                 /* Connected State */
                 /*--------------------------------------------------------------------------*/
                 else {
-
-                    if(readSocketData(&xClientSocket, (uint8_t *)&cmdMsg, sizeof(RemoteCmdPacket)) == sizeof(RemoteCmdPacket))
+                    ret = readSocketData(&xClientSocket, (uint8_t *)&cmdMsg, sizeof(RemoteCmdPacket));
+                    if(ret == pdFREERTOS_ERRNO_ENOTCONN) {
+                        g_cmdSocketLost = 1;
+                    }
+                    else if(ret == sizeof(RemoteCmdPacket))
                     {
                         /* process cmdMsg */
                         if((cmdMsg.cmd ==  REMOTE_WATERPLANT) ||
@@ -612,11 +604,15 @@ BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
     /* try to read data */
     ret = FreeRTOS_recv(*pSocket, pData, length, 0);
 
+    if(ret == 0) {
+        ERROR_PRINT("readSocketData TIMEOUT\n");
+        return RETURN_ERROR;
+    }
     if(ret == length) {
         return RETURN_SUCCESS;
     }
 
-    /* FreeRTOS uses negative value to indicate obsolete error code */
+    /* FreeRTOS uses negative value to not interfere with read length */
     ret = ret < 0 ? -1 * ret : ret;
 
     if(ret == pdFREERTOS_ERRNO_ENOMEM ) {
@@ -633,9 +629,6 @@ BaseType_t readSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
     if(ret == pdFREERTOS_ERRNO_EINVAL ) {
         /* Socket invalid, not TCP or not bound */
         ERROR_PRINT("ERROR in readSocketData: pdFREERTOS_ERRNO_EINVAL(invalid socket) \n");
-    }
-    if(ret == 0) {
-        ERROR_PRINT("readSocketData TIMEOUT\n");
     }
     return RETURN_ERROR;
 }

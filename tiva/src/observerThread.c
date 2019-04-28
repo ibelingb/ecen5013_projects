@@ -25,6 +25,7 @@
 #include "my_debug.h"
 #include "healthMonitor.h"
 #include "logger.h"
+#include "remoteThread.h"
 
 /* TivaWare includes */
 #include "driverlib/sysctl.h"   /* for clk */
@@ -40,7 +41,7 @@
 #include "semphr.h"
 
 /*---------------------------------------------------------------------------------*/
-#define ALARM_GPIO_PIN      (GPIO_PIN_0)
+#define ALARM_GPIO_PIN                  (GPIO_PIN_0)
 #define DEFAULT_HIGH_MOIST_THRESHOLD    (40)
 #define DEFAULT_LOW_MOIST_THRESHOLD     (20)
 
@@ -116,7 +117,11 @@ void observerTask(void *pvParameters)
             LOG_OBSERVER_EVENT(OBSERVE_EVENT_SHMEM_ERROR);
         }
 
-        /* TODO - check connection status and set alarm if LOST */
+        /* check connection status and set alarm if LOST */
+        if((g_cmdSocketLost == 1) && (g_statusSocketLost == 1) &&
+                (g_logSocketLost == 1) && (g_dataSocketLost == 1)) {
+            alarm = 1;
+        }
 
         /* set alarm pin */
         if(alarm != prev_alarm) {
