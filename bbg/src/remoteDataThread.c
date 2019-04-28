@@ -224,7 +224,7 @@ void* remoteDataThreadHandler(void* threadInfo)
 
   /* Thread Cleanup */
   LOG_REMOTE_DATA_EVENT(REMOTE_EVENT_EXITING);
-  ERROR_PRINT("Remote thread exiting\n");
+  ERROR_PRINT("Remote Data Thread exiting\n");
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);

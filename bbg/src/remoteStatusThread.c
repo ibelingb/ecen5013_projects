@@ -213,7 +213,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
 
   /* Thread Cleanup */
   LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_EXITING);
-  ERROR_PRINT("Remote thread exiting\n");
+  ERROR_PRINT("Remote Status Thread exiting\n");
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);

@@ -387,7 +387,7 @@ int main(int argc, char *argv[]){
  * @brief Handler for SIGINT signal being received by main() - Kill application
  *
  * When SIGINT signal (ctrl+c) received by application, send kill signals to 
- * terminate Remote, Temp, and Light children threads and have main exit from 
+ * terminate Remote children threads and have main exit from 
  * processing loop to allow for gracefully termination of application.
  *
  * @param sig - param required by sigAction struct.
