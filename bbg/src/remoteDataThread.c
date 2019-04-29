@@ -194,7 +194,7 @@ void* remoteDataThreadHandler(void* threadInfo)
         continue;
       }
       ERRNO_PRINT("remoteDataThread recv fail");
-      
+
       /* Handle error with receiving data from client socket */
       ERROR_PRINT("remoteDataThread failed to handle incoming command from remote client.\n");
       LOG_REMOTE_DATA_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
@@ -230,8 +230,15 @@ void* remoteDataThreadHandler(void* threadInfo)
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
   mq_close(dataMsgQueue);
-  close(sockfdDataClient);
-  close(sockfdDataServer);
+  shutdown(sockfdDataClient, SHUT_RDWR);
+  shutdown(sockfdDataServer, SHUT_RDWR);
+  sleep(1);
+  uint8_t closeCnt = 0;
+  while(closeCnt++ < 8) {
+    close(sockfdDataClient);
+    close(sockfdDataServer);
+    usleep(100000);
+  }
 
   return NULL;
 }

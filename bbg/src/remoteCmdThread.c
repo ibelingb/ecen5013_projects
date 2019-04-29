@@ -233,8 +233,15 @@ void* remoteCmdThreadHandler(void* threadInfo)
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
   mq_close(cmdMsgQueue);
-  close(sockfdCmdClient);
-  close(sockfdCmdServer);
+  shutdown(sockfdCmdClient, SHUT_RDWR);
+  shutdown(sockfdCmdServer, SHUT_RDWR);
+  sleep(1);
+  uint8_t closeCnt = 0;
+  while(closeCnt++ < 8) {
+    close(sockfdCmdClient);
+    close(sockfdCmdServer);
+    usleep(100000);
+  }
 
   return NULL;
 }

@@ -233,9 +233,15 @@ void* remoteStatusThreadHandler(void* threadInfo)
   timer_delete(timerid);
   mq_close(logMsgQueue);
   mq_close(hbMsgQueue);
-  close(sockfdStatusClient);
-  close(sockfdStatusServer);
-
+  shutdown(sockfdStatusClient, SHUT_RDWR);
+  shutdown(sockfdStatusServer, SHUT_RDWR);
+  sleep(1);
+  uint8_t closeCnt = 0;
+  while(closeCnt++ < 8) {
+    close(sockfdStatusClient);
+    close(sockfdStatusServer);
+    usleep(100000);
+  }
   return NULL;
 }
 
