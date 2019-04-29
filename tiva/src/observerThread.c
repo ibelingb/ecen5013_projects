@@ -95,49 +95,43 @@ void observerTask(void *pvParameters)
         /* try to get semaphore */
         if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
         {
-
-            /* Check status of system states */
-//            INFO_PRINT("System States Light Sensor State: %d | remoteStatusState: %d | remoteLogState: %d | remoteCmdState: %d | remoteDataState: %d |\n",
-//              info.pShmem->lightSensorState,
-//              g_statusSocketLost,
-//              g_logSocketLost,
-//              g_cmdSocketLost,
-//              g_dataSocketLost);
+            /* Determine if light task has become unresponsive */
+            if(info.pShmem->lightSensorUpdateTs + 3000 < (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS) {
+                info.pShmem->lightSensorState = DEGRADED;
+            }
 
             /* If unable to receive cmds from Control Node or unable to provide feedback data to Control Node, enter Fault state (water plant autonomously) */
             if((g_dataSocketLost != 0) || (g_cmdSocketLost != 0)) {
                 systemState = FAULT;
                 INFO_PRINT("RemoteNode in FAULT mode - autonomously water plant based on soil moisture\n");
             } else if((g_dataSocketLost == 0) && (g_cmdSocketLost == 0) &&
-                     ((g_logSocketLost != 0) || (g_statusSocketLost != 0))) {
-//                      ((g_logSocketLost != 0) || (g_statusSocketLost != 0) || (info.pShmem->lightSensorState < NOMINAL))) {
-
-                INFO_PRINT("RemoteNode in DEGRADED mode - Non-critical system component missing\n");
+                     ((g_logSocketLost != 0) || (g_statusSocketLost != 0) || (info.pShmem->lightSensorState < NOMINAL))) {
+                INFO_PRINT("RemoteNode in DEGRADED mode - Non-critical system component missing. Log Socket Lost: %d | Status Socket Lost: %d | LightSensor State: %d\n",
+                           g_logSocketLost, g_statusSocketLost, info.pShmem->lightSensorState);
+                systemState = DEGRADED;
             } else {
                 systemState = NOMINAL;
             }
 
+            /* check if moisture is low */
+            if((info.pShmem->moistData.moistureLevel < info.pShmem->moistData.lowThreshold)) {
 
+                /* if low, turn on alarm LED */
+                alarm = 1;
 
-                /* check if moisture is low */
-                if((info.pShmem->moistData.moistureLevel < info.pShmem->moistData.lowThreshold)) {
-
-                    /* if low, turn on alarm */
-                    alarm = 1;
-
-                    /* Autonomously water plant if in FAULT mode (comm with ControlNode failed) */
-                    if(systemState == FAULT) {
-                        /* verify water value is on */
-                        if(info.pShmem->solenoidData.state == 0) {
-                            /* if not turn on */
-                            LOG_OBSERVER_EVENT(OBSERVE_EVENT_CMD_OVERRIDE_ASSERTED);
-                            info.pShmem->solenoidData.cmd = 1;
-                        }
+                /* Autonomously water plant if in FAULT mode (comm with ControlNode failed) */
+                if(systemState == FAULT) {
+                    /* verify water value is on */
+                    if(info.pShmem->solenoidData.state == 0) {
+                        /* if not turn on */
+                        LOG_OBSERVER_EVENT(OBSERVE_EVENT_CMD_OVERRIDE_ASSERTED);
+                        info.pShmem->solenoidData.cmd = 1;
                     }
                 }
-                else if (info.pShmem->moistData.moistureLevel > info.pShmem->moistData.highThreshold) {
-                    alarm = 0;
-                }
+            }
+            else if (info.pShmem->moistData.moistureLevel > info.pShmem->moistData.highThreshold) {
+                alarm = 0;
+            }
 
             /* release mutex */
             xSemaphoreGive(info.shmemMutex);

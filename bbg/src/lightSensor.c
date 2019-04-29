@@ -81,12 +81,20 @@ int8_t apds9301_getLuxData(uint8_t file, float *luxData)
 {
   uint16_t data0;
   uint16_t data1;
+  uint8_t partNo, revNo;
   float luxRatio;
   float sensorLux;
 
   /* Validate inputs */
   if(luxData == NULL)
     return EXIT_FAILURE;
+
+  /* Verify comm with APDS9301 Sensor device is functional */
+  apds9301_getDeviceId(0, &partNo, &revNo);
+  if(partNo != APDS9301_PARTNO)
+  {
+      return EXIT_FAILURE;
+  }
 
   /* Verify device is powered on and responsive */
   Apds9301_PowerCtrl_e powerCtrl;
@@ -97,6 +105,7 @@ int8_t apds9301_getLuxData(uint8_t file, float *luxData)
     ERROR_PRINT("apds9301_getLuxData() failed to power on device via apds9301_setControl() - read failed.\n");
     return EXIT_FAILURE;
   }
+
 
   /* Get Lux Data0 Low and High register values */
   if(EXIT_FAILURE == apds9301_getWord(file, &data0, APDS9301_DATA0LOW_REG))
