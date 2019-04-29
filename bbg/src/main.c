@@ -438,9 +438,8 @@ void displayCommandMenu()
              "\t6 = Enable TIVA Device2 (LED2 On)\n"
              "\t7 = Disable TIVA Device2 (LED2 Off)\n"
              "\t8 = Set Moisture Low Threshold\n"
-             "\t9 = Set Moisture Threshold\n"
+             "\t9 = Set Moisture High Threshold\n"
              "\t10 = Cancel Scheduled Watering Event\n"
-             //"\t11 = \n"
             );
       break;
   }
@@ -501,11 +500,11 @@ int8_t handleConsoleCmd(uint32_t userInput) {
         break;
       case CMD_EN_DEV2 :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
-        printf("CMD_EN_DEV2\n");
+        printf("Cmd to Enable additional device on Remote Node2\n");
         txCmd = REMOTE_ENDEV2;
         break;
       case CMD_DS_DEV2 :
-        printf("CMD_DS_DEV2\n");
+        printf("Cmd to Disable additional device on Remote Node\n");
         txCmd = REMOTE_DSDEV2;
         break;
       case CMD_SETMOISTURE_LOWTHRES:
@@ -539,18 +538,10 @@ int8_t handleConsoleCmd(uint32_t userInput) {
           }
         }
         break;
-
       case CMD_SCHED_CANCEL :
         printf("CMD_SCHED_CANCEL\n");
         cancelWaterSched();
         break;
-
-        /*
-           case CMD_ :
-        // TODO
-        break;
-         */
-
       default:
         ERROR_PRINT("Unrecognized command received. Request ignored.\n");
       return EXIT_FAILURE;
@@ -562,8 +553,6 @@ int8_t handleConsoleCmd(uint32_t userInput) {
     RemoteCmdPacket cmdPacket = {0};
     cmdPacket.cmd = txCmd;
     cmdPacket.data = data;
-
-    printf("Cmd TX: cmd: %d | data: %d\n", cmdPacket.cmd, cmdPacket.data);
 
     mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
     gCurrentCmd = 0;
