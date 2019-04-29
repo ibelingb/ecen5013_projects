@@ -137,11 +137,20 @@ int8_t sendIicByte(uint8_t slaveAddr, uint8_t reg, uint8_t *pData)
     while(I2CMasterBusy(I2C2_BASE));
 
     /* Write data to I2C Device */
+    taskENTER_CRITICAL();
     I2CMasterDataPut(I2C2_BASE, pData[0]);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 
     /* Wait for I2C to become available */
-    while(!I2CMasterBusy(I2C2_BASE));
+    cnt = 0;
+    while(++cnt < 50) {
+        if(cnt == 1) {
+            taskEXIT_CRITICAL();
+        }
+        if(!I2CMasterBusy(I2C2_BASE)){
+            break;
+        }
+    }
     while(I2CMasterBusy(I2C2_BASE));
 
     return 0;
