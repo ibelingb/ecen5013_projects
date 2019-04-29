@@ -64,8 +64,14 @@ void* remoteStatusThreadHandler(void* threadInfo)
   unsigned int cliLen = sizeof(cliAddr);
   size_t statusPacketSize = sizeof(struct TaskStatusPacket);
   ssize_t clientResponse = 0; /* Used to determine if client has disconnected from server */
-  uint8_t ind;
+  uint8_t ind, statusMsgCount;
 	sigset_t mask;
+  struct timespec currentTime, lastStatusMsgTime;     /* to calc delta time */
+  float deltaTime;                                    /* delta time since last sent status msg */
+
+  /* how often healthMonitor expects status msgs */
+  const float otherThreadTime = TEMP_LOOP_TIME_SEC + (TEMP_LOOP_TIME_NSEC * 1e-9);
+
 
   /* timer variables */
   timer_t timerid;
@@ -76,8 +82,8 @@ void* remoteStatusThreadHandler(void* threadInfo)
   /* Setup Timer */
   memset(&set, 0, sizeof(sigset_t));
   memset(&timerid, 0, sizeof(timer_t));
-  timer_interval.tv_nsec = REMOTE_LOOP_TIME_NSEC;
-  timer_interval.tv_sec = REMOTE_LOOP_TIME_SEC;
+  timer_interval.tv_nsec = REMOTE_LOOP_TIME_NSEC/4;
+  timer_interval.tv_sec = REMOTE_LOOP_TIME_SEC/4;
   setupTimer(&set, &timerid, signum, &timer_interval);
 
   /* block SIGRTs signals */
@@ -151,8 +157,7 @@ void* remoteStatusThreadHandler(void* threadInfo)
   // TODO: TBD
 
   while(aliveFlag) {
-    SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_STATUS, STATUS_OK, ERROR_CODE_USER_NONE0);
-    sigwait(&set, &signum);
+    statusMsgCount = 0;
 
     /* Accept Client Connection for Sensor data */
     if(clientResponse == 0)
@@ -180,12 +185,13 @@ void* remoteStatusThreadHandler(void* threadInfo)
 
     /* Check for incoming status packets from remote clients on socket port */
     clientResponse = recv(sockfdStatusClient, &statusPacket, statusPacketSize, 0);
-    if (clientResponse == -1) 
+    if (clientResponse == -1)
     {
       /* Non-blocking logic to allow remoteStatusThread to report status while waiting for client cmd */
       if(errno == EWOULDBLOCK) {
         continue;
       }
+      ERRNO_PRINT("remoteStatusThread recv fail");
 
       /* Handle error with receiving data from client socket */
       ERROR_PRINT("remoteStatusThread failed to handle incoming status packet from remote node.\n");
@@ -206,9 +212,21 @@ void* remoteStatusThreadHandler(void* threadInfo)
       continue;
     }
 
+    /* calculate delta time (since last status msg TX) */
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    deltaTime = (currentTime.tv_sec - lastStatusMsgTime.tv_sec) + ((currentTime.tv_nsec - lastStatusMsgTime.tv_nsec) * 1e-9);
+
+    /* only send OK status at rate of other threads 
+    * and if we didn't send error status yet */
+    if((deltaTime > otherThreadTime) && (statusMsgCount == 0)) {
+        SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_STATUS, STATUS_OK, ERROR_CODE_USER_NONE0);
+        ++statusMsgCount;
+        clock_gettime(CLOCK_REALTIME, &lastStatusMsgTime);
+    }
+
     /* Receive status packets from TIVA tasks, push onto heartbeat queue */
-    // TODO: Need to handle TaskState_e?
     SEND_STATUS_MSG(hbMsgQueue, statusPacket.processId, statusPacket.taskStatus, statusPacket.errorCode);
+    sigwait(&set, &signum);
   }
 
   /* Thread Cleanup */

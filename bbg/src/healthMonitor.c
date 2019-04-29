@@ -112,7 +112,7 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
      * there should be at least one message from each thread.
      * if a msg is received, this flag will get set to zero,
      * else this flag will increment the missing count by one */
-    for(ind = 0; ind < NUM_THREADS; ++ind) {
+    for(ind = 0; ind < PID_END; ++ind) {
         missingFlag[ind] = 1;
     }
 

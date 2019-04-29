@@ -206,7 +206,19 @@ void* remoteCmdThreadHandler(void* threadInfo)
 
     /* Read from socket to determine if client disconnect occurred */
     clientResponse = recv(sockfdCmdClient, &cmdPacket, cmdPacketSize, 0);
-    if(clientResponse == 0) {
+    if (clientResponse == -1) 
+    {
+      /* Non-blocking logic to allow remoteStatusThread to report status while waiting for client cmd */
+      if(errno == EWOULDBLOCK) {
+        continue;
+      }
+      ERRNO_PRINT("remoteCmdThread recv fail");
+
+      /* Handle error with receiving data from client socket */
+      ERROR_PRINT("remoteCmdThread failed to handle incoming status packet from remote node.\n");
+      LOG_REMOTE_STATUS_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
+      continue;
+    } else if(clientResponse == 0) {
       /* Handle disconnect from client socket */
       printf("remoteCmdThread connection lost with client on port %d.\n", CMD_PORT);
       LOG_REMOTE_CMD_EVENT(REMOTE_EVENT_CNCT_LOST);

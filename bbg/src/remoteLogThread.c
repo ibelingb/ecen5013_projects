@@ -188,7 +188,8 @@ void* remoteLogThreadHandler(void* threadInfo)
       if(errno == EWOULDBLOCK) {
         continue;
       }
-
+      ERRNO_PRINT("remoteLogThread recv fail");
+      
       /* Handle error with receiving data from client socket */
       ERROR_PRINT("remoteLogThread failed to handle incoming command from remote client.\n");
       LOG_REMOTE_LOG_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
