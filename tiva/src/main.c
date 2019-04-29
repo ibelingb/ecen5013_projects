@@ -259,6 +259,9 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
         FreeRTOS_inet_ntoa( ulDNSServerAddress, cBuffer );
         INFO_PRINT("DNS Server Address: %s\r\n\r\n\r\n", cBuffer);
     }
+    else {
+        INFO_PRINT("Other network event: %d", eNetworkEvent);
+    }
 }
 
 /*-----------------------------------------------------------------------------------*/
