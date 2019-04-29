@@ -669,6 +669,9 @@ BaseType_t sendSocketData(Socket_t *pSocket, uint8_t *pData, size_t length)
     if(ret == pdFREERTOS_ERRNO_ENOSPC) {
         ERROR_PRINT("readSocketData TIMEOUT\n");
     }
+    if(ret == 0) {
+        ERROR_PRINT("ERROR in readSocketData: zero(0) bytes sent, closing?\n");
+    }
     return ret;
 }
 

@@ -224,9 +224,9 @@ typedef enum ControlLoopState_e {
 } ControlLoopState_e;
 
 typedef enum SystemState_e {
-  NOMINAL = 0,
-  DEGRADED,
-  FAULT
+  DEGRADED = 0,
+  FAULT,
+  NOMINAL
 } SystemState_e;
 
 /* ------------------------------------------------------------- */
@@ -313,10 +313,12 @@ typedef struct {
 } SolenoidDataStruct;
 
 #ifndef __linux__
+
 typedef struct {
     LightDataStruct lightData;
     MoistureDataStruct moistData;
     SolenoidDataStruct solenoidData;
+    SystemState_e lightSensorState;
 } Shmem_t;
 #endif
 
