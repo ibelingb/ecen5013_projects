@@ -188,28 +188,28 @@ void* remoteStatusThreadHandler(void* threadInfo)
     if (clientResponse == -1)
     {
       /* Non-blocking logic to allow remoteStatusThread to report status while waiting for client cmd */
-      if(errno == EWOULDBLOCK) {
-        continue;
+      if(errno != EWOULDBLOCK) {
+        ERRNO_PRINT("remoteStatusThread recv fail");
+      
+        /* Handle error with receiving data from client socket */
+        ERROR_PRINT("remoteStatusThread failed to handle incoming status packet from remote node.\n");
+        LOG_REMOTE_STATUS_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       }
-      ERRNO_PRINT("remoteStatusThread recv fail");
-
-      /* Handle error with receiving data from client socket */
-      ERROR_PRINT("remoteStatusThread failed to handle incoming status packet from remote node.\n");
-      LOG_REMOTE_STATUS_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
-      continue;
-    } else if(clientResponse == 0) { 
+    } 
+    else if(clientResponse == 0) { 
       /* Handle disconnect from client socket */
       printf("remoteStatusThread connection lost with client on port %d.\n", STATUS_PORT);
       LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_CNCT_LOST);
-      continue;
     }
-
-    /* Verify bytes received is the expected size for a statusPacket */
-    if(clientResponse != statusPacketSize){
+    else if(clientResponse != statusPacketSize){
       ERROR_PRINT("remoteStatusThread received cmd of invalid length from remote client.\n"
              "Expected {%d} | Received {%d}", statusPacketSize, clientResponse);
       LOG_REMOTE_STATUS_EVENT(REMOTE_EVENT_INVALID_RECV);
-      continue;
+    }
+    /* Received Msg is the expected size for a statusPacket */
+    else {
+      /* Receive status packets from TIVA tasks, push onto heartbeat queue */
+      SEND_STATUS_MSG(hbMsgQueue, statusPacket.processId, statusPacket.taskStatus, statusPacket.errorCode);
     }
 
     /* calculate delta time (since last status msg TX) */
@@ -224,8 +224,6 @@ void* remoteStatusThreadHandler(void* threadInfo)
         clock_gettime(CLOCK_REALTIME, &lastStatusMsgTime);
     }
 
-    /* Receive status packets from TIVA tasks, push onto heartbeat queue */
-    SEND_STATUS_MSG(hbMsgQueue, statusPacket.processId, statusPacket.taskStatus, statusPacket.errorCode);
     sigwait(&set, &signum);
   }
 
