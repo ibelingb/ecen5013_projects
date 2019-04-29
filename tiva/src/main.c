@@ -120,8 +120,9 @@ int main(void)
     /* create shared memory block */
     static Shmem_t shmem;
     memset(&shmem, 0,sizeof(LightDataStruct) +
-                       sizeof(MoistureDataStruct) +
-                       sizeof(SolenoidDataStruct));
+                     sizeof(MoistureDataStruct) +
+                     sizeof(SolenoidDataStruct) +
+                     sizeof(SystemState_e));
 
     /* init thread info struct */
     memset(&info, 0,sizeof(SensorThreadInfo));

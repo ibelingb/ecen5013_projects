@@ -44,7 +44,7 @@
 /*---------------------------------------------------------------------------------*/
 #define SOLENOID_STATE_OFF          (0)
 #define SOLENOID_STATE_ON           (1)
-#define SOLENOID_ON_TIME_DURATION   (5000)  /* MSEC */
+#define SOLENOID_ON_TIME_DURATION   (3000)  /* MSEC */
 
 /*---------------------------------------------------------------------------------*/
 static uint8_t keepAlive;   /* global to kill thread */
