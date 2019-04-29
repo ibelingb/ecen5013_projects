@@ -87,6 +87,8 @@ void lightTask(void *pvParameters)
     {
         statusMsgCount = 0;
 
+        INFO_PRINT("lightThread Running\n");
+
         /* get sensor data; Write data to shared memory */
         if(apds9301_getLuxData(0, &luxData) == EXIT_SUCCESS) {
             /* try to get semaphore */
@@ -94,6 +96,8 @@ void lightTask(void *pvParameters)
             {
                 /* write data to shmem */
                 info.pShmem->lightData.apds9301_luxData = luxData;
+                info.pShmem->lightSensorState = NOMINAL;
+                info.pShmem->lightSensorUpdateTs = (xTaskGetTickCount() - info.xStartTime) * portTICK_PERIOD_MS;
 
                 /* release mutex */
                 xSemaphoreGive(info.shmemMutex);
@@ -113,6 +117,13 @@ void lightTask(void *pvParameters)
         }
         else {
             LOG_LIGHT_SENSOR_EVENT(LIGHT_EVENT_SENSOR_READ_ERROR);
+            /* Update system state variable to signal Light Sensor Failure */
+            if( xSemaphoreTake( info.shmemMutex, THREAD_MUTEX_DELAY ) == pdTRUE )
+            {
+                /* write lightSensorState to shmem */
+                info.pShmem->lightSensorState = FAULT;
+                xSemaphoreGive(info.shmemMutex);
+            }
         }
 
         /* sleep */

@@ -319,6 +319,7 @@ typedef struct {
     MoistureDataStruct moistData;
     SolenoidDataStruct solenoidData;
     SystemState_e lightSensorState;
+    uint32_t lightSensorUpdateTs;
 } Shmem_t;
 #endif
 
