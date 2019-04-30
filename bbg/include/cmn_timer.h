@@ -43,7 +43,7 @@
 #define MAIN_LOOP_TIME_SEC      (TEMP_LOOP_TIME_SEC * 2)
 #define MAIN_LOOP_TIME_NSEC     (TEMP_LOOP_TIME_NSEC * 2)
 #define LOG_LOOP_TIME_SEC       (0)
-#define LOG_LOOP_TIME_NSEC      (50e-3 * 1e9)
+#define LOG_LOOP_TIME_NSEC      (25e-3 * 1e9)
 
 
 
