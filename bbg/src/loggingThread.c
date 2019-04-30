@@ -93,7 +93,7 @@ void* logThreadHandler(void* threadInfo)
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
     /* try to open logfile */
-    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_TRUNC, 0644);
+    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_APPEND, 0644);
     if(logFd < 0)
     {
         ERRNO_PRINT("loggingThread failed to open log file");
