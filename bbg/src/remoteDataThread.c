@@ -155,7 +155,8 @@ void* remoteDataThreadHandler(void* threadInfo)
    *    - Waiting for client connection at this point;
    *    - Verify able to lock mutex and communicate with Shared Memory.
    */
-  // TODO: TBD
+  LOG_REMOTE_CMD_EVENT(REMOTE_BIST_COMPLETE);
+  LOG_REMOTE_CMD_EVENT(REMOTE_INIT_SUCCESS);
 
   while(aliveFlag) {
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_DATA, STATUS_OK, ERROR_CODE_USER_NONE0);
@@ -215,7 +216,6 @@ void* remoteDataThreadHandler(void* threadInfo)
     }
     else {
       /* Log data received from Remote Node */
-      // TODO
       MUTED_PRINT("Data packet received: Lux: %f | Moist: %f\n", dataPacket.luxData, dataPacket.moistureData);
 
       /* Pass received data to main thread */

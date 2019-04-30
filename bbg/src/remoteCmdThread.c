@@ -155,7 +155,7 @@ void* remoteCmdThreadHandler(void* threadInfo)
    *    - Waiting for client connection at this point;
    *    - Verify able to lock mutex and communicate with Shared Memory.
    */
-  // TODO: TBD
+  LOG_REMOTE_CMD_EVENT(REMOTE_BIST_COMPLETE);
   LOG_REMOTE_CMD_EVENT(REMOTE_INIT_SUCCESS);
 
   int status = 0;
@@ -173,11 +173,11 @@ void* remoteCmdThreadHandler(void* threadInfo)
       }
       else {
         ERROR_PRINT("Failed to send CmdPacket to Remote Node - client socket connection unavailable\n");
-        // TODO LOG failed to send cmd
+        LOG_REMOTE_STATUS_EVENT(REMOTE_CLIENT_SOCKET_ERROR);
       }
 
       /* Log cmd packet transmitted to remote node */
-      // TODO
+      LOG_REMOTE_CMD_EVENT(REMOTE_EVENT_CMD_RECV);
     }
 
     /* Accept Client Connection for Sensor data */

@@ -150,7 +150,8 @@ void* remoteLogThreadHandler(void* threadInfo)
    *    - Waiting for client connection at this point;
    *    - Verify able to lock mutex and communicate with Shared Memory.
    */
-  // TODO: TBD
+  LOG_REMOTE_CMD_EVENT(REMOTE_BIST_COMPLETE);
+  LOG_REMOTE_CMD_EVENT(REMOTE_INIT_SUCCESS);
 
   while(aliveFlag) {
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE_LOG, STATUS_OK, ERROR_CODE_USER_NONE0);

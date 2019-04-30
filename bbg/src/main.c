@@ -272,6 +272,8 @@ int main(int argc, char *argv[]){
 
   /* system is now fully functional */
   LOG_SYSTEM_INITIALIZED();
+  LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_NOMINAL_STATE);
+  LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
   MUTED_PRINT("main started successfully, pid: %d\n",(pid_t)syscall(SYS_gettid));
 
   /* Display menu to UART console; Receive cmd from user */
@@ -319,8 +321,9 @@ int main(int argc, char *argv[]){
           if(checkingSoilMoisture && (soilWateringCount > SOIL_MAX_WATER_CHECK_COUNT)) {
             ERROR_PRINT("Soil watering exceeded max count - entering FAULT state | Control Loop set to IDLE state\n");
             controlLoopState = IDLE;
-            // TODO - Log state change
             systemState = FAULT;
+            LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
+            LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_FAULT_STATE);
           }
         } 
         else {
@@ -332,20 +335,19 @@ int main(int argc, char *argv[]){
           if(((int)waterTimeSpec.it_value.tv_sec == 0) && 
              ((int)waterTimeSpec.it_value.tv_nsec == 0))
           {
-            // TODO: log state change
             controlLoopState = IDLE;
+            LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
           }
           else {
-            // TODO: log state change
             controlLoopState = WATER_PERIODIC_SCHED;
+            LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_SCHEDPERIODIC_STATE);
           }
 
           /* If successfully watered and in FAULT state, reenter NOMINAL state */
-          // TODO - Log state change
           if(systemState == FAULT) {
             INFO_PRINT("Soil watering successful! - System state back to NOMINAL\n");
-            // TODO: log state change
             systemState = NOMINAL;
+            LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_NOMINAL_STATE);
           }
           checkingSoilMoisture = false;
           soilWateringCount = 0;
@@ -601,11 +603,10 @@ int8_t handleConsoleCmd(uint32_t userInput) {
             soilMoistureHigh = data;
             txCmd = REMOTE_SETMOISTURE_HIGHTHRES;
             
-            // TODO - Log state change
             if((systemState == FAULT) && (soilMoistureHigh < moistureData)) {
-              INFO_PRINT("Soil moisture level exceeded set high threshold value - System state back to NOMINAL\n");
-              // TODO: log state change
               systemState = NOMINAL;
+              INFO_PRINT("Soil moisture level exceeded set high threshold value - System state back to NOMINAL\n");
+              LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_NOMINAL_STATE);
             }
           }
         }
@@ -671,6 +672,7 @@ void setPeriodicWaterSched(uint32_t hours) {
   if(controlLoopState != WATERING_PLANT)
   {
     controlLoopState = WATER_PERIODIC_SCHED;
+    LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_SCHEDPERIODIC_STATE);
   }
 }
 
@@ -688,6 +690,7 @@ void setOneshotWaterSched(uint32_t hours) {
   if(controlLoopState != WATERING_PLANT)
   {
     controlLoopState = WATER_ONESHOT_SCHED;
+    LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_SCHEDONESHOT_STATE);
   }
 }
 
@@ -705,6 +708,7 @@ void cancelWaterSched() {
   if(controlLoopState != WATERING_PLANT)
   {
     controlLoopState = IDLE;
+    LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
   }
 }
 
@@ -733,6 +737,7 @@ static void waterDeviceTx() {
       //TODO: Log state change
       INFO_PRINT("WATER_ONESHOT_SCHED failed to send water plant cmd - Control loop reset to IDLE\n");
       controlLoopState = IDLE;
+      LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
     }
 
     return;
@@ -745,5 +750,6 @@ static void waterDeviceTx() {
   checkingSoilMoisture = true;
   soilWateringCount = 0;
 
+  LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_WATERINGPLANT_STATE);
   INFO_PRINT("Watering Plant Enabled!\n");
 }
