@@ -49,6 +49,7 @@
 //#define HOUR_TO_SEC (3600) // For Production
 #define HOUR_TO_SEC (1) // For demo/testing, set to seconds
 #define SOIL_MAX_WATER_CHECK_COUNT (15) // For demo/testing, num seconds
+#define LUX_MAX_THRESHOLD (200) // Peak "sunlight" threshold to avoid watering plant
 
 /* private functions */
 void set_sig_handlers(void);
@@ -69,8 +70,8 @@ static RemoteCmd_e gCurrentCmd = 0; /* Tracks current user cmd if waiting for ad
 static mqd_t cmdMsgQueue;
 static timer_t waterTimerid;
 uint32_t waterCyclePeriodHours = 0;
-uint32_t soilMoistureHigh = SOIL_SATURATION_HIGH_THRES;
-uint32_t soilMoistureLow = SOIL_SATURATION_LOW_THRES;
+float soilMoistureHigh = SOIL_SATURATION_HIGH_THRES;
+float soilMoistureLow = SOIL_SATURATION_LOW_THRES;
 float luxData, moistureData = 0;
 uint32_t soilWateringCount = 0;
 bool checkingSoilMoisture = false;
@@ -436,26 +437,26 @@ void displayCommandMenu()
   switch(gCurrentCmd)
   {
     case CMD_SCHED_PERIODIC:
-      printf("\nEnter a value to water the plant at a periodically date/time.\n");
+      INFO_PRINT("\nEnter a value to water the plant at a periodically date/time.\n");
       break;
     case CMD_SCHED_ONESHOT:
-      printf("\nEnter a value to water the plant at a future date/time.\n");
+      INFO_PRINT("\nEnter a value to water the plant at a future date/time.\n");
       break;
     case CMD_SETMOISTURE_LOWTHRES:
-      printf("\nEnter a value to set for the Moisture Sensor Low Threshold.\n");
+      INFO_PRINT("\nEnter a value to set for the Moisture Sensor Low Threshold.\n");
       break;
     case CMD_SETMOISTURE_HIGHTHRES:
-      printf("\nEnter a value to set for the Moisture Sensor High Threshold.\n");
+      INFO_PRINT("\nEnter a value to set for the Moisture Sensor High Threshold.\n");
       break;
     default:
-      printf("\nEnter a value to specify a command to send to the Sensor Application:\n"
+      INFO_PRINT("\nEnter a value to specify a command to send to the Sensor Application:\n"
              "\t1 = Water Plant\n"
              "\t2 = Schedule Periodic Watering Cycle\n"
              "\t3 = Schedule One-Shot Watering Event\n"
              "\t4 = Display Sensor Data\n"
              "\t5 = Display Device/Actuator State\n"
-             "\t6 = Enable TIVA Device2 (LED2 On)\n"
-             "\t7 = Disable TIVA Device2 (LED2 Off)\n"
+             "\t6 = Enable TIVA Device2\n"
+             "\t7 = Disable TIVA Device2\n"
              "\t8 = Set Moisture Low Threshold\n"
              "\t9 = Set Moisture High Threshold\n"
              "\t10 = Cancel Scheduled Watering Event\n"
@@ -482,7 +483,7 @@ int8_t handleConsoleCmd(uint32_t userInput) {
   /* Verify received cmd is valid */
   if(userInput >= CMD_MAX_CMDS) {
     gCurrentCmd = 0;
-    printf("Invalid command received of {%d} - ignoring cmd\n", userInput);
+    INFO_PRINT("Invalid command received of {%d} - ignoring cmd\n", userInput);
     return EXIT_FAILURE;
   } 
   else {
@@ -490,11 +491,11 @@ int8_t handleConsoleCmd(uint32_t userInput) {
     {
       case CMD_WATER_PLANT :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
-        printf("CMD_WATER_PLANT\n");
+        INFO_PRINT("CMD_WATER_PLANT\n");
         waterDeviceTx();
         break;
       case CMD_SCHED_PERIODIC :
-        printf("CMD_SCHED_PERIODIC\n");
+        INFO_PRINT("CMD_SCHED_PERIODIC\n");
         gCurrentCmd = CMD_SCHED_PERIODIC;
         if(data != 0) {
           setPeriodicWaterSched(data);
@@ -502,7 +503,7 @@ int8_t handleConsoleCmd(uint32_t userInput) {
         }
         break;
       case CMD_SCHED_ONESHOT :
-        printf("CMD_SCHED_ONESHOT\n");
+        INFO_PRINT("CMD_SCHED_ONESHOT\n");
         gCurrentCmd = CMD_SCHED_ONESHOT;
         if(data != 0) {
           setOneshotWaterSched(data);
@@ -510,52 +511,57 @@ int8_t handleConsoleCmd(uint32_t userInput) {
         }
         break;
       case CMD_GET_SENSOR_DATA :
-        printf("CMD_GET_SENSOR_DATA\n");
-        printf("LuxData: {%f} | MoistureData: {%f}\n", luxData, moistureData);
+        INFO_PRINT("CMD_GET_SENSOR_DATA\n");
+        INFO_PRINT("LuxData: {%f} | MoistureData: {%f}\n", luxData, moistureData);
         break;
       case CMD_GET_APP_STATE :
-        printf("CMD_GET_APP_STATE\n");
+        INFO_PRINT("CMD_GET_APP_STATE\n");
 
         /* Print Control Loop State */
         switch(controlLoopState) {
           case IDLE :
-            printf("ControlLoopState: IDLE\n");
+            INFO_PRINT("ControlLoopState: IDLE\n");
             break;
           case WATER_PERIODIC_SCHED :
-            printf("ControlLoopState: WATER_PERIODIC_SCHED\n");
+            INFO_PRINT("ControlLoopState: WATER_PERIODIC_SCHED\n");
             break;
           case WATER_ONESHOT_SCHED:
-            printf("ControlLoopState: WATER_ONESHOT_SCHED\n");
+            INFO_PRINT("ControlLoopState: WATER_ONESHOT_SCHED\n");
             break;
           case WATERING_PLANT:
-            printf("ControlLoopState: WATERING_PLANT\n");
+            INFO_PRINT("ControlLoopState: WATERING_PLANT\n");
             break;
         }
 
         /* Print System State */
         switch(systemState) {
           case DEGRADED :
-            printf("SystemState: DEGRADED\n");
+            INFO_PRINT("SystemState: DEGRADED\n");
             break;
           case FAULT :
-            printf("SystemState: FAULT\n");
+            INFO_PRINT("SystemState: FAULT\n");
             break;
           case NOMINAL :
-            printf("SystemState: NOMINAL\n");
+            INFO_PRINT("SystemState: NOMINAL\n");
             break;
         }
+
+        /* Print Threshold and limit values */
+        INFO_PRINT("Soil Moisture Low Threshold: %f\n", soilMoistureLow);
+        INFO_PRINT("Soil Moisture High Threshold: %f\n", soilMoistureHigh);
+        INFO_PRINT("Lux Sensor Sunlight High Threshold: %d\n", LUX_MAX_THRESHOLD);
         break;
       case CMD_EN_DEV2 :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
-        printf("Cmd to Enable additional device on Remote Node2\n");
+        INFO_PRINT("Cmd to Enable additional device on Remote Node2\n");
         txCmd = REMOTE_ENDEV2;
         break;
       case CMD_DS_DEV2 :
-        printf("Cmd to Disable additional device on Remote Node\n");
+        INFO_PRINT("Cmd to Disable additional device on Remote Node\n");
         txCmd = REMOTE_DSDEV2;
         break;
       case CMD_SETMOISTURE_LOWTHRES:
-        printf("CMD_SETMOISTURE_LOWTHRES\n");
+        INFO_PRINT("CMD_SETMOISTURE_LOWTHRES\n");
         gCurrentCmd = CMD_SETMOISTURE_LOWTHRES;
         if(data != 0) {
           /* Validate data received from user */
@@ -567,15 +573,16 @@ int8_t handleConsoleCmd(uint32_t userInput) {
           else if(data >= soilMoistureHigh) {
             gCurrentCmd = 0;
             ERROR_PRINT("Invalid Low Threshold value for Soil Moisture received - Greater than or equal to high Threshold.\n"
-                        "Max value: {%d} | Received value: {%d}\n", soilMoistureHigh, data);
+                        "High value: {%f} | Received value: {%d}\n", soilMoistureHigh, data);
           }
           else {
+            soilMoistureLow = data;
             txCmd = REMOTE_SETMOISTURE_LOWTHRES;
           }
         }
         break;
       case CMD_SETMOISTURE_HIGHTHRES:
-        printf("CMD_SETMOISTURE_HIGHTHRES\n");
+        INFO_PRINT("CMD_SETMOISTURE_HIGHTHRES\n");
         gCurrentCmd = CMD_SETMOISTURE_HIGHTHRES;
 
         if (data != 0) {
@@ -585,13 +592,26 @@ int8_t handleConsoleCmd(uint32_t userInput) {
             ERROR_PRINT("Invalid Low Threshold value for Soil Moisture received.\n"
                         "Max value: {%d} | Received value: {%d}\n", SOIL_MOISTURE_MAX, data);
           }
+          else if(data <= soilMoistureLow) {
+            gCurrentCmd = 0;
+            ERROR_PRINT("Invalid High Threshold value for Soil Moisture received - Less than or equal to low Threshold.\n"
+                        "Low value: {%f} | Received value: {%d}\n", soilMoistureLow, data);
+          }
           else {
+            soilMoistureHigh = data;
             txCmd = REMOTE_SETMOISTURE_HIGHTHRES;
+            
+            // TODO - Log state change
+            if((systemState == FAULT) && (soilMoistureHigh < moistureData)) {
+              INFO_PRINT("Soil moisture level exceeded set high threshold value - System state back to NOMINAL\n");
+              // TODO: log state change
+              systemState = NOMINAL;
+            }
           }
         }
         break;
       case CMD_SCHED_CANCEL :
-        printf("CMD_SCHED_CANCEL\n");
+        INFO_PRINT("CMD_SCHED_CANCEL\n");
         cancelWaterSched();
         break;
       default:
@@ -690,6 +710,34 @@ void cancelWaterSched() {
 
 /*---------------------------------------------------------------------------------*/
 static void waterDeviceTx() {
+  bool waterPlant = true;
+
+  /* If soil moisture exceeds threshold, ignore request */
+  if(moistureData > soilMoistureHigh)
+  {
+    INFO_PRINT("Current Soil Moisture exceeds high threshold - Water plant cmd ignored\n");
+    waterPlant = false;
+  }
+
+  /* If soil Moisture between Low & High threshold with peaking sunlight exposure, ignore request */ 
+  if((moistureData > soilMoistureLow) && (luxData > LUX_MAX_THRESHOLD))
+  {
+    INFO_PRINT("Avoiding watering during high sunlight exposure with soil moisture nominal - Water plant cmd ignored\n");
+    waterPlant = false;
+  }
+
+  if(waterPlant == false) {
+    /* Didn't successfully water plant - return to nominal state */
+    if(controlLoopState == WATER_ONESHOT_SCHED)
+    {
+      //TODO: Log state change
+      INFO_PRINT("WATER_ONESHOT_SCHED failed to send water plant cmd - Control loop reset to IDLE\n");
+      controlLoopState = IDLE;
+    }
+
+    return;
+  }
+
   RemoteCmdPacket cmdPacket = {0};
   cmdPacket.cmd = REMOTE_WATERPLANT;
   mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
