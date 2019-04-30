@@ -29,40 +29,25 @@
  * @param value desired value of led
  * @return int function sucess
  */
-int led_set_value(uint8_t value);
+int led1_set_value(uint8_t value);
+int led2_set_value(uint8_t value);
 
 /*---------------------------------------------------------------------------------*/
-int8_t setStatusLed(uint8_t newError)
+int8_t setStatusLed(uint8_t state)
 {
-  static uint8_t state = 0;
-  static uint8_t bulb = 0;
-  static uint8_t blinkCount = 0;
-
   switch (state) {
-    case 0: /* off state (0) */
-      led_set_value(0);
-      if(newError) {
-        blinkCount = 8;
-        bulb = 0;
-        state = 1;
-      }
-    break;
-    case 1: /* blink state (1) */
-      bulb = (bulb == 0);
-        led_set_value(bulb);
-      --blinkCount;
-      if(blinkCount == 0) {
-        state = 2;
-      }
-    break;
-    case 2: /* on state (2) */
-      if(newError) {
-        blinkCount = 8;
-        bulb = 0;
-        state = 1;
-      }
-        led_set_value(1);
-    break;
+    case 0: /* DEGRADED state (one LED) */
+      led1_set_value(1);
+      led2_set_value(0);
+      break;
+    case 1: /* FAULT state (two LED) */
+      led1_set_value(1);
+      led2_set_value(1);
+      break;
+    case 2: /* NOMINAL state (no LED) */
+      led1_set_value(0);
+      led2_set_value(0);
+      break;
   }
 
   return EXIT_SUCCESS;
@@ -78,7 +63,8 @@ int8_t initLed(void)
   char str1[] = "0";
   char str3[] = "out";
   char str[] = "53";
-  //this part here exports gpio23
+  char str2[] = "54";
+  //this part here exports gpio21
   export_file = fopen ("/sys/class/gpio/export", "w");
   fwrite (str, 1, sizeof(str), export_file);
   fclose (export_file);
@@ -92,15 +78,45 @@ int8_t initLed(void)
   IO_value = fopen ("/sys/class/gpio/gpio53/value", "w");
   fwrite (str1, 1, sizeof(str1), IO_value);
   fclose (IO_value);
+
+  //this part here exports gpio22
+  export_file = fopen ("/sys/class/gpio/export", "w");
+  fwrite (str2, 1, sizeof(str2), export_file);
+  fclose (export_file);
+
+  //this part here sets the direction of the pin
+  IO_direction = fopen("/sys/class/gpio/gpio54/direction", "w");
+  fwrite(str3, 1, sizeof(str3), IO_direction); //set the pin to HIGH
+  fclose(IO_direction);
+  usleep (1000000);
+
+  IO_value = fopen ("/sys/class/gpio/gpio54/value", "w");
+  fwrite (str1, 1, sizeof(str1), IO_value);
+
   return 0;
 }
 
-int led_set_value(uint8_t value)
+int led1_set_value(uint8_t value)
 {
   FILE *IO_value = NULL;
   char str1[] = "0";
   char str2[] = "1";
   IO_value = fopen ("/sys/class/gpio/gpio53/value", "w");
+
+  fwrite (value == 0 ? str1 : str2, 1, 
+  sizeof(str2), IO_value);
+  fclose (IO_value);
+
+  return 0;
+}
+
+/*---------------------------------------------------------------------------------*/
+int led2_set_value(uint8_t value)
+{
+  FILE *IO_value = NULL;
+  char str1[] = "0";
+  char str2[] = "1";
+  IO_value = fopen ("/sys/class/gpio/gpio54/value", "w");
 
   fwrite (value == 0 ? str1 : str2, 1, 
   sizeof(str2), IO_value);

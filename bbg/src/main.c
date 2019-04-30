@@ -269,6 +269,7 @@ int main(int argc, char *argv[]){
 
   /* initialize status LED */
   initLed();
+  setStatusLed(NOMINAL);
 
   /* system is now fully functional */
   LOG_SYSTEM_INITIALIZED();
@@ -322,6 +323,7 @@ int main(int argc, char *argv[]){
             ERROR_PRINT("Soil watering exceeded max count - entering FAULT state | Control Loop set to IDLE state\n");
             controlLoopState = IDLE;
             systemState = FAULT;
+            setStatusLed(systemState);
             LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
             LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_FAULT_STATE);
           }
@@ -347,6 +349,7 @@ int main(int argc, char *argv[]){
           if(systemState == FAULT) {
             INFO_PRINT("Soil watering successful! - System state back to NOMINAL\n");
             systemState = NOMINAL;
+            setStatusLed(systemState);
             LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_NOMINAL_STATE);
           }
           checkingSoilMoisture = false;
@@ -364,8 +367,6 @@ int main(int argc, char *argv[]){
 
     newError = 0;
     monitorHealth(&heartbeatMsgQueue, &gExit, &newError);
-    MUTED_PRINT("newError: %d\n", newError);
-    setStatusLed(newError);
 
     /* wait on signal timer */
     sigwait(&set, &signum);
@@ -605,6 +606,7 @@ int8_t handleConsoleCmd(uint32_t userInput) {
             
             if((systemState == FAULT) && (soilMoistureHigh < moistureData)) {
               systemState = NOMINAL;
+              setStatusLed(systemState);
               INFO_PRINT("Soil moisture level exceeded set high threshold value - System state back to NOMINAL\n");
               LOG_MAIN_EVENT(MAIN_EVENT_SYSTEM_NOMINAL_STATE);
             }
@@ -734,7 +736,6 @@ static void waterDeviceTx() {
     /* Didn't successfully water plant - return to nominal state */
     if(controlLoopState == WATER_ONESHOT_SCHED)
     {
-      //TODO: Log state change
       INFO_PRINT("WATER_ONESHOT_SCHED failed to send water plant cmd - Control loop reset to IDLE\n");
       controlLoopState = IDLE;
       LOG_MAIN_EVENT(MAIN_EVENT_CONTROLLOOP_IDLE_STATE);
