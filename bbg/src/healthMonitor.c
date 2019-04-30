@@ -93,20 +93,15 @@ int8_t monitorHealth(mqd_t * pQueue, uint8_t *pExit, uint8_t *newError)
         return EXIT_FAILURE;
     }
 
-    /* determine state of threads (alive, zombie, etc) */
-    for(ind = 0; ind < NUM_THREADS; ++ind) {
-        /* TODO - get thread status */
-    }
-
     /* check queue length diagonistics */
-	mq_getattr(*pQueue, &Attr);
-	MUTED_PRINT("hBQueue count:%ld\n", Attr.mq_curmsgs);
-	if(Attr.mq_curmsgs > ((STATUS_MSG_QUEUE_DEPTH * 3) / 4)) {
-		if(Attr.mq_curmsgs >= STATUS_MSG_QUEUE_DEPTH - 1) {
-			ERROR_PRINT("hBQueue full\n");
-		}
-		WARN_PRINT("hBQueue have 3/4 full \n");
-	}
+    mq_getattr(*pQueue, &Attr);
+    MUTED_PRINT("hBQueue count:%ld\n", Attr.mq_curmsgs);
+    if(Attr.mq_curmsgs > ((STATUS_MSG_QUEUE_DEPTH * 3) / 4)) {
+      if(Attr.mq_curmsgs >= STATUS_MSG_QUEUE_DEPTH - 1) {
+        ERROR_PRINT("hBQueue full\n");
+      }
+      WARN_PRINT("hBQueue have 3/4 full \n");
+    }
 
     /* set missing flags before looping on status queue;
      * there should be at least one message from each thread.

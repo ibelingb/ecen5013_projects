@@ -147,7 +147,6 @@ void* remoteThreadHandler(void* threadInfo)
    *    - Waiting for client connection at this point;
    *    - Verify able to lock mutex and communicate with Shared Memory.
    */
-  // TODO: TBD
 
   while(aliveFlag) {
     SEND_STATUS_MSG(hbMsgQueue, PID_REMOTE, STATUS_OK, ERROR_CODE_USER_NONE0);
@@ -204,9 +203,6 @@ void* remoteThreadHandler(void* threadInfo)
       LOG_REMOTE_HANDLING_EVENT(REMOTE_EVENT_INVALID_RECV);
       continue;
     }
-
-    /* Handle received packet */
-    // TODO
   }
 
   /* Thread Cleanup */

@@ -60,7 +60,6 @@ typedef enum
     TMP102_DEVICE_IN_END
 } Tmp102_Shutdown_e;
 
-/* TODO: reset sensor to power-up defauls? */
 int8_t tmp102_initialize(uint8_t file);
 
 /**

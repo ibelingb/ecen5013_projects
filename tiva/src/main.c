@@ -107,14 +107,12 @@ int main(void)
     QueueHandle_t statusQueue = xQueueCreate(STATUS_QUEUE_LENGTH, sizeof(struct TaskStatusPacket));
     if(statusQueue == 0) {
         return EXIT_FAILURE;
-        /* TODO - don't want to return, what to do?? */
     }
 
     /* create log queue */
     QueueHandle_t logQueue = xQueueCreate(LOG_QUEUE_LENGTH, sizeof(LogMsgPacket));
     if(logQueue == 0) {
         return EXIT_FAILURE;
-        /* TODO - don't want to return, what to do?? */
     }
 
     /* create shared memory block */
@@ -299,7 +297,6 @@ uint32_t ulApplicationGetNextSequenceNumber( uint32_t ulSourceAddress,
 
 UBaseType_t uxRand()
 {
-    //TODO: add random number generator
     return 1;
 }
 

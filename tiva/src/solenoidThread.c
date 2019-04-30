@@ -79,9 +79,6 @@ void solenoidTask(void *pvParameters)
     /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
-    /* TODO - set BIST error in logMsg if necessary */
-
-
     while(keepAlive)
     {
         statusMsgCount = 0;

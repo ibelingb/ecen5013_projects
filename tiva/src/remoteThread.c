@@ -8,7 +8,7 @@
  ************************************************************************************
  *
  * @file remoteThread.c
- * @brief TODO
+ * @brief FreeRTOS task to create TCP/IP socket interfaces between RemoteNode and ControlNode.
  *
  * Resources Utilized:
  *   - https://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/TCP_Networking_Tutorial_TCP_Client_and_Server.html
