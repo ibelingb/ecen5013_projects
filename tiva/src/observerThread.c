@@ -141,8 +141,8 @@ void observerTask(void *pvParameters)
         }
 
         /* check connection status and set alarm if LOST */
-        if((g_cmdSocketLost == 1) && (g_statusSocketLost == 1) &&
-                (g_logSocketLost == 1) && (g_dataSocketLost == 1)) {
+        if((g_cmdSocketLost == 1) || (g_statusSocketLost == 1) ||
+                (g_logSocketLost == 1) || (g_dataSocketLost == 1)) {
             alarm = 1;
         }
 
