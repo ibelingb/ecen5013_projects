@@ -8,7 +8,8 @@
  ************************************************************************************
  *
  * @file lightThread.c
- * @brief Light Thread
+ * @brief Light Thread used to capture sampled data from the APDS-9301 Light Sensor
+ *        via I2C.
  *
  ************************************************************************************
  */

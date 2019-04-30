@@ -8,7 +8,13 @@
  ************************************************************************************
  *
  * @file observerThread.c
- * @brief
+ * @brief Watchdog / Monitor task to determine if Remote Node has entered non-nominal
+ *        state; perform error handling.
+ *
+ * Watchdog / monitor task to determine Remote Node state and in the event comm with
+ * the Control Node is lost, the Observer task will then control watering of the plant
+ * by checking the soil moisture readings against the last LOW THRES value set and
+ * water the plant accordingly.
  *
  ************************************************************************************
  */

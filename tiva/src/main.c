@@ -8,7 +8,10 @@
  ************************************************************************************
  *
  * @file main.c
- * @brief
+ * @brief Main method for the Remote Node.
+ *
+ * Remote Node Main Method creates all needed resources and IPC utilities used by the
+ * remote node app and spawns all tasks.
  *
  * References:
  *

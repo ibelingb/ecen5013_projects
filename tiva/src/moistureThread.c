@@ -8,7 +8,7 @@
  ************************************************************************************
  *
  * @file moistureThread.c
- * @brief
+ * @brief Task to capture readings from the attached soil moisture sensor via an ADC.
  *
  * reference: TivaWare single_ended.c
  ************************************************************************************
