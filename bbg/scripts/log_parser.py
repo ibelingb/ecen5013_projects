@@ -196,38 +196,38 @@ class TempEvent_e(IntEnum):
     END = 12
 
 class SolenoidEvent_e(IntEnum):
-    SOLE_EVENT_STARTED = 0
-    SOLE_EVENT_BIST_SUCCESS = 1
-    SOLE_EVENT_BIST_FAILED = 2
-    SOLE_EVENT_SENSOR_GPIO_ERROR = 3
-    SOLE_EVENT_STATUS_QUEUE_ERROR = 4
-    SOLE_EVENT_LOG_QUEUE_ERROR = 5
-    SOLE_EVENT_SHMEM_ERROR = 6
-    SOLE_EVENT_EXITING = 7
-    SOLE_EVENT_END = 8
+    STARTED = 0
+    BIST_SUCCESS = 1
+    BIST_FAILED = 2
+    SENSOR_GPIO_ERROR = 3
+    STATUS_QUEUE_ERROR = 4
+    LOG_QUEUE_ERROR = 5
+    SHMEM_ERROR = 6
+    EXITING = 7
+    END = 8
 
 class ObserverEvent_e(IntEnum):
-    OBSERVE_EVENT_STARTED = 0
-    OBSERVE_EVENT_BIST_SUCCESS = 1
-    OBSERVE_EVENT_BIST_FAILED = 2
-    OBSERVE_EVENT_GPIO_ERROR = 3
-    OBSERVE_EVENT_STATUS_QUEUE_ERROR = 4
-    OBSERVE_EVENT_LOG_QUEUE_ERROR = 5
-    OBSERVE_EVENT_SHMEM_ERROR = 6
-    OBSERVE_EVENT_CMD_OVERRIDE_ASSERTED = 7
-    OBSERVE_EVENT_EXITING = 8
-    OBSERVE_EVENT_END = 9
+    STARTED = 0
+    BIST_SUCCESS = 1
+    BIST_FAILED = 2
+    GPIO_ERROR = 3
+    STATUS_QUEUE_ERROR = 4
+    LOG_QUEUE_ERROR = 5
+    SHMEM_ERROR = 6
+    CMD_OVERRIDE_ASSERTED = 7
+    EXITING = 8
+    END = 9
 
-class ObserverEvent_e(IntEnum):
-    MOIST_EVENT_STARTED = 0
-    MOIST_EVENT_BIST_SUCCESS = 1
-    MOIST_EVENT_BIST_FAILED = 2
-    MOIST_EVENT_ADC_ERROR = 3
-    MOIST_EVENT_STATUS_QUEUE_ERROR = 4
-    MOIST_EVENT_LOG_QUEUE_ERROR = 5
-    MOIST_EVENT_SHMEM_ERROR = 6
-    MOIST_EVENT_EXITING = 7
-    MOIST_EVENT_END = 8
+class MoistEvent_e(IntEnum):
+    STARTED = 0
+    BIST_SUCCESS = 1
+    BIST_FAILED = 2
+    ADC_ERROR = 3
+    STATUS_QUEUE_ERROR = 4
+    MLOG_QUEUE_ERROR = 5
+    SHMEM_ERROR = 6
+    EXITING = 7
+    END = 8
 
 def clear_log_item(my_log_item):
     my_log_item.eventId = logMsg_e.NONE
@@ -303,6 +303,14 @@ def print_message(item):
             print(LogEvent_e(int(item.payload, 16)).name, end="")
         elif item.eventId == logMsg_e.MAIN_EVENT:
             print(MainEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.SOLENOID_EVENT:
+            print(SolenoidEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.OBSERVER_EVENT:
+            print(ObserverEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.MOIST_EVENT:
+            print(MoistEvent_e(int(item.payload, 16)).name, end="")
+        elif item.eventId == logMsg_e.REMOTE_CLIENT_EVENT:
+            print(RemoteEvent_e(int(item.payload, 16)).name, end="")
         else:
             print(":", item.payload)
     print("")

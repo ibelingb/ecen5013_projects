@@ -93,7 +93,7 @@ void* logThreadHandler(void* threadInfo)
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
     /* try to open logfile */
-    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_TRUNC, 0644);
+    logFd = open(((LogThreadInfo *)threadInfo)->logFileName, O_CREAT | O_WRONLY | O_NONBLOCK | O_SYNC | O_APPEND, 0644);
     if(logFd < 0)
     {
         ERRNO_PRINT("loggingThread failed to open log file");
@@ -170,7 +170,7 @@ void* logThreadHandler(void* threadInfo)
                 
                     /* if read from queue successful, right to file */
                     MUTED_PRINT("writing log msg to file\n");
-                    if(0)//LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+                    if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
                     {
                         ERROR_PRINT("log_dequeue_item error\n");
                         SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
