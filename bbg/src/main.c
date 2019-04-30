@@ -46,8 +46,9 @@
 #define USR_LED_53          (53)
 #define BUFFER_SIZE         (6)
 
-//#define HOUR_TO_SEC (3600)
-#define HOUR_TO_SEC (1) // For testing, set to seconds
+//#define HOUR_TO_SEC (3600) // For Production
+#define HOUR_TO_SEC (1) // For demo/testing, set to seconds
+#define SOIL_MAX_WATER_CHECK_COUNT (15) // For demo/testing, num seconds
 
 /* private functions */
 void set_sig_handlers(void);
@@ -68,7 +69,11 @@ static RemoteCmd_e gCurrentCmd = 0; /* Tracks current user cmd if waiting for ad
 static mqd_t cmdMsgQueue;
 static timer_t waterTimerid;
 uint32_t waterCyclePeriodHours = 0;
+uint32_t soilMoistureHigh = SOIL_SATURATION_HIGH_THRES;
+uint32_t soilMoistureLow = SOIL_SATURATION_LOW_THRES;
 float luxData, moistureData = 0;
+uint32_t soilWateringCount = 0;
+bool checkingSoilMoisture = false;
 
 /* Variables to track system operating state */
 ControlLoopState_e controlLoopState = IDLE;
@@ -299,10 +304,6 @@ int main(int argc, char *argv[]){
     switch(controlLoopState) {
       case WATER_PERIODIC_SCHED:
         /* Waiting until next periodic watering cycle */
-        /* If soil moisture exceeds threshold between scheduled watering cycles, reset timer */
-        if(moistureData > SOIL_SATURATION_THRES)
-        {
-          setPeriodicWaterSched(waterCyclePeriodHours);
         }
         break;
       case WATER_ONESHOT_SCHED:
@@ -310,13 +311,20 @@ int main(int argc, char *argv[]){
         break;
       case WATERING_PLANT:
         /* Plant should be getting watered - remain in watering state until soil moisture exceeds threshold */
-        // TODO: Update below to use state of Solenoid/Simulated LED Device reported from TIVA
-        //       --> If Solenoid is "open", watering plant
-        if(moistureData < SOIL_SATURATION_THRES)
+        if(moistureData < soilMoistureHigh)
         {
           /* Continue watering plant */
+          /* Track number of times we've check soil moisture levels. If Count exceeds threshold, enter FAULT state */
+          soilWateringCount++;
+          if(checkingSoilMoisture && (soilWateringCount > SOIL_MAX_WATER_CHECK_COUNT)) {
+            ERROR_PRINT("Soil watering exceeded max count - entering FAULT state | Control Loop set to IDLE state\n");
+            controlLoopState = IDLE;
+            // TODO - Log state change
+            systemState = FAULT;
+          }
         } 
         else {
+          INFO_PRINT("Soil moisture level reported above threshold - Soil watering complete!\n");
           /* Watering complete, update current state */
           struct itimerspec waterTimeSpec;
           timer_gettime(waterTimerid, &waterTimeSpec);
@@ -324,16 +332,28 @@ int main(int argc, char *argv[]){
           if(((int)waterTimeSpec.it_value.tv_sec == 0) && 
              ((int)waterTimeSpec.it_value.tv_nsec == 0))
           {
+            // TODO: log state change
             controlLoopState = IDLE;
           }
           else {
+            // TODO: log state change
             controlLoopState = WATER_PERIODIC_SCHED;
           }
+
+          /* If successfully watered and in FAULT state, reenter NOMINAL state */
+          // TODO - Log state change
+          if(systemState == FAULT) {
+            INFO_PRINT("Soil watering successful! - System state back to NOMINAL\n");
+            // TODO: log state change
+            systemState = NOMINAL;
+          }
+          checkingSoilMoisture = false;
+          soilWateringCount = 0;
         }
         break;
       case IDLE:
       default:
-        // TODO: TBD
+        /* Awaiting control loop state change */
         break;
     }
 
@@ -496,7 +516,35 @@ int8_t handleConsoleCmd(uint32_t userInput) {
         break;
       case CMD_GET_APP_STATE :
         printf("CMD_GET_APP_STATE\n");
-        printf("ControlLoopState: {%d} | SystemState: {%d}\n", controlLoopState, systemState);
+
+        /* Print Control Loop State */
+        switch(controlLoopState) {
+          case IDLE :
+            printf("ControlLoopState: IDLE\n");
+            break;
+          case WATER_PERIODIC_SCHED :
+            printf("ControlLoopState: WATER_PERIODIC_SCHED\n");
+            break;
+          case WATER_ONESHOT_SCHED:
+            printf("ControlLoopState: WATER_ONESHOT_SCHED\n");
+            break;
+          case WATERING_PLANT:
+            printf("ControlLoopState: WATERING_PLANT\n");
+            break;
+        }
+
+        /* Print System State */
+        switch(systemState) {
+          case DEGRADED :
+            printf("SystemState: DEGRADED\n");
+            break;
+          case FAULT :
+            printf("SystemState: FAULT\n");
+            break;
+          case NOMINAL :
+            printf("SystemState: NOMINAL\n");
+            break;
+        }
         break;
       case CMD_EN_DEV2 :
         /* Populate packet and push onto cmdQueue to tx to Remote Node */
@@ -514,8 +562,13 @@ int8_t handleConsoleCmd(uint32_t userInput) {
           /* Validate data received from user */
           if(data > SOIL_MOISTURE_MAX) {
             gCurrentCmd = 0;
-            ERROR_PRINT("Invalid High Threshold value for Soil Moisture received.\n"
+            ERROR_PRINT("Invalid Low Threshold value for Soil Moisture received - exceeds max.\n"
                         "Max value: {%d} | Received value: {%d}\n", SOIL_MOISTURE_MAX, data);
+          }
+          else if(data >= soilMoistureHigh) {
+            gCurrentCmd = 0;
+            UUERROR_PRINT("Invalid Low Threshold value for Soil Moisture received - Greater than or equal to high Threshold.\n"
+                        "Max value: {%d} | Received value: {%d}\n", soilMoistureHigh, data);
           }
           else {
             txCmd = REMOTE_SETMOISTURE_LOWTHRES;
@@ -642,4 +695,8 @@ static void waterDeviceTx() {
   cmdPacket.cmd = REMOTE_WATERPLANT;
   mq_send(cmdMsgQueue, (char *)&cmdPacket, sizeof(struct RemoteCmdPacket), 1);
   controlLoopState = WATERING_PLANT;
+  checkingSoilMoisture = true;
+  soilWateringCount = 0;
+
+  INFO_PRINT("Watering Plant Enabled!\n");
 }

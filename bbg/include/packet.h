@@ -50,7 +50,8 @@
 #define IPC_NAME_SIZE               (30)
 
 #define SOIL_MOISTURE_MAX (100)
-#define SOIL_SATURATION_THRES (60) // Soil saturation threshold
+#define SOIL_SATURATION_HIGH_THRES (30) // Soil saturation High threshold
+#define SOIL_SATURATION_LOW_THRES (10) // Soil saturation Low threshold
 
 /* Identifies start of a packet */
 #define PKT_HEADER (0xABCD)
