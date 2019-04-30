@@ -170,7 +170,7 @@ void* logThreadHandler(void* threadInfo)
                 
                     /* if read from queue successful, right to file */
                     MUTED_PRINT("writing log msg to file\n");
-                    if(0)//LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
+                    if(LOG_WRITE_ITEM(&logItem, logFd) != LOG_STATUS_OK)
                     {
                         ERROR_PRINT("log_dequeue_item error\n");
                         SEND_STATUS_MSG(hbMsgQueue, PID_LOGGING, STATUS_ERROR, ERROR_CODE_USER_NOTIFY0);
