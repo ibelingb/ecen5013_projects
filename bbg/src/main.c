@@ -304,7 +304,6 @@ int main(int argc, char *argv[]){
     switch(controlLoopState) {
       case WATER_PERIODIC_SCHED:
         /* Waiting until next periodic watering cycle */
-        }
         break;
       case WATER_ONESHOT_SCHED:
         /* Waiting until next one-shot watering cycle */
@@ -567,7 +566,7 @@ int8_t handleConsoleCmd(uint32_t userInput) {
           }
           else if(data >= soilMoistureHigh) {
             gCurrentCmd = 0;
-            UUERROR_PRINT("Invalid Low Threshold value for Soil Moisture received - Greater than or equal to high Threshold.\n"
+            ERROR_PRINT("Invalid Low Threshold value for Soil Moisture received - Greater than or equal to high Threshold.\n"
                         "Max value: {%d} | Received value: {%d}\n", soilMoistureHigh, data);
           }
           else {
