@@ -87,8 +87,6 @@ void lightTask(void *pvParameters)
     {
         statusMsgCount = 0;
 
-        INFO_PRINT("lightThread Running\n");
-
         /* get sensor data; Write data to shared memory */
         if(apds9301_getLuxData(0, &luxData) == EXIT_SUCCESS) {
             /* try to get semaphore */

@@ -42,8 +42,6 @@
 
 /*---------------------------------------------------------------------------------*/
 #define ALARM_GPIO_PIN                  (GPIO_PIN_0)
-#define DEFAULT_HIGH_MOIST_THRESHOLD    (40)
-#define DEFAULT_LOW_MOIST_THRESHOLD     (20)
 
 /*---------------------------------------------------------------------------------*/
 static uint8_t keepAlive;   /* global to kill thread */
@@ -77,8 +75,8 @@ void observerTask(void *pvParameters)
     /* get status queue handle, etc */
     SensorThreadInfo info = *((SensorThreadInfo *)pvParameters);
 
-    info.pShmem->moistData.highThreshold = DEFAULT_HIGH_MOIST_THRESHOLD;
-    info.pShmem->moistData.lowThreshold = DEFAULT_LOW_MOIST_THRESHOLD;
+    info.pShmem->moistData.highThreshold = SOIL_SATURATION_HIGH_THRES;
+    info.pShmem->moistData.lowThreshold = SOIL_SATURATION_LOW_THRES;
 
     /* send BIST results to logger */
     if(0) {
